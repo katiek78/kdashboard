@@ -40,3 +40,235 @@ a {
     color-scheme: dark;
   }
 }
+
+/* My global styles here */
+
+body {
+  margin: 20px;
+  padding: 20px;
+  background: linear-gradient(90deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+}
+
+header {
+  background-color: #333;
+  padding: 1rem;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+}
+
+nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+}
+
+nav li {
+  margin-left: 1rem;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+nav a:hover {
+  background-color: #555;
+}
+
+button {
+  background-color: #408ef3;
+  border: none;
+  color: white;
+  padding: 10px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition-duration: 0.4s;
+}
+
+button:hover {
+  background-color: #ccc;
+  color: black;
+  /* border: 1px solid #007bff; */
+}
+
+.cool-button {
+  background-color: rgb(226, 23, 124);
+  font-weight: bold;
+}
+
+.green-button {
+  background-color: lawngreen;
+  color: black;
+}
+
+.grey-button {
+  background-color: gray;
+  color: black;
+}
+
+.orange-button {
+  background-color: orangered;
+  color: white;
+}
+
+.red-button {
+  background-color: red;
+  color: white;
+}
+
+.yellow-button {
+  background-color: yellow;
+  color: black;
+}
+
+
+input, select {
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.content {
+background-color: white;
+text-align: center;
+padding: 1rem;
+border: 1px solid #444;
+border-radius: 8px;
+margin: 0 auto;
+width: 90%;
+max-width: 1300px;
+}
+
+@media only screen and (max-width:800px) {  
+  .content {
+    width: 100%;
+    padding: 0;
+  }
+
+
+ body {
+      margin: 3px;
+      padding: 3px;
+    }
+
+}
+
+.breadcrumb {
+  text-align: left;
+  font-size: 1.3rem;
+  color: #666;
+  margin: 0;
+  padding: 0;
+}
+
+.one,
+.one-third,
+.two-thirds,
+.one-quarter,
+.one-sixth,
+.half {
+  width:100%;   
+}
+
+@media only screen and (min-width:800px) {
+  .one {
+    width:100%;
+  }
+  .half {
+    width:calc(100%/2);    
+  }
+  .one-third {
+    width:calc(100%/3);    
+  }
+  .one-quarter {
+    width:calc(100%/4);    
+  }
+   .one-sixth {
+    width:calc(100%/4);    
+  }
+  .two-thirds {
+    width:calc(100%/3*2);    
+  }
+  
+     .five-sixths {
+    width:calc(100%/3*2);    
+  }
+}
+
+/* Styles for Cards */
+
+.cardParent {
+	display:flex;
+	flex-wrap:wrap;
+	justify-content:center;
+}
+
+.segmentCard {
+	background-color: #eee;
+	font-size: 1.5rem;
+}
+
+.card {	
+	flex-grow:1;
+	padding:10px;
+	box-shadow: 2px 2px #777;
+	  border:solid 2px #555;
+   border-radius:10px; 
+   margin: 3px;
+   transition: 0.5s all;
+   --shadow: transparent;
+   position: relative;
+   font-size: 1.5em;  
+
+  /* transition: 0.5s all;
+  --shadow: transparent;
+  box-shadow: 0 0 10px 5px var(--shadow);
+  position: relative; */
+}
+
+.card a {
+  text-decoration: none;
+  color: black;
+}
+
+.point-card {
+  flex: 1;
+  background-color: #EEE;
+  min-width: 300px;
+  font-size: 1.2em;
+  text-align: center;
+}
+
+.point-number {
+  font-size:1em;
+  font-weight: bold;
+}
+
+.point-name {
+  font-size:1em;
+  font-weight:600;
+}
