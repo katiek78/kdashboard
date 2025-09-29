@@ -1,3 +1,8 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import supabase from "../../utils/supabaseClient";
+
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -8,18 +13,32 @@ import {
   faBrain,
   faDumbbell,
   faMusic,
-  faFootball,
   faSoccerBall,
   faTv,
   faLaptop,
   faLanguage,
   faCode,
-  faTree,
   faCube,
   faLeaf,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data?.session?.user) {
+        router.replace("/login");
+      }
+      setLoading(false);
+    });
+  }, [router]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="content">
       <div className="one">
@@ -59,9 +78,13 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="card segmentCard">
-            <Link href="/languages">
+            <a
+              href="https://multilingual-flax.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FontAwesomeIcon icon={faLanguage} /> Languages
-            </Link>
+            </a>
           </div>
           <div className="card segmentCard">
             <Link href="/coding">

@@ -1,0 +1,21 @@
+.task-container {
+    display: flex;
+    flex-direction: column;
+    background: repeating-linear-gradient(
+        to bottom,
+        /* #f3f7d4 0 10px,
+        #eea4a4 10px 12px,
+        #f3f7d4 12px 23px
+         */
+         #fafce8 0 10px,
+    #fbdcdc 10px 12px,
+    #fafce8 12px 23px
+      );
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+    width: 80%;
+  }
