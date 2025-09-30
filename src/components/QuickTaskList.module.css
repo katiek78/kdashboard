@@ -19,3 +19,9 @@
     margin: 20px auto;
     width: 80%;
   }
+
+  .quickTaskList {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
