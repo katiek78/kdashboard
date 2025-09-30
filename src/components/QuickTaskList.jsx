@@ -146,7 +146,7 @@ const QuickTaskList = () => {
   }
 
   return (
-    <div className={styles.taskContainer}>
+    <div className={styles.taskContainer + " pageContainer"}>
       <div>
         <input
           type="text"
