@@ -1,7 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import supabase from "../../utils/supabaseClient";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -23,17 +21,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data?.session?.user) {
-        router.replace("/login");
-      }
-      setLoading(false);
-    });
-  }, [router]);
+  const loading = useAuthRedirect();
 
   if (loading) {
     return <div>Loading...</div>;

@@ -29,7 +29,9 @@ export default function MainMenu() {
 
   return (
     <header>
-      <h1>My Dashboard</h1>
+      <Link href="/dashboard">
+        <h1>My Dashboard</h1>
+      </Link>
       <nav>
         <ul>
           {!user ? (
