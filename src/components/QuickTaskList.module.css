@@ -16,3 +16,19 @@
     flex-direction: column;
     gap: 5px;
   }
+
+  @media (prefers-color-scheme: dark) {
+  .taskContainer,
+  .taskContainer * {
+    color: #f3f3f3 !important;
+  }
+  .quickTaskList {
+    background: repeating-linear-gradient(
+        to bottom,       
+         #333 0 10px,
+    #8888dd 10px 12px,
+    #333 12px 23px
+      );
+  }
+
+}
