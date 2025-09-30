@@ -1,7 +1,7 @@
 export async function fetchPlaceById(id) {
   const { data, error } = await supabase
     .from("places")
-    .select("id, name, parent_id")
+    .select("id, name, parent_id, flag_url")
     .eq("id", id)
     .single();
   if (error) throw error;
@@ -16,7 +16,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export async function fetchPlaces(parentId = null) {
   let query = supabase
     .from("places")
-    .select("id, name, parent_id")
+    .select("id, name, parent_id, flag_url")
     .order("name", { ascending: true });
   if (parentId === null) {
     query = query.is("parent_id", null);
@@ -28,17 +28,20 @@ export async function fetchPlaces(parentId = null) {
   return data || [];
 }
 
-export async function addPlace(name, parentId = null) {
+export async function addPlace(name, parentId = null, flag_url = "") {
   const { data, error } = await supabase
     .from("places")
-    .insert([{ name, parent_id: parentId }])
+    .insert([{ name, parent_id: parentId, flag_url }])
     .select();
   if (error) throw error;
   return data[0];
 }
 
-export async function updatePlace(id, name) {
-  const { error } = await supabase.from("places").update({ name }).eq("id", id);
+export async function updatePlace(id, name, flag_url = "") {
+  const { error } = await supabase
+    .from("places")
+    .update({ name, flag_url })
+    .eq("id", id);
   if (error) throw error;
 }
 

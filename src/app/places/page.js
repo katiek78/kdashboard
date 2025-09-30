@@ -16,8 +16,10 @@ export default function PlacesPage() {
   const [parentIdStack, setParentIdStack] = useState([null]);
   const [breadcrumb, setBreadcrumb] = useState([{ id: null, name: "World" }]);
   const [newPlaceName, setNewPlaceName] = useState("");
+  const [newFlagUrl, setNewFlagUrl] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
+  const [editingFlagUrl, setEditingFlagUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
   const parentId = parentIdStack[parentIdStack.length - 1];
@@ -72,8 +74,9 @@ export default function PlacesPage() {
     if (!newPlaceName.trim()) return;
     setLoading(true);
     try {
-      await addPlace(newPlaceName, parentId);
+      await addPlace(newPlaceName, parentId, newFlagUrl);
       setNewPlaceName("");
+      setNewFlagUrl("");
       loadPlaces();
     } catch (err) {
       alert("Error adding place");
@@ -84,9 +87,10 @@ export default function PlacesPage() {
   async function handleEdit(id) {
     setLoading(true);
     try {
-      await updatePlace(id, editingName);
+      await updatePlace(id, editingName, editingFlagUrl);
       setEditingId(null);
       setEditingName("");
+      setEditingFlagUrl("");
       loadPlaces();
     } catch (err) {
       alert("Error updating place");
@@ -147,13 +151,27 @@ export default function PlacesPage() {
               </span>
             ))}
           </nav>
-          <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              marginBottom: 16,
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
             <input
               type="text"
               placeholder="Add new place"
               value={newPlaceName}
               onChange={(e) => setNewPlaceName(e.target.value)}
               style={{ marginRight: 8 }}
+            />
+            <input
+              type="text"
+              placeholder="Flag image URL (optional)"
+              value={newFlagUrl}
+              onChange={(e) => setNewFlagUrl(e.target.value)}
+              style={{ marginRight: 8, minWidth: 180 }}
             />
             <button onClick={handleAdd} disabled={loading}>
               Add
@@ -176,21 +194,58 @@ export default function PlacesPage() {
                   }}
                 >
                   <span
-                    style={{ flex: 1, cursor: "pointer" }}
+                    style={{
+                      flex: 1,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
                     onClick={() => handleNavigate(place.id, place.name)}
                   >
                     {editingId === place.id ? (
-                      <input
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onBlur={() => handleEdit(place.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleEdit(place.id);
-                        }}
-                        autoFocus
-                      />
+                      <>
+                        <input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          style={{ marginRight: 8 }}
+                          autoFocus
+                          onClick={e => e.stopPropagation()}
+                          onFocus={e => e.stopPropagation()}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Flag image URL"
+                          value={editingFlagUrl}
+                          onChange={(e) => setEditingFlagUrl(e.target.value)}
+                          style={{ minWidth: 120 }}
+                          onClick={e => e.stopPropagation()}
+                          onFocus={e => e.stopPropagation()}
+                        />
+                        <button
+                          onClick={e => { e.stopPropagation(); handleEdit(place.id); }}
+                          style={{ marginLeft: 8 }}
+                        >
+                          Save
+                        </button>
+                      </>
                     ) : (
-                      place.name
+                      <>
+                        {place.flag_url && (
+                          <img
+                            src={place.flag_url}
+                            alt="flag"
+                            style={{
+                              width: 24,
+                              height: 18,
+                              objectFit: "cover",
+                              borderRadius: 2,
+                              marginRight: 6,
+                            }}
+                          />
+                        )}
+                        {place.name}
+                      </>
                     )}
                   </span>
                   <button
@@ -204,6 +259,7 @@ export default function PlacesPage() {
                     onClick={() => {
                       setEditingId(place.id);
                       setEditingName(place.name);
+                      setEditingFlagUrl(place.flag_url || "");
                     }}
                   >
                     <FontAwesomeIcon icon={faPen} style={{ color: "#333" }} />
