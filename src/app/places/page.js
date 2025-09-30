@@ -30,6 +30,7 @@ const LINK_TYPE_OPTIONS = [
 ];
 
 export default function PlacesPage() {
+  // All hooks must be called unconditionally and before any return/logic
   const [places, setPlaces] = useState([]);
   const [parentIdStack, setParentIdStack] = useState([null]);
   const [breadcrumb, setBreadcrumb] = useState([{ id: null, name: "World" }]);
@@ -49,12 +50,7 @@ export default function PlacesPage() {
   const [editLinkType, setEditLinkType] = useState("");
 
   const parentId = parentIdStack[parentIdStack.length - 1];
-
   const loadingAuth = useAuthRedirect();
-
-  if (loadingAuth) {
-    return <div>Loading...</div>;
-  }
 
   useEffect(() => {
     loadPlaces();
@@ -90,6 +86,23 @@ export default function PlacesPage() {
     updateBreadcrumb();
     // eslint-disable-next-line
   }, [parentIdStack]);
+
+  useEffect(() => {
+    async function loadLinks() {
+      if (parentId) {
+        const links = await fetchPlaceLinks(parentId);
+        setPlaceLinks(links);
+      } else {
+        setPlaceLinks([]);
+      }
+    }
+    loadLinks();
+  }, [parentId]);
+
+  // Hooks must not be called conditionally, so move this check after all hooks
+  if (loadingAuth) {
+    return <div>Loading...</div>;
+  }
 
   async function loadPlaces() {
     setLoading(true);
@@ -151,18 +164,6 @@ export default function PlacesPage() {
     setParentIdStack(parentIdStack.slice(0, idx + 1));
     setBreadcrumb(breadcrumb.slice(0, idx + 1));
   }
-
-  useEffect(() => {
-    async function loadLinks() {
-      if (parentId) {
-        const links = await fetchPlaceLinks(parentId);
-        setPlaceLinks(links);
-      } else {
-        setPlaceLinks([]);
-      }
-    }
-    loadLinks();
-  }, [parentId]);
 
   async function handleAddLink(e) {
     e.preventDefault();
