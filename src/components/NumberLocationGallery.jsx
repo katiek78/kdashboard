@@ -1,6 +1,6 @@
-
 import React, { useState } from "react";
 import styles from "./NumberLocationGallery.module.css";
+import { useRouter } from "next/navigation";
 
 // Helper to get the numbers for the current level and startingDigits
 function getTileNumbers(level, startingDigits) {
@@ -15,6 +15,8 @@ const NumberLocationGallery = () => {
   const [level, setLevel] = useState(1);
   const [startingDigits, setStartingDigits] = useState(0);
 
+  const router = useRouter();
+
   const numbers = getTileNumbers(level, startingDigits);
 
   // Handler for tile click: go to next level with new startingDigits
@@ -27,8 +29,7 @@ const NumberLocationGallery = () => {
   const handleNumberClick = (e, num) => {
     e.stopPropagation();
     // Placeholder for navigation to number detail page
-    // e.g., router.push(`/number-locations/${num}`)
-    alert(`Go to detail page for number: ${num}`);
+    router.push(`/number-locations/${num}`);
   };
 
   // Handler to go back a level
@@ -41,8 +42,26 @@ const NumberLocationGallery = () => {
 
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <button onClick={handleBack} disabled={level === 1} style={{ fontSize: 18, padding: "8px 16px", borderRadius: 8, border: "none", background: "#eee", cursor: level === 1 ? "not-allowed" : "pointer" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+        }}
+      >
+        <button
+          onClick={handleBack}
+          disabled={level === 1}
+          style={{
+            fontSize: 18,
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: "none",
+            background: "#eee",
+            cursor: level === 1 ? "not-allowed" : "pointer",
+          }}
+        >
           Back
         </button>
         <div style={{ fontWeight: "bold", fontSize: 20 }}>Level {level}</div>
@@ -60,7 +79,13 @@ const NumberLocationGallery = () => {
             <span
               className={styles.tileNumber}
               onClick={(e) => handleNumberClick(e, num)}
-              style={{ fontSize: 48, fontWeight: "bold", display: "block", marginBottom: 8, color: "#004d4d" }}
+              style={{
+                fontSize: 48,
+                fontWeight: "bold",
+                display: "block",
+                marginBottom: 8,
+                color: "#004d4d",
+              }}
               tabIndex={-1}
             >
               {num.toString().padStart(level, "0")}
