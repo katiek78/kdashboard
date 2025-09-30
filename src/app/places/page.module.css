@@ -1,3 +1,20 @@
+.placeFormRow {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+@media (max-width: 600px) {
+	.placeFormRow {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 4px;
+	}
+	.placeFormRow input[type="text"] {
+		min-width: 0 !important;
+		width: 100%;
+	}
+}
 .breadcrumbNav {
 	background: rgba(255,255,255,0.95);
 	border-radius: 8px;
@@ -5,7 +22,15 @@
 	padding: 6px 14px;
 	display: inline-block;
 	box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 8px;
 }
 .placesContainer {
 	background: url('https://images.unsplash.com/photo-1713098965471-d324f294a71d?q=80&w=1802&auto=format&fit=crop') center center/cover no-repeat;
+}
+
+@media (max-width: 600px) {
+  .placeInputRow {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
 }

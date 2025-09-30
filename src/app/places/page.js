@@ -152,10 +152,10 @@ export default function PlacesPage() {
             ))}
           </nav>
           <div
+            className={styles.placeInputRow}
             style={{
-              marginBottom: 16,
               display: "flex",
-              gap: 8,
+              gap: 2,
               alignItems: "center",
             }}
           >
@@ -172,6 +172,7 @@ export default function PlacesPage() {
               value={newFlagUrl}
               onChange={(e) => setNewFlagUrl(e.target.value)}
               style={{ marginRight: 8, minWidth: 180 }}
+              className={styles.flagUrlInput}
             />
             <button onClick={handleAdd} disabled={loading}>
               Add
@@ -204,14 +205,14 @@ export default function PlacesPage() {
                     onClick={() => handleNavigate(place.id, place.name)}
                   >
                     {editingId === place.id ? (
-                      <>
+                      <div className={styles.placeInputRow}>
                         <input
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           style={{ marginRight: 8 }}
                           autoFocus
-                          onClick={e => e.stopPropagation()}
-                          onFocus={e => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          onFocus={(e) => e.stopPropagation()}
                         />
                         <input
                           type="text"
@@ -219,16 +220,20 @@ export default function PlacesPage() {
                           value={editingFlagUrl}
                           onChange={(e) => setEditingFlagUrl(e.target.value)}
                           style={{ minWidth: 120 }}
-                          onClick={e => e.stopPropagation()}
-                          onFocus={e => e.stopPropagation()}
+                          className={styles.flagUrlInput}
+                          onClick={(e) => e.stopPropagation()}
+                          onFocus={(e) => e.stopPropagation()}
                         />
                         <button
-                          onClick={e => { e.stopPropagation(); handleEdit(place.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(place.id);
+                          }}
                           style={{ marginLeft: 8 }}
                         >
                           Save
                         </button>
-                      </>
+                      </div>
                     ) : (
                       <>
                         {place.flag_url && (
