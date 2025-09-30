@@ -4,6 +4,22 @@
 	align-items: center;
 }
 
+.placeList {
+  border: 2px solid #bbb;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: #fff;
+  list-style: none;
+}
+
+.placeLinksList {
+  border: 2px solid #bbb;
+  border-radius: 6px;
+  margin-bottom: 12px; 
+  background: #fff;
+  list-style: none;
+}
+
 @media (max-width: 600px) {
 	.placeFormRow {
 		flex-direction: column;
@@ -33,4 +49,25 @@
     flex-direction: column !important;
     align-items: stretch !important;
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  .placesContainer,
+  .placesContainer * {
+    color: #f3f3f3 !important;
+  }
+  .breadcrumbNav {
+    background: rgba(30,30,30,0.95);
+    border-color: #444;
+    color: #f3f3f3 !important;
+  }
+  .placeLinksList {
+    border-color: #444;
+    background: rgba(30,30,30,0.95);
+  }
+  .placeList {
+    border-color: #444;   
+    background: rgba(30,30,30,0.95); 
+  }
+
 }

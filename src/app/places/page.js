@@ -1,7 +1,13 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faPen } from "@fortawesome/free-solid-svg-icons";
+import {
+  faTrash,
+  faPen,
+  faGlobe,
+  faNewspaper,
+  faPhotoFilm,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   fetchPlaces,
   addPlace,
@@ -9,7 +15,18 @@ import {
   deletePlace,
   fetchPlaceById,
 } from "../../utils/placesUtils";
+import {
+  fetchPlaceLinks,
+  addPlaceLink,
+  deletePlaceLink,
+} from "../../utils/placeLinksUtils";
 import styles from "./page.module.css";
+
+const LINK_TYPE_OPTIONS = [
+  { value: "Media", label: "Media", icon: faPhotoFilm },
+  { value: "News", label: "News", icon: faNewspaper },
+  { value: "View", label: "View", icon: faGlobe },
+];
 
 export default function PlacesPage() {
   const [places, setPlaces] = useState([]);
@@ -21,6 +38,14 @@ export default function PlacesPage() {
   const [editingName, setEditingName] = useState("");
   const [editingFlagUrl, setEditingFlagUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [placeLinks, setPlaceLinks] = useState([]);
+  const [newLinkTitle, setNewLinkTitle] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkType, setNewLinkType] = useState("");
+  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [editLinkTitle, setEditLinkTitle] = useState("");
+  const [editLinkUrl, setEditLinkUrl] = useState("");
+  const [editLinkType, setEditLinkType] = useState("");
 
   const parentId = parentIdStack[parentIdStack.length - 1];
 
@@ -120,11 +145,57 @@ export default function PlacesPage() {
     setBreadcrumb(breadcrumb.slice(0, idx + 1));
   }
 
+  useEffect(() => {
+    async function loadLinks() {
+      if (parentId) {
+        const links = await fetchPlaceLinks(parentId);
+        setPlaceLinks(links);
+      } else {
+        setPlaceLinks([]);
+      }
+    }
+    loadLinks();
+  }, [parentId]);
+
+  async function handleAddLink(e) {
+    e.preventDefault();
+    if (!newLinkTitle.trim() || !newLinkUrl.trim() || !newLinkType.trim())
+      return;
+    await addPlaceLink(parentId, newLinkTitle, newLinkUrl, newLinkType);
+    setNewLinkTitle("");
+    setNewLinkUrl("");
+    setNewLinkType("");
+    const links = await fetchPlaceLinks(parentId);
+    setPlaceLinks(links);
+  }
+
+  async function handleDeleteLink(linkId) {
+    await deletePlaceLink(linkId);
+    const links = await fetchPlaceLinks(parentId);
+    setPlaceLinks(links);
+  }
+
+  async function handleEditLink(link) {
+    setEditingLinkId(link.id);
+    setEditLinkTitle(link.title);
+    setEditLinkUrl(link.url);
+    setEditLinkType(link.type);
+  }
+
+  async function handleSaveEditLink(linkId) {
+    await addPlaceLink(parentId, editLinkTitle, editLinkUrl, editLinkType); // You should implement an updatePlaceLink util for real update
+    setEditingLinkId(null);
+    setEditLinkTitle("");
+    setEditLinkUrl("");
+    setEditLinkType("");
+    const links = await fetchPlaceLinks(parentId);
+    setPlaceLinks(links);
+  }
+
   return (
     <div className="page">
       <main className="main">
         <div className="title">Places</div>
-
         <div className={styles.placesContainer + " pageContainer"}>
           <nav className={styles.breadcrumbNav}>
             {breadcrumb.map((crumb, idx) => (
@@ -151,6 +222,159 @@ export default function PlacesPage() {
               </span>
             ))}
           </nav>
+          {/* Place Links Section */}
+          {parentId && (
+            <div style={{ margin: "16px 0" }}>
+              <h4>Links</h4>
+              <form
+                onSubmit={handleAddLink}
+                style={{ display: "flex", gap: 8, marginBottom: 8 }}
+              >
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={newLinkTitle}
+                  onChange={(e) => setNewLinkTitle(e.target.value)}
+                  style={{ minWidth: 80 }}
+                />
+                <input
+                  type="text"
+                  placeholder="URL"
+                  value={newLinkUrl}
+                  onChange={(e) => setNewLinkUrl(e.target.value)}
+                  style={{ minWidth: 120 }}
+                />
+                <select
+                  value={newLinkType}
+                  onChange={(e) => setNewLinkType(e.target.value)}
+                  style={{ minWidth: 60 }}
+                  required
+                >
+                  <option value="" disabled>
+                    Select type
+                  </option>
+                  {LINK_TYPE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit">Add</button>
+              </form>
+              {placeLinks.length > 0 && (
+                <ul className={styles.placeLinksList}>
+                  {placeLinks.map((link) => {
+                    const typeObj = LINK_TYPE_OPTIONS.find(
+                      (opt) => opt.value === link.type
+                    );
+                    const isEditing = editingLinkId === link.id;
+                    return (
+                      <li
+                        key={link.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "6px",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {typeObj && (
+                          <FontAwesomeIcon
+                            icon={typeObj.icon}
+                            style={{ color: "#888" }}
+                          />
+                        )}
+                        {isEditing ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editLinkTitle}
+                              onChange={(e) => setEditLinkTitle(e.target.value)}
+                              style={{ minWidth: 80 }}
+                            />
+                            <input
+                              type="text"
+                              value={editLinkUrl}
+                              onChange={(e) => setEditLinkUrl(e.target.value)}
+                              style={{ minWidth: 120 }}
+                            />
+                            <select
+                              value={editLinkType}
+                              onChange={(e) => setEditLinkType(e.target.value)}
+                              style={{ minWidth: 60 }}
+                            >
+                              {LINK_TYPE_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleSaveEditLink(link.id)}
+                              style={{
+                                color: "#0070f3",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingLinkId(null)}
+                              style={{
+                                color: "#888",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {link.title}
+                            </a>
+                            <button
+                              onClick={() => handleEditLink(link)}
+                              style={{
+                                color: "#0070f3",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                              title="Edit"
+                            >
+                              <FontAwesomeIcon icon={faPen} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLink(link.id)}
+                              style={{
+                                color: "red",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                              }}
+                              title="Delete"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
           <div
             className={styles.placeInputRow}
             style={{
@@ -181,7 +405,7 @@ export default function PlacesPage() {
           {loading ? (
             <div>Loading...</div>
           ) : (
-            <ul style={{ listStyle: "none", padding: 0 }}>
+            <ul className={styles.placeList}>
               {places.map((place) => (
                 <li
                   key={place.id}
@@ -189,8 +413,6 @@ export default function PlacesPage() {
                     display: "flex",
                     alignItems: "center",
                     marginBottom: 8,
-                    background: "#f7f7f7",
-                    borderRadius: 8,
                     padding: "8px 12px",
                   }}
                 >
