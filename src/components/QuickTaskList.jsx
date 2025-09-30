@@ -33,9 +33,16 @@ function SortableQTLItem({ id, title, onDelete, highlight }) {
     border: highlight ? "2px solid #f79533" : "none",
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <span>{title}</span>
-      <button onClick={() => onDelete(id)}>Delete</button>
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <span {...listeners}>{title}</span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(id);
+        }}
+      >
+        Delete
+      </button>
     </div>
   );
 }
@@ -100,6 +107,7 @@ const QuickTaskList = () => {
   }
 
   async function deleteTask(id) {
+    console.log(id);
     setLoading(true);
     await supabase.from("quicktasks").delete().eq("id", id);
     fetchTasks();
