@@ -1,0 +1,4 @@
+.galleryContainer {
+    /* Gentle aqua gradient background toward a deeper aqua */
+    background: linear-gradient(135deg, #7fffd4 0%, #008080 100%);
+}

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash,
@@ -48,6 +49,12 @@ export default function PlacesPage() {
   const [editLinkType, setEditLinkType] = useState("");
 
   const parentId = parentIdStack[parentIdStack.length - 1];
+
+  const loadingAuth = useAuthRedirect();
+
+  if (loadingAuth) {
+    return <div>Loading...</div>;
+  }
 
   useEffect(() => {
     loadPlaces();
