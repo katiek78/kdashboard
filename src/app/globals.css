@@ -63,13 +63,26 @@ h1 {
   font-size: 1.5rem;
 }
 
+.page {
+  min-height: 100vh;
+  width: 100%;
+  background: transparent; /* or a color/gradient */
+  padding: 10px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .title {
-  font-size: 2rem;
+  font-size: 3rem;
   margin: 0 auto;
   text-align: center;
   margin-bottom: 1rem;
+  width: 100%;
 }
-
 nav {
   display: flex;
   align-items: center;
@@ -170,7 +183,7 @@ width: 90%;
 max-width: 1300px;
 }
 
-@media only screen and (max-width:800px) {  
+@media only screen and (max-width:800px) {
   .content {
     width: 100%;
     padding: 0;
@@ -198,7 +211,7 @@ max-width: 1300px;
 .one-quarter,
 .one-sixth,
 .half {
-  width:100%;   
+  width:100%;
 }
 
 @media only screen and (min-width:800px) {
@@ -206,23 +219,23 @@ max-width: 1300px;
     width:100%;
   }
   .half {
-    width:calc(100%/2);    
+    width:calc(100%/2);
   }
   .one-third {
-    width:calc(100%/3);    
+    width:calc(100%/3);
   }
   .one-quarter {
-    width:calc(100%/4);    
+    width:calc(100%/4);
   }
    .one-sixth {
-    width:calc(100%/4);    
+    width:calc(100%/4);
   }
   .two-thirds {
-    width:calc(100%/3*2);    
+    width:calc(100%/3*2);
   }
-  
+
      .five-sixths {
-    width:calc(100%/3*2);    
+    width:calc(100%/3*2);
   }
 }
 
@@ -239,17 +252,17 @@ max-width: 1300px;
 	font-size: 1.5rem;
 }
 
-.card {	
+.card {
 	flex-grow:1;
 	padding:10px;
 	box-shadow: 2px 2px #777;
 	  border:solid 2px #555;
-   border-radius:10px; 
+   border-radius:10px;
    margin: 3px;
    transition: 0.5s all;
    --shadow: transparent;
    position: relative;
-   font-size: 1.5em;  
+   font-size: 1.5em;
 
   /* transition: 0.5s all;
   --shadow: transparent;

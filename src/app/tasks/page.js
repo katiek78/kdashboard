@@ -1,5 +1,6 @@
 "use client";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import QuickTaskList from "@/components/QuickTaskList";
 import styles from "./task.module.css";
 
 export default function TasksPage() {
@@ -10,13 +11,10 @@ export default function TasksPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <h1 className={styles.title}>Tasks</h1>
-        <div className={styles.taskContainer}>
-          {/* Task list component would go here */}
-          Something
-        </div>
+    <div className="page">
+      <main className="main">
+        <div className="title">Tasks</div>
+        <QuickTaskList />
       </main>
     </div>
   );
