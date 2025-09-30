@@ -1,7 +1,6 @@
 "use client";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import QuickTaskList from "@/components/QuickTaskList";
-import styles from "./task.module.css";
 
 export default function TasksPage() {
   const loading = useAuthRedirect();

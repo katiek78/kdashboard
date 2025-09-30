@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import supabase from "../utils/supabaseClient";
+import { useRouter } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrash, faPlay } from "@fortawesome/free-solid-svg-icons";
 import styles from "./QuickTaskList.module.css";
 import {
   DndContext,
@@ -17,7 +20,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-function SortableQTLItem({ id, title, onDelete, highlight }) {
+function SortableQTLItem({ id, title, onDelete, onPlay, highlight }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
   const style = {
@@ -35,19 +38,42 @@ function SortableQTLItem({ id, title, onDelete, highlight }) {
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <span {...listeners}>{title}</span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(id);
-        }}
-      >
-        Delete
-      </button>
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button
+          title="Play"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPlay(id);
+          }}
+          style={{ background: "none", border: "none", cursor: "pointer" }}
+        >
+          <FontAwesomeIcon icon={faPlay} size="lg" style={{ color: "black" }} />
+        </button>
+        <button
+          title="Delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(id);
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "black",
+          }}
+        >
+          <FontAwesomeIcon icon={faTrash} size="lg" />
+        </button>
+      </div>
     </div>
   );
 }
 
 const QuickTaskList = () => {
+  const router = useRouter();
+  function playTask(id) {
+    router.push(`/focus/${id}`);
+  }
   const [tasks, setTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(false);
@@ -151,6 +177,7 @@ const QuickTaskList = () => {
                   id={task.id}
                   title={task.title}
                   onDelete={deleteTask}
+                  onPlay={playTask}
                   highlight={task.id === randomTaskId}
                 />
               ))}
