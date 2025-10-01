@@ -1,8 +1,74 @@
+.galleryLocationName {
+    font-weight: bold;
+    font-size: 64px;
+    text-align: center;
+    flex: 1 1 100%;
+    margin-bottom: 8px;
+}
+@media (max-width: 600px) {
+    .galleryLocationName {
+        font-size: 40px;
+        margin-bottom: 12px;
+        order: -1;
+        width: 100%;
+    }
+    .galleryHeaderRow {
+        flex-direction: column;
+        align-items: center !important;
+        gap: 0 !important;
+        padding: 0 4px !important;
+    }
+}
+/* Responsive white section for number detail */
+
+.responsiveWhiteSection {
+    max-width: 900px;
+    min-width: 400px;
+    width: 100%;
+    margin: 40px auto;
+    background: rgba(255,255,255,0.85);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    transition: max-width 0.2s, padding 0.2s;
+}
+
+@media (max-width: 1000px) {
+    .responsiveWhiteSection {
+        max-width: 98vw;
+        min-width: 0;
+        padding: 20px;
+    }
+}
+@media (max-width: 600px) {
+    .responsiveWhiteSection {
+        max-width: 100vw;
+        min-width: 0;
+        padding: 8px;
+    }
+}
+
+/* Responsive Street View container */
+.streetViewContainer {
+    margin-top: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+}
 .galleryContainer {
     /* Gentle aqua gradient background toward a deeper aqua */
     background: linear-gradient(135deg, #7fffd4 0%, #008080 100%);
     min-height: 100vh;
     padding: 32px 0;
+    max-width: 100vw;
+    box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+    .galleryContainer {
+        padding: 8px 0;
+        max-width: 95vw;
+        width: 95vw;
+    }
 }
 
 .tilesGrid {

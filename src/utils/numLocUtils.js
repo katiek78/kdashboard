@@ -6,25 +6,28 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function fetchNumLoc(numString) {
-  // Fetch main numberstring row
+  // Fetch numberstrings row
   const { data: numData, error: numError } = await supabase
     .from("numberstrings")
     .select("*")
     .eq("num_string", numString)
     .maybeSingle();
-  if (numError) return null;
+  if (numError || !numData) return null;
 
   // Fetch comp_image from comp_images table
+  let compImage = "";
   const { data: compData, error: compError } = await supabase
     .from("comp_images")
     .select("comp_image")
     .eq("num_string", numString)
     .maybeSingle();
-  if (compError) return null;
+  if (!compError && compData && compData.comp_image) {
+    compImage = compData.comp_image;
+  }
 
   return {
     ...numData,
-    comp_image: compData ? compData.comp_image : "",
+    comp_image: compImage,
   };
 }
 
@@ -33,33 +36,15 @@ export async function upsertNumLoc({
   location,
   person,
   comp_image,
+  location_view,
 }) {
-  // Upsert numberstrings row (without comp_image)
-  const { data: numData, error: numError } = await supabase
+  const { data, error } = await supabase
     .from("numberstrings")
-    .upsert([{ num_string, location, person }], {
+    .upsert([{ num_string, location, person, location_view }], {
       onConflict: ["num_string"],
     })
     .select()
     .maybeSingle();
-  if (numError) throw numError;
-
-  // Upsert comp_image in comp_images table
-  let compData = null;
-  if (typeof comp_image !== "undefined") {
-    const { data, error } = await supabase
-      .from("comp_images")
-      .upsert([{ num_string, comp_image }], {
-        onConflict: ["num_string"],
-      })
-      .select()
-      .maybeSingle();
-    if (error) throw error;
-    compData = data;
-  }
-
-  return {
-    ...numData,
-    comp_image: compData ? compData.comp_image : comp_image,
-  };
+  if (error) throw error;
+  return data;
 }

@@ -109,6 +109,7 @@ const NumberLocationGallery = () => {
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
       <div
+        className={styles.galleryHeaderRow}
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -134,7 +135,7 @@ const NumberLocationGallery = () => {
         >
           Back
         </button>
-        <div style={{ fontWeight: "bold", fontSize: 20 }}>{groupLocation}</div>
+        <div className={styles.galleryLocationName}>{groupLocation}</div>
         <button
           onClick={handleRandomNumber}
           style={{

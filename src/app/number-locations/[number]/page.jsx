@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import styles from "../../../components/NumberLocationGallery.module.css";
+import styles from "./NumberPage.module.css";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { fetchNumLoc, upsertNumLoc } from "../../../utils/numLocUtils";
@@ -14,7 +14,6 @@ const NumberLocationPage = () => {
 
   // Compute group start for back navigation (e.g., 175 -> 170)
   const numInt = parseInt(number, 10);
-  const groupStart = Math.floor(numInt / 10) * 10;
   const groupLevel = number.length;
 
   const handleBackToGroup = () => {
@@ -35,6 +34,7 @@ const NumberLocationPage = () => {
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [message, setMessage] = useState("");
+  const [locationView, setLocationView] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -47,10 +47,12 @@ const NumberLocationPage = () => {
           setLocation(data.location || "");
           setPerson(data.person || "");
           setCompImage(data.comp_image || "");
+          setLocationView(data.location_view || "");
         } else if (!ignore) {
           setLocation("");
           setPerson("");
           setCompImage("");
+          setLocationView("");
         }
       } catch {
         if (!ignore) setMessage("Error loading data");
@@ -76,6 +78,7 @@ const NumberLocationPage = () => {
         location,
         person,
         comp_image: compImage,
+        location_view: locationView,
       });
       setMessage("Saved!");
       setEditMode(false);
@@ -100,6 +103,7 @@ const NumberLocationPage = () => {
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
       <div
+        className={styles.numberHeaderContainer}
         style={{
           display: "flex",
           alignItems: "center",
@@ -124,16 +128,7 @@ const NumberLocationPage = () => {
         >
           Back to level
         </button>
-        <h1
-          style={{
-            fontSize: 64,
-            color: "#004d4d",
-            textAlign: "center",
-            margin: 0,
-          }}
-        >
-          {number}
-        </h1>
+        <h1 className={styles.numberHeader}>{number}</h1>
         <button
           onClick={handleRandomNumber}
           style={{
@@ -149,57 +144,202 @@ const NumberLocationPage = () => {
           Random Number
         </button>
       </div>
-      <div
-        style={{
-          maxWidth: 480,
-          margin: "40px auto",
-          background: "rgba(255,255,255,0.85)",
-          borderRadius: 16,
-          padding: 32,
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div className={styles.responsiveWhiteSection}>
+        {/* Location name at the top */}
+        <div
+          style={{
+            fontSize: 36,
+            fontWeight: 600,
+            color: location ? "#004d4d" : "#aaa",
+            textAlign: "center",
+            marginBottom: 24,
+            minHeight: 44,
+          }}
+        >
+          {editMode ? (
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              style={{
+                width: "100%",
+                fontSize: 32,
+                fontWeight: 600,
+                color: "#004d4d",
+                textAlign: "center",
+                border: "1px solid #ccc",
+                borderRadius: 8,
+                padding: "8px 12px",
+                margin: 0,
+                background: "#fff",
+              }}
+              placeholder="(no location name)"
+              autoFocus
+            />
+          ) : (
+            location || <span>(no location name)</span>
+          )}
+        </div>
         {loading ? (
           <div>Loading...</div>
         ) : (
           <>
             <div style={{ marginBottom: 32 }}>
-              <label
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 28,
-                  display: "block",
-                  marginBottom: 8,
-                }}
-              >
-                Location:
-              </label>
               {editMode ? (
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  style={{
-                    width: "100%",
-                    fontSize: 40,
-                    marginTop: 4,
-                    padding: "12px 16px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                  }}
-                  autoFocus
-                />
+                <>
+                  <label
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: 28,
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Street View (Paste coordinates, full URL, or embed URL):
+                  </label>
+                  <input
+                    type="text"
+                    value={locationView}
+                    onChange={(e) => setLocationView(e.target.value)}
+                    style={{
+                      width: "100%",
+                      fontSize: 24,
+                      marginTop: 4,
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #ccc",
+                    }}
+                    placeholder="e.g. 51.5074,-0.1278 or https://www.google.com/maps/embed?... or https://www.google.com/maps/@?..."
+                  />
+                </>
               ) : (
-                <div
-                  style={{
-                    fontSize: 48,
-                    minHeight: 56,
-                    fontWeight: 500,
-                    color: location ? "#004d4d" : "#aaa",
-                  }}
-                >
-                  {location || <span>(none)</span>}
-                </div>
+                <>
+                  <div
+                    style={{
+                      fontSize: 28,
+                      minHeight: 36,
+                      color: locationView ? "#004d4d" : "#aaa",
+                    }}
+                  >
+                    {!locationView && <span>(none)</span>}
+                  </div>
+                  {/* Show Street View if possible */}
+                  {locationView &&
+                    (() => {
+                      const val = locationView.trim();
+                      // 1. Embed URL
+                      if (
+                        val.startsWith("https://www.google.com/maps/embed?")
+                      ) {
+                        return (
+                          <div
+                            style={{
+                              marginTop: 16,
+                              borderRadius: 12,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <iframe
+                              src={val}
+                              width="100%"
+                              height="320"
+                              style={{ border: 0, borderRadius: 12 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              title="Street View"
+                            />
+                          </div>
+                        );
+                      }
+                      // 2. Full Street View URL (e.g. https://www.google.com/maps/@.../data=!3m1!1e3)
+                      if (val.startsWith("https://www.google.com/maps/@")) {
+                        // Try to extract lat,lng from the URL
+                        const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                        if (match) {
+                          const coords = `${match[1]},${match[2]}`;
+                          return (
+                            <div
+                              style={{
+                                marginTop: 16,
+                                borderRadius: 12,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <iframe
+                                src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                                  coords
+                                )}&cbp=11,0,0,0,0&output=svembed`}
+                                width="100%"
+                                height="320"
+                                style={{ border: 0, borderRadius: 12 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title="Street View"
+                              />
+                            </div>
+                          );
+                        }
+                      }
+                      // 2b. /place/.../@lat,lng,... URLs
+                      const placeMatch = val.match(
+                        /\/@(\-?\d+\.\d+),(\-?\d+\.\d+)/
+                      );
+                      if (placeMatch) {
+                        const coords = `${placeMatch[1]},${placeMatch[2]}`;
+                        return (
+                          <div
+                            style={{
+                              marginTop: 16,
+                              borderRadius: 12,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <iframe
+                              src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                                coords
+                              )}&cbp=11,0,0,0,0&output=svembed`}
+                              width="100%"
+                              height="320"
+                              style={{ border: 0, borderRadius: 12 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              title="Street View"
+                            />
+                          </div>
+                        );
+                      }
+                      // 3. Coordinates
+                      if (/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(val)) {
+                        return (
+                          <div
+                            style={{
+                              marginTop: 16,
+                              borderRadius: 12,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <iframe
+                              src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                                val
+                              )}&cbp=11,0,0,0,0&output=svembed`}
+                              width="100%"
+                              height="320"
+                              style={{ border: 0, borderRadius: 12 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              title="Street View"
+                            />
+                          </div>
+                        );
+                      }
+                      // Fallback: not recognized
+                      return null;
+                    })()}
+                </>
               )}
             </div>
             <div style={{ marginBottom: 32 }}>
