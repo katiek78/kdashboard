@@ -141,6 +141,41 @@ const NumberLocationPage = () => {
     router.push(`/number-locations/${numString}`);
   };
 
+  // Navigation handlers for Previous, Next, Up, Down
+  const handlePrev = () => {
+    const digits = number.length;
+    let n = parseInt(number, 10) - 1;
+    if (n < 0) {
+      n = 0;
+    }
+    const numString = n.toString().padStart(digits, "0");
+    router.push(`/number-locations/${numString}`);
+  };
+
+  const handleNext = () => {
+    const digits = number.length;
+    let n = parseInt(number, 10) + 1;
+    const max = Math.pow(10, digits) - 1;
+    if (n > max) {
+      n = max;
+    }
+    const numString = n.toString().padStart(digits, "0");
+    router.push(`/number-locations/${numString}`);
+  };
+
+  const handleUp = () => {
+    // Remove last digit (unless only 1 digit)
+    if (number.length === 1) return;
+    const upNum = number.slice(0, -1);
+    router.push(`/number-locations/${upNum}`);
+  };
+
+  const handleDown = () => {
+    // Add a zero at the end
+    const downNum = number + "0";
+    router.push(`/number-locations/${downNum}`);
+  };
+
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
       <div
@@ -169,7 +204,81 @@ const NumberLocationPage = () => {
         >
           Back to level
         </button>
-        <h1 className={styles.numberHeader}>{number}</h1>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            flex: 1,
+          }}
+        >
+          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+            <button
+              onClick={handleUp}
+              style={{
+                fontSize: 18,
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#eee",
+                color: "#333",
+                cursor: number.length === 1 ? "not-allowed" : "pointer",
+              }}
+              disabled={number.length === 1}
+            >
+              ↑
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              onClick={handlePrev}
+              style={{
+                fontSize: 18,
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#eee",
+                color: "#333",
+                cursor: "pointer",
+              }}
+            >
+              ←
+            </button>
+            <h1 className={styles.numberHeader} style={{ margin: 0 }}>
+              {number}
+            </h1>
+            <button
+              onClick={handleNext}
+              style={{
+                fontSize: 18,
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#eee",
+                color: "#333",
+                cursor: "pointer",
+              }}
+            >
+              →
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+            <button
+              onClick={handleDown}
+              style={{
+                fontSize: 18,
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "none",
+                background: "#eee",
+                color: "#333",
+                cursor: "pointer",
+              }}
+            >
+              ↓
+            </button>
+          </div>
+        </div>
         <button
           onClick={handleRandomNumber}
           style={{
