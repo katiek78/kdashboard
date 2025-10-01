@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import supabase from "../utils/supabaseClient";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faPlay } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faPlay, faBan } from "@fortawesome/free-solid-svg-icons";
 import styles from "./QuickTaskList.module.css";
 import {
   DndContext,
@@ -20,7 +20,15 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-function SortableQTLItem({ id, title, onDelete, onPlay, highlight }) {
+function SortableQTLItem({
+  id,
+  title,
+  blocked,
+  onDelete,
+  onPlay,
+  onToggleBlocked,
+  highlight,
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
   const style = {
@@ -38,7 +46,21 @@ function SortableQTLItem({ id, title, onDelete, onPlay, highlight }) {
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <span {...listeners}>{title}</span>
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <button
+          title={blocked ? "Unblock task" : "Block task"}
+          onClick={() => onToggleBlocked(id, !blocked)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: blocked ? "#c00" : "#888",
+            fontSize: 20,
+            marginRight: 4,
+          }}
+        >
+          <FontAwesomeIcon icon={faBan} />
+        </button>
         <button
           title="Play"
           onClick={(e) => {
@@ -75,6 +97,7 @@ const QuickTaskList = () => {
     router.push(`/focus/${id}`);
   }
   const [tasks, setTasks] = useState([]);
+  const [taskCount, setTaskCount] = useState(0);
   const [newTitle, setNewTitle] = useState("");
   const [loading, setLoading] = useState(false);
   const [randomTaskId, setRandomTaskId] = useState(null);
@@ -109,11 +132,14 @@ const QuickTaskList = () => {
 
   async function fetchTasks() {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("quicktasks")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("order", { ascending: true });
-    if (!error) setTasks(data);
+    if (!error) {
+      setTasks(data);
+      setTaskCount(count ?? data.length);
+    }
     setLoading(false);
   }
 
@@ -140,9 +166,16 @@ const QuickTaskList = () => {
   }
 
   function pickRandomTask() {
-    if (tasks.length === 0) return;
-    const randomIdx = Math.floor(Math.random() * tasks.length);
-    setRandomTaskId(tasks[randomIdx].id);
+    const unblocked = tasks.filter((t) => !t.blocked);
+    if (unblocked.length === 0) return;
+    const randomIdx = Math.floor(Math.random() * unblocked.length);
+    setRandomTaskId(unblocked[randomIdx].id);
+  }
+
+  async function toggleBlocked(id, blocked) {
+    setLoading(true);
+    await supabase.from("quicktasks").update({ blocked }).eq("id", id);
+    fetchTasks();
   }
 
   return (
@@ -155,6 +188,10 @@ const QuickTaskList = () => {
           onChange={(e) => setNewTitle(e.target.value)}
         />
         <button onClick={addTask}>Add Task</button>
+      </div>
+
+      <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
+        Total tasks: {taskCount}
       </div>
       <button onClick={pickRandomTask}>Pick Random Task</button>
 
@@ -176,8 +213,10 @@ const QuickTaskList = () => {
                   key={task.id}
                   id={task.id}
                   title={task.title}
+                  blocked={!!task.blocked}
                   onDelete={deleteTask}
                   onPlay={playTask}
+                  onToggleBlocked={toggleBlocked}
                   highlight={task.id === randomTaskId}
                 />
               ))}
