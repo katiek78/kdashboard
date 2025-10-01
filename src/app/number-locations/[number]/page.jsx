@@ -100,6 +100,13 @@ const NumberLocationPage = () => {
     if (placeMatch) {
       return `${placeMatch[1]},${placeMatch[2]}`;
     }
+    // If coordinates in parentheses, e.g. (19.4432926, -99.1572926)
+    const parenCoords = val.match(
+      /^\(?\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\)?$/
+    );
+    if (parenCoords) {
+      return `${parenCoords[1]},${parenCoords[3]}`;
+    }
     // If already coordinates
     if (/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(val)) {
       return val;
@@ -468,8 +475,12 @@ const NumberLocationPage = () => {
                           </div>
                         );
                       }
-                      // 3. Coordinates
-                      if (/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(val)) {
+                      // 3. Coordinates (with or without parentheses and spaces)
+                      const coordMatch = val.match(
+                        /^\(?\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\)?$/
+                      );
+                      if (coordMatch) {
+                        const coords = `${coordMatch[1]},${coordMatch[3]}`;
                         return (
                           <div
                             style={{
@@ -480,7 +491,7 @@ const NumberLocationPage = () => {
                           >
                             <iframe
                               src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
-                                val
+                                coords
                               )}&cbp=11,0,0,0,0&output=svembed`}
                               width="100%"
                               height="320"
