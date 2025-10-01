@@ -114,6 +114,9 @@ const NumberLocationGallery = () => {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 24,
+          gap: 8,
+          flexWrap: "wrap",
+          padding: "0 8px",
         }}
       >
         <button

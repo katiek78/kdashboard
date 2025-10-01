@@ -105,6 +105,9 @@ const NumberLocationPage = () => {
           alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 24,
+          gap: 8,
+          flexWrap: "wrap",
+          padding: "0 8px",
         }}
       >
         <button
