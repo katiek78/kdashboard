@@ -69,19 +69,60 @@ const NumberLocationPage = () => {
     return <div>Loading...</div>;
   }
 
+  // (No normalization on entering edit mode; only normalize on save)
+
+  // Normalize the Street View input to store only the minimal form
+  const normalizeLocationView = (input) => {
+    let val = input.trim();
+    // If iframe HTML, extract src and return ONLY the src (do not keep the HTML)
+    if (val.startsWith("<iframe")) {
+      const srcMatch = val.match(/src=["']([^"']+)["']/);
+      if (srcMatch && srcMatch[1]) {
+        val = srcMatch[1];
+      } else {
+        // If no src found, treat as empty
+        return "";
+      }
+    }
+    // If embed URL, keep as is
+    if (val.startsWith("https://www.google.com/maps/embed?")) {
+      return val;
+    }
+    // If full Street View URL, extract lat,lng
+    if (val.startsWith("https://www.google.com/maps/@")) {
+      const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (match) {
+        return `${match[1]},${match[2]}`;
+      }
+    }
+    // /place/.../@lat,lng,... URLs
+    const placeMatch = val.match(/\/@(\-?\d+\.\d+),(\-?\d+\.\d+)/);
+    if (placeMatch) {
+      return `${placeMatch[1]},${placeMatch[2]}`;
+    }
+    // If already coordinates
+    if (/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(val)) {
+      return val;
+    }
+    // Fallback: store as is, but if it was iframe HTML, this will now be just the src or empty
+    return val;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
     try {
+      const normalizedLocationView = normalizeLocationView(locationView);
       await upsertNumLoc({
         num_string: number.toString(),
         location,
         person,
         comp_image: compImage,
-        location_view: locationView,
+        location_view: normalizedLocationView,
       });
       setMessage("Saved!");
       setEditMode(false);
+      setLocationView(normalizedLocationView); // update input to normalized after save
     } catch {
       setMessage("Error saving data");
     }
@@ -226,7 +267,14 @@ const NumberLocationPage = () => {
                   {/* Show Street View if possible */}
                   {locationView &&
                     (() => {
-                      const val = locationView.trim();
+                      let val = locationView.trim();
+                      // If user pasted an iframe HTML, extract the src attribute
+                      if (val.startsWith("<iframe")) {
+                        const srcMatch = val.match(/src=["']([^"']+)["']/);
+                        if (srcMatch && srcMatch[1]) {
+                          val = srcMatch[1];
+                        }
+                      }
                       // 1. Embed URL
                       if (
                         val.startsWith("https://www.google.com/maps/embed?")
