@@ -2,11 +2,14 @@
 import React, { useEffect, useState } from "react";
 import styles from "../../../components/NumberLocationGallery.module.css";
 import { useParams, useRouter } from "next/navigation";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { fetchNumLoc, upsertNumLoc } from "../../../utils/numLocUtils";
 
 const NumberLocationPage = () => {
   const params = useParams();
   const router = useRouter();
+  const loadingAuth = useAuthRedirect();
+
   const { number } = params;
 
   // Compute group start for back navigation (e.g., 175 -> 170)
@@ -59,6 +62,10 @@ const NumberLocationPage = () => {
       ignore = true;
     };
   }, [number]);
+
+  if (loadingAuth) {
+    return <div>Loading...</div>;
+  }
 
   const handleSave = async () => {
     setSaving(true);

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import styles from "../FocusPage.module.css";
 import { fetchTaskById } from "../../../utils/taskUtils";
 
@@ -20,6 +21,7 @@ export default function FocusPage() {
   const [taskName, setTaskName] = useState("");
   const [loading, setLoading] = useState(true);
   const [bgUrl, setBgUrl] = useState(backgrounds[0]);
+  const loadingAuth = useAuthRedirect();
 
   useEffect(() => {
     setBgUrl(backgrounds[Math.floor(Math.random() * backgrounds.length)]);
@@ -38,6 +40,10 @@ export default function FocusPage() {
     }
     getTask();
   }, [taskId]);
+
+  if (loadingAuth) {
+    return <div>Loading...</div>;
+  }
 
   const goToQuickTaskList = () => {
     window.location.href = "/tasks";
