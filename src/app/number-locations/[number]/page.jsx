@@ -35,6 +35,7 @@ const NumberLocationPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [message, setMessage] = useState("");
   const [locationView, setLocationView] = useState("");
+  const [compImagePic, setCompImagePic] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -48,11 +49,13 @@ const NumberLocationPage = () => {
           setPerson(data.person || "");
           setCompImage(data.comp_image || "");
           setLocationView(data.location_view || "");
+          setCompImagePic(data.comp_image_pic || "");
         } else if (!ignore) {
           setLocation("");
           setPerson("");
           setCompImage("");
           setLocationView("");
+          setCompImagePic("");
         }
       } catch {
         if (!ignore) setMessage("Error loading data");
@@ -126,6 +129,7 @@ const NumberLocationPage = () => {
         person,
         comp_image: compImage,
         location_view: normalizedLocationView,
+        comp_image_pic: compImagePic,
       });
       setMessage("Saved!");
       setEditMode(false);
@@ -380,7 +384,7 @@ const NumberLocationPage = () => {
                   >
                     {!locationView && <span>(none)</span>}
                   </div>
-                  {/* Show Street View if possible */}
+                  {/* Show Street View with comp_image_pic overlay if possible */}
                   {locationView &&
                     (() => {
                       let val = locationView.trim();
@@ -391,58 +395,56 @@ const NumberLocationPage = () => {
                           val = srcMatch[1];
                         }
                       }
+                      // Helper to render the iframe with overlay if compImagePic exists
+                      const renderIframeWithOverlay = (iframeSrc) => (
+                        <div
+                          style={{
+                            marginTop: 16,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            position: "relative",
+                            width: "100%",
+                          }}
+                        >
+                          <iframe
+                            src={iframeSrc}
+                            width="100%"
+                            height="320"
+                            style={{
+                              border: 0,
+                              borderRadius: 12,
+                              display: "block",
+                              width: "100%",
+                            }}
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            title="Street View"
+                          />
+                          {compImagePic && (
+                            <img
+                              src={compImagePic}
+                              alt="Comp Image Overlay"
+                              className={styles.compImageOverlay}
+                            />
+                          )}
+                        </div>
+                      );
                       // 1. Embed URL
                       if (
                         val.startsWith("https://www.google.com/maps/embed?")
                       ) {
-                        return (
-                          <div
-                            style={{
-                              marginTop: 16,
-                              borderRadius: 12,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <iframe
-                              src={val}
-                              width="100%"
-                              height="320"
-                              style={{ border: 0, borderRadius: 12 }}
-                              allowFullScreen
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                              title="Street View"
-                            />
-                          </div>
-                        );
+                        return renderIframeWithOverlay(val);
                       }
                       // 2. Full Street View URL (e.g. https://www.google.com/maps/@.../data=!3m1!1e3)
                       if (val.startsWith("https://www.google.com/maps/@")) {
-                        // Try to extract lat,lng from the URL
                         const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
                         if (match) {
                           const coords = `${match[1]},${match[2]}`;
-                          return (
-                            <div
-                              style={{
-                                marginTop: 16,
-                                borderRadius: 12,
-                                overflow: "hidden",
-                              }}
-                            >
-                              <iframe
-                                src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
-                                  coords
-                                )}&cbp=11,0,0,0,0&output=svembed`}
-                                width="100%"
-                                height="320"
-                                style={{ border: 0, borderRadius: 12 }}
-                                allowFullScreen
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                title="Street View"
-                              />
-                            </div>
+                          return renderIframeWithOverlay(
+                            `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                              coords
+                            )}&cbp=11,0,0,0,0&output=svembed`
                           );
                         }
                       }
@@ -452,27 +454,10 @@ const NumberLocationPage = () => {
                       );
                       if (placeMatch) {
                         const coords = `${placeMatch[1]},${placeMatch[2]}`;
-                        return (
-                          <div
-                            style={{
-                              marginTop: 16,
-                              borderRadius: 12,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <iframe
-                              src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
-                                coords
-                              )}&cbp=11,0,0,0,0&output=svembed`}
-                              width="100%"
-                              height="320"
-                              style={{ border: 0, borderRadius: 12 }}
-                              allowFullScreen
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                              title="Street View"
-                            />
-                          </div>
+                        return renderIframeWithOverlay(
+                          `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                            coords
+                          )}&cbp=11,0,0,0,0&output=svembed`
                         );
                       }
                       // 3. Coordinates (with or without parentheses and spaces)
@@ -481,27 +466,10 @@ const NumberLocationPage = () => {
                       );
                       if (coordMatch) {
                         const coords = `${coordMatch[1]},${coordMatch[3]}`;
-                        return (
-                          <div
-                            style={{
-                              marginTop: 16,
-                              borderRadius: 12,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <iframe
-                              src={`https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
-                                coords
-                              )}&cbp=11,0,0,0,0&output=svembed`}
-                              width="100%"
-                              height="320"
-                              style={{ border: 0, borderRadius: 12 }}
-                              allowFullScreen
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                              title="Street View"
-                            />
-                          </div>
+                        return renderIframeWithOverlay(
+                          `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+                            coords
+                          )}&cbp=11,0,0,0,0&output=svembed`
                         );
                       }
                       // Fallback: not recognized
@@ -586,6 +554,34 @@ const NumberLocationPage = () => {
                 </div>
               )}
             </div>
+            {editMode && (
+              <div style={{ marginBottom: 32 }}>
+                <label
+                  style={{
+                    fontWeight: "bold",
+                    fontSize: 28,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
+                  Comp Image Pic (URL):
+                </label>
+                <input
+                  type="text"
+                  value={compImagePic}
+                  onChange={(e) => setCompImagePic(e.target.value)}
+                  style={{
+                    width: "100%",
+                    fontSize: 24,
+                    marginTop: 4,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #ccc",
+                  }}
+                  placeholder="https://... (image URL)"
+                />
+              </div>
+            )}
             <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
               {editMode ? (
                 <>
