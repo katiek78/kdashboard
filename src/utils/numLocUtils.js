@@ -14,20 +14,23 @@ export async function fetchNumLoc(numString) {
     .maybeSingle();
   if (numError || !numData) return null;
 
-  // Fetch comp_image from comp_images table
+  // Fetch comp_image and comp_image_pic from comp_images table
   let compImage = "";
+  let compImagePic = "";
   const { data: compData, error: compError } = await supabase
     .from("comp_images")
-    .select("comp_image")
+    .select("comp_image, comp_image_pic")
     .eq("num_string", numString)
     .maybeSingle();
-  if (!compError && compData && compData.comp_image) {
-    compImage = compData.comp_image;
+  if (!compError && compData) {
+    if (compData.comp_image) compImage = compData.comp_image;
+    if (compData.comp_image_pic) compImagePic = compData.comp_image_pic;
   }
 
   return {
     ...numData,
     comp_image: compImage,
+    comp_image_pic: compImagePic,
   };
 }
 
@@ -36,8 +39,10 @@ export async function upsertNumLoc({
   location,
   person,
   comp_image,
+  comp_image_pic,
   location_view,
 }) {
+  // Upsert numberstrings row
   const { data, error } = await supabase
     .from("numberstrings")
     .upsert([{ num_string, location, person, location_view }], {
@@ -46,5 +51,14 @@ export async function upsertNumLoc({
     .select()
     .maybeSingle();
   if (error) throw error;
+
+  // Upsert comp_images row (comp_image and comp_image_pic)
+  const { error: compError } = await supabase
+    .from("comp_images")
+    .upsert([{ num_string, comp_image, comp_image_pic }], {
+      onConflict: ["num_string"],
+    });
+  if (compError) throw compError;
+
   return data;
 }
