@@ -166,7 +166,28 @@ export const specialVoicedConsonantArray = [
   "b",
 ];
 
-export const getBen4Phonetics = (text) => {
+export const getNumberPhonetics = (text) => {
+  if (text.length === 3) {
+    return getBen3Phonetics(text);
+  } else if (text.length === 4) {
+    return getBen4Phonetics(text);
+  } else if (text.length === 2) {
+    return majorValues[text.charAt(0)] + majorValues[text.charAt(1)];
+  } else if (text.length === 1) {
+    return majorValues[text.charAt(0)];
+  }
+  return "";
+};
+
+const getBen3Phonetics = (text) => {
+  return (
+    majorValues[text.charAt(0)] +
+    benVowels[text.charAt(1)] +
+    majorValues[text.charAt(2)]
+  );
+};
+
+const getBen4Phonetics = (text) => {
   const RULES = [
     //type 0 (STARTS WITH) = CL + V + C   tr ai n
     //type 1 (VOWEL) = C + CL + C   t ow n

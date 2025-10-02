@@ -5,7 +5,7 @@ import styles from "./NumberPage.module.css";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { fetchNumLoc, upsertNumLoc } from "../../../utils/numLocUtils";
-import { getBen4Phonetics } from "../../../utils/memTrainingUtils";
+import { getNumberPhonetics } from "../../../utils/memTrainingUtils";
 
 const NumberLocationPage = () => {
   const params = useParams();
@@ -45,13 +45,7 @@ const NumberLocationPage = () => {
 
     // Compute phonetics for 4-digit numbers
     let phonetics = "";
-    if (number.length === 4) {
-      try {
-        setPhonetics(getBen4Phonetics(number));
-      } catch (e) {
-        setPhonetics("");
-      }
-    }
+    setPhonetics(getNumberPhonetics(number));
 
     async function load() {
       setLoading(true);
