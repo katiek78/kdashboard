@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { fetchAllCategoryImages } from "../utils/categoryImagesUtils";
-import { fetchAllCompImages } from "../utils/compImagesUtils";
+import { createClient } from "@supabase/supabase-js";
 
 export default function FourDigitGrid({ refresh }) {
   const [categoryImages, setCategoryImages] = useState({});
@@ -8,21 +7,36 @@ export default function FourDigitGrid({ refresh }) {
   const [loading, setLoading] = useState(true);
   const [prefix, setPrefix] = useState("00"); // first two digits
 
+  // Supabase client (reuse env vars)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   useEffect(() => {
     async function fetchImages() {
       setLoading(true);
-      // Fetch all category and comp images at once (no in filter, no paging)
-      const [catImgs, compImgs] = await Promise.all([
-        fetchAllCategoryImages(),
-        fetchAllCompImages(),
-      ]);
+      // Only fetch the 100 for the current prefix
+      const rangeStart = prefix + "00";
+      const rangeEnd = prefix + "99";
+      // Fetch category_images
+      const { data: catImgs, error: catErr } = await supabase
+        .from("category_images")
+        .select("num_string,category_image")
+        .gte("num_string", rangeStart)
+        .lte("num_string", rangeEnd);
+      // Fetch comp_images
+      const { data: compImgs, error: compErr } = await supabase
+        .from("comp_images")
+        .select("num_string,comp_image")
+        .gte("num_string", rangeStart)
+        .lte("num_string", rangeEnd);
       // Map by num_string for fast lookup
       const catMap = {};
-      catImgs.forEach((img) => {
+      (catImgs || []).forEach((img) => {
         if (img?.num_string) catMap[img.num_string] = img;
       });
       const compMap = {};
-      compImgs.forEach((img) => {
+      (compImgs || []).forEach((img) => {
         if (img?.num_string) compMap[img.num_string] = img;
       });
       setCategoryImages(catMap);
@@ -30,7 +44,7 @@ export default function FourDigitGrid({ refresh }) {
       setLoading(false);
     }
     fetchImages();
-  }, [refresh]);
+  }, [refresh, prefix]);
 
   // Show only the 100 numbers for the selected prefix
   const numbers = Array.from(
