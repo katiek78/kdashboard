@@ -8,12 +8,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const TABLE = "geoguessr";
 
 export async function fetchTips({ tip_type, place_id } = {}) {
-  let query = supabase
-    .from(TABLE)
-    .select("*")
-    .order("created_at", { ascending: false });
+  let query = supabase.from(TABLE).select("*");
   if (tip_type) query = query.eq("tip_type", tip_type);
-  if (place_id) query = query.eq("place_id", place_id);
+  if (place_id === null) {
+    query = query.is("place_id", null);
+  } else if (place_id) {
+    query = query.eq("place_id", place_id);
+  }
   const { data, error } = await query;
   if (error) throw error;
   return data;

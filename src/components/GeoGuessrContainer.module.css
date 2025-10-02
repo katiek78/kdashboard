@@ -4,3 +4,29 @@
     /* Brighter greenish gradient background for readability */
     background: linear-gradient(135deg, #b2f7cc 0%, #7be495 60%, #329d6f 100%);
 }
+
+.tipType {
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: darkolivegreen;
+}
+
+.tipTitle {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.tipContentTextarea {
+    margin-left: 8px;
+    min-width: 400px;
+    min-height: 90px;
+    resize: vertical;
+}
+
+@media screen and (max-width: 600px) {
+    .tipContentTextarea {
+        min-width: 200px;
+    }
+    
+}
