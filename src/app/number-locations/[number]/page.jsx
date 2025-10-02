@@ -1,9 +1,11 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import styles from "./NumberPage.module.css";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { fetchNumLoc, upsertNumLoc } from "../../../utils/numLocUtils";
+import { getBen4Phonetics } from "../../../utils/memTrainingUtils";
 
 const NumberLocationPage = () => {
   const params = useParams();
@@ -36,9 +38,21 @@ const NumberLocationPage = () => {
   const [message, setMessage] = useState("");
   const [locationView, setLocationView] = useState("");
   const [compImagePic, setCompImagePic] = useState("");
+  const [phonetics, setPhonetics] = useState("");
 
   useEffect(() => {
     let ignore = false;
+
+    // Compute phonetics for 4-digit numbers
+    let phonetics = "";
+    if (number.length === 4) {
+      try {
+        setPhonetics(getBen4Phonetics(number));
+      } catch (e) {
+        setPhonetics("");
+      }
+    }
+
     async function load() {
       setLoading(true);
       setMessage("");
@@ -582,6 +596,28 @@ const NumberLocationPage = () => {
                 />
               </div>
             )}
+            <div style={{ marginTop: 24 }}>
+              <label
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 22,
+                  display: "block",
+                  marginBottom: 6,
+                }}
+              >
+                Phonetics:
+              </label>
+              <div
+                style={{
+                  fontSize: 22,
+                  minHeight: 28,
+                  color: phonetics ? "#004d4d" : "#aaa",
+                  fontStyle: phonetics ? "normal" : "italic",
+                }}
+              >
+                {phonetics || <span>(none)</span>}
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
               {editMode ? (
                 <>
@@ -630,6 +666,7 @@ const NumberLocationPage = () => {
                 </button>
               )}
             </div>
+
             {message && (
               <div
                 style={{
