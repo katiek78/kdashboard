@@ -83,6 +83,12 @@ h1 {
     width: 80%;
 }
 
+.dashboardContainer {
+background-color: white;
+text-align: center;
+border: 1px solid #444;
+}
+
 .main {
   display: flex;
   flex-direction: column;

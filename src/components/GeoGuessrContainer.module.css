@@ -1,0 +1,6 @@
+.geoContainer {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Brighter greenish gradient background for readability */
+    background: linear-gradient(135deg, #b2f7cc 0%, #7be495 60%, #329d6f 100%);
+}
