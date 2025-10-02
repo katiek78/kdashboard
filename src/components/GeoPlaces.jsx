@@ -124,13 +124,13 @@ export default function GeoPlaces() {
                   position: "relative",
                 }}
               >
-                <div style={{ fontWeight: 500, marginBottom: 2 }}>
+                <div className={styles.tipType}>
                   {tip.tip_type || (
                     <span style={{ color: "#bbb" }}>[No type]</span>
                   )}
                 </div>
                 {tip.title && (
-                  <div style={{ fontWeight: 400 }}>{tip.title}</div>
+                  <div className={styles.tipTitle}>{tip.title}</div>
                 )}
                 {tip.image_url && (
                   <div style={{ margin: "6px 0" }}>
