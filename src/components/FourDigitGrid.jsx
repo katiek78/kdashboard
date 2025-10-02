@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { fetchAllCategoryImages } from "../utils/categoryImagesUtils";
 import { fetchAllCompImages } from "../utils/compImagesUtils";
 
-export default function FourDigitGrid() {
+export default function FourDigitGrid({ refresh }) {
   const [categoryImages, setCategoryImages] = useState({});
   const [compImages, setCompImages] = useState({});
   const [loading, setLoading] = useState(true);
+  const [prefix, setPrefix] = useState("00"); // first two digits
 
   useEffect(() => {
     async function fetchImages() {
@@ -29,18 +30,35 @@ export default function FourDigitGrid() {
       setLoading(false);
     }
     fetchImages();
-  }, []);
+  }, [refresh]);
 
-  // Show all 10,000 numbers, with any available labels
-  const numbers = Array.from({ length: 10000 }, (_, i) =>
-    i.toString().padStart(4, "0")
+  // Show only the 100 numbers for the selected prefix
+  const numbers = Array.from(
+    { length: 100 },
+    (_, i) => `${prefix}${i.toString().padStart(2, "0")}`
   );
 
   if (loading) return <div>Loading grid...</div>;
 
-  // Render full table
+  // Render table for selected prefix
   return (
     <div style={{ overflowX: "auto", maxHeight: "80vh" }}>
+      <div style={{ marginBottom: 12 }}>
+        <label htmlFor="prefix-select">Select first two digits: </label>
+        <select
+          id="prefix-select"
+          value={prefix}
+          onChange={(e) => setPrefix(e.target.value)}
+        >
+          {Array.from({ length: 100 }, (_, i) =>
+            i.toString().padStart(2, "0")
+          ).map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </div>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
