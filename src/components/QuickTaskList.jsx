@@ -3,7 +3,12 @@ import { useState, useEffect } from "react";
 import supabase from "../utils/supabaseClient";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faPlay, faBan } from "@fortawesome/free-solid-svg-icons";
+import {
+  faTrash,
+  faPlay,
+  faBan,
+  faPen,
+} from "@fortawesome/free-solid-svg-icons";
 import styles from "./QuickTaskList.module.css";
 import {
   DndContext,
@@ -19,11 +24,10 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-
 function SortableQTLItem({
   id,
   title,
-  due,
+  next_due,
   repeat,
   blocked,
   urgent,
@@ -53,13 +57,12 @@ function SortableQTLItem({
     background: highlight ? "#ffe066" : "none",
     boxShadow: highlight ? "0 0 20px 5px #ffe066" : "none",
     border: highlight ? "2px solid #f79533" : "none",
-    marginBottom: 4,
     padding: 4,
   };
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {isEditing ? (
-        <>
+        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
           <input
             type="text"
             value={editValues.title}
@@ -72,7 +75,7 @@ function SortableQTLItem({
             type="date"
             value={editValues.next_due || new Date().toISOString().slice(0, 10)}
             onChange={(e) =>
-              setEditValues((v) => ({ ...v, due: e.target.value }))
+              setEditValues((v) => ({ ...v, next_due: e.target.value }))
             }
             style={{ fontSize: "1.1rem", marginRight: 4 }}
           />
@@ -85,7 +88,7 @@ function SortableQTLItem({
             placeholder="Repeat"
             style={{ fontSize: "1.1rem", marginRight: 4, width: 90 }}
           />
-          <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
             <button onClick={() => onSaveEdit(id)} style={{ marginRight: 2 }}>
               Save
             </button>
@@ -93,85 +96,28 @@ function SortableQTLItem({
               Cancel
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <>
-          <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-            <span
-              {...listeners}
-              style={{ marginRight: 8, display: "flex", alignItems: "center" }}
-            >
-              {title}
-              {urgent && (
-                <span
-                  style={{
-                    background: "#d00",
-                    color: "#fff",
-                    borderRadius: 8,
-                    padding: "2px 8px",
-                    marginLeft: 8,
-                    fontWeight: 700,
-                    fontSize: "0.95rem",
-                    letterSpacing: 1,
-                    display: "inline-block",
-                  }}
-                >
-                  URGENT
-                </span>
-              )}
-              {repeat ? (
-                <span
-                  style={{
-                    fontSize: "0.95rem",
-                    color: "#0a7",
-                    background: "#eaffea",
-                    borderRadius: 6,
-                    padding: "2px 8px",
-                    marginLeft: 8,
-                    fontWeight: 600,
-                    letterSpacing: 1,
-                    display: "inline-block",
-                  }}
-                >
-                  {repeat.toUpperCase()}
-                </span>
-              ) : null}
-            </span>
-            {due && (
-              <span
-                style={{ fontSize: "0.9rem", color: "#888", marginLeft: 8 }}
-              >
-                Due: {due}
-              </span>
-            )}
-          </div>
+          <span>{title}</span>
           <div
             style={{
               display: "flex",
-              gap: 4,
-              marginLeft: "auto",
               alignItems: "center",
+              marginLeft: "auto",
+              gap: 10,
             }}
           >
-            <label
+            <input
+              type="checkbox"
+              onChange={() => onComplete && onComplete(id)}
               style={{
-                marginRight: 8,
-                display: "flex",
-                alignItems: "center",
-                cursor: "pointer",
+                width: 25,
+                height: 25,
+                marginTop: "8px",
               }}
-            >
-              <input
-                type="checkbox"
-                onChange={() => onComplete && onComplete(id)}
-                style={{
-                  marginRight: 4,
-                  width: 25,
-                  height: 25,
-                }}
-                title="Mark as complete"
-              />
-            </label>
+              title="Mark as complete"
+            />
             <button
               title={urgent ? "Unmark urgent" : "Mark as urgent"}
               onClick={() => onToggleUrgent(id, !urgent)}
@@ -181,26 +127,50 @@ function SortableQTLItem({
                 border: urgent ? "2px solid #d00" : "1px solid #ccc",
                 borderRadius: 6,
                 fontWeight: 700,
-                marginRight: 2,
                 padding: "2px 8px",
                 cursor: "pointer",
+                minWidth: 32,
+                minHeight: 32,
               }}
             >
               !
             </button>
-            <button onClick={() => onEdit(id)} style={{ marginRight: 2 }}>
-              Edit
+            <button
+              title="Edit"
+              onClick={() => onEdit(id)}
+              style={{
+                background: "#f5f5f5",
+                border: "1px solid #ccc",
+                borderRadius: 6,
+                cursor: "pointer",
+                color: "#333",
+                fontSize: 20,
+                padding: "2px 8px",
+                minWidth: 32,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FontAwesomeIcon icon={faPen} />
             </button>
             <button
               title={blocked ? "Unblock task" : "Block task"}
               onClick={() => onToggleBlocked(id, !blocked)}
               style={{
-                background: "none",
-                border: "none",
+                background: "#f5f5f5",
+                border: "1px solid #ccc",
+                borderRadius: 6,
                 cursor: "pointer",
                 color: blocked ? "#c00" : "#888",
                 fontSize: 20,
-                marginRight: 4,
+                padding: "2px 8px",
+                minWidth: 32,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <FontAwesomeIcon icon={faBan} />
@@ -211,7 +181,18 @@ function SortableQTLItem({
                 e.stopPropagation();
                 onPlay(id);
               }}
-              style={{ background: "none", border: "none", cursor: "pointer" }}
+              style={{
+                background: "#f5f5f5",
+                border: "1px solid #ccc",
+                borderRadius: 6,
+                cursor: "pointer",
+                padding: "2px 8px",
+                minWidth: 32,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <FontAwesomeIcon
                 icon={faPlay}
@@ -226,10 +207,17 @@ function SortableQTLItem({
                 onDelete(id);
               }}
               style={{
-                background: "none",
-                border: "none",
+                background: "#f5f5f5",
+                border: "1px solid #ccc",
+                borderRadius: 6,
                 cursor: "pointer",
                 color: "black",
+                padding: "2px 8px",
+                minWidth: 32,
+                minHeight: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <FontAwesomeIcon icon={faTrash} size="lg" />
