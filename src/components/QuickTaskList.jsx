@@ -251,6 +251,7 @@ const QuickTaskList = () => {
   }
   const [tasks, setTasks] = useState([]);
   const [taskCount, setTaskCount] = useState(0);
+  const [visibleTasks, setVisibleTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
   // Default next_due to today (YYYY-MM-DD)
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -260,6 +261,14 @@ const QuickTaskList = () => {
   const [randomTaskId, setRandomTaskId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValuesMap, setEditValuesMap] = useState({});
+
+  // Update visibleTasks whenever tasks or loading changes
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    setVisibleTasks(
+      tasks.filter((task) => !task.next_due || task.next_due === today)
+    );
+  }, [tasks, loading]);
 
   // Only use editValuesMap for editing
   function onEdit(id) {
@@ -442,15 +451,12 @@ const QuickTaskList = () => {
   }
 
   function pickRandomTask() {
-    const today = new Date().toISOString().slice(0, 10);
-    // Only include tasks that are unblocked and are visible (next_due today or no next_due)
-    const visible = tasks.filter(
-      (t) => !t.blocked && (!t.next_due || t.next_due === today)
-    );
-    if (visible.length === 0) return;
-    const urgent = visible.filter((t) => t.urgent);
-    const nonUrgent = visible.filter((t) => !t.urgent);
-    let pool = visible;
+    // Only pick from visible tasks that are not blocked
+    const unblocked = visibleTasks.filter((t) => !t.blocked);
+    if (unblocked.length === 0) return;
+    const urgent = unblocked.filter((t) => t.urgent);
+    const nonUrgent = unblocked.filter((t) => !t.urgent);
+    let pool = unblocked;
     if (urgent.length > 0 && nonUrgent.length > 0) {
       // 80% chance urgent, 20% non-urgent
       pool = Math.random() < 0.8 ? urgent : nonUrgent;
@@ -512,13 +518,7 @@ const QuickTaskList = () => {
             strategy={verticalListSortingStrategy}
           >
             <div className={styles.quickTaskList}>
-              {tasks
-                .filter((task) => {
-                  if (!task.next_due) return true;
-                  // Only show if next_due is today
-                  const today = new Date().toISOString().slice(0, 10);
-                  return task.next_due === today;
-                })
+              {visibleTasks
                 .sort((a, b) => {
                   // Urgent tasks first
                   if (!!b.urgent - !!a.urgent !== 0)
