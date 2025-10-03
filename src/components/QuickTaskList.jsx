@@ -442,10 +442,25 @@ const QuickTaskList = () => {
   }
 
   function pickRandomTask() {
-    const unblocked = tasks.filter((t) => !t.blocked);
-    if (unblocked.length === 0) return;
-    const randomIdx = Math.floor(Math.random() * unblocked.length);
-    setRandomTaskId(unblocked[randomIdx].id);
+    const today = new Date().toISOString().slice(0, 10);
+    // Only include tasks that are unblocked and are visible (next_due today or no next_due)
+    const visible = tasks.filter(
+      (t) => !t.blocked && (!t.next_due || t.next_due === today)
+    );
+    if (visible.length === 0) return;
+    const urgent = visible.filter((t) => t.urgent);
+    const nonUrgent = visible.filter((t) => !t.urgent);
+    let pool = visible;
+    if (urgent.length > 0 && nonUrgent.length > 0) {
+      // 80% chance urgent, 20% non-urgent
+      pool = Math.random() < 0.8 ? urgent : nonUrgent;
+    } else if (urgent.length > 0) {
+      pool = urgent;
+    } else if (nonUrgent.length > 0) {
+      pool = nonUrgent;
+    }
+    const randomIdx = Math.floor(Math.random() * pool.length);
+    setRandomTaskId(pool[randomIdx].id);
   }
 
   async function toggleBlocked(id, blocked) {
