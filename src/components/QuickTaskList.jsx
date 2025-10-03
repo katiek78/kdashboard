@@ -67,7 +67,7 @@ function SortableQTLItem({
           />
           <input
             type="date"
-             value={editValues.next_due || new Date().toISOString().slice(0, 10)}
+            value={editValues.next_due || new Date().toISOString().slice(0, 10)}
             onChange={(e) =>
               setEditValues((v) => ({ ...v, due: e.target.value }))
             }
