@@ -26,9 +26,11 @@ function SortableQTLItem({
   due,
   repeat,
   blocked,
+  urgent,
   onDelete,
   onPlay,
   onToggleBlocked,
+  onToggleUrgent,
   highlight,
   onEdit,
   isEditing,
@@ -54,7 +56,6 @@ function SortableQTLItem({
     marginBottom: 4,
     padding: 4,
   };
-
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {isEditing ? (
@@ -101,6 +102,23 @@ function SortableQTLItem({
               style={{ marginRight: 8, display: "flex", alignItems: "center" }}
             >
               {title}
+              {urgent && (
+                <span
+                  style={{
+                    background: "#d00",
+                    color: "#fff",
+                    borderRadius: 8,
+                    padding: "2px 8px",
+                    marginLeft: 8,
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    letterSpacing: 1,
+                    display: "inline-block",
+                  }}
+                >
+                  URGENT
+                </span>
+              )}
               {repeat ? (
                 <span
                   style={{
@@ -127,15 +145,51 @@ function SortableQTLItem({
               </span>
             )}
           </div>
-          <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 4,
+              marginLeft: "auto",
+              alignItems: "center",
+            }}
+          >
+            <label
+              style={{
+                marginRight: 8,
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                onChange={() => onComplete && onComplete(id)}
+                style={{
+                  marginRight: 4,
+                  width: 25,
+                  height: 25,
+                }}
+                title="Mark as complete"
+              />
+            </label>
+            <button
+              title={urgent ? "Unmark urgent" : "Mark as urgent"}
+              onClick={() => onToggleUrgent(id, !urgent)}
+              style={{
+                background: urgent ? "#d00" : "#eee",
+                color: urgent ? "#fff" : "#d00",
+                border: urgent ? "2px solid #d00" : "1px solid #ccc",
+                borderRadius: 6,
+                fontWeight: 700,
+                marginRight: 2,
+                padding: "2px 8px",
+                cursor: "pointer",
+              }}
+            >
+              !
+            </button>
             <button onClick={() => onEdit(id)} style={{ marginRight: 2 }}>
               Edit
-            </button>
-            <button
-              onClick={() => onComplete && onComplete(id)}
-              style={{ marginRight: 2 }}
-            >
-              Complete
             </button>
             <button
               title={blocked ? "Unblock task" : "Block task"}
@@ -249,16 +303,25 @@ const QuickTaskList = () => {
     fetchTasks();
   }
 
-  // Mark a task as complete: advance next_due if repeat, else clear next_due
+  // Mark a task as complete: advance next_due if repeat, else delete
   async function completeTask(id) {
     const t = tasks.find((task) => task.id === id);
     if (!t) return;
-    let next_due = null;
-    if (t.repeat) {
-      next_due = getNextDue(t.next_due || todayStr, t.repeat);
+    if (!t.repeat) {
+      // Non-repeating: delete
+      await deleteTask(id);
+      return;
     }
+    let next_due = getNextDue(t.next_due || todayStr, t.repeat);
     setLoading(true);
     await supabase.from("quicktasks").update({ next_due }).eq("id", id);
+    fetchTasks();
+  }
+
+  // Toggle urgent flag
+  async function toggleUrgent(id, urgent) {
+    setLoading(true);
+    await supabase.from("quicktasks").update({ urgent }).eq("id", id);
     fetchTasks();
   }
 
@@ -438,6 +501,15 @@ const QuickTaskList = () => {
                   const today = new Date().toISOString().slice(0, 10);
                   return task.next_due === today;
                 })
+                .sort((a, b) => {
+                  // Urgent tasks first
+                  if (!!b.urgent - !!a.urgent !== 0)
+                    return !!b.urgent - !!a.urgent;
+                  // One-off (non-repeating) tasks next
+                  if (!!a.repeat !== !!b.repeat) return !!a.repeat - !!b.repeat;
+                  // Otherwise, keep original order (by id or order field)
+                  return (a.order ?? a.id) - (b.order ?? b.id);
+                })
                 .map((task) => (
                   <SortableQTLItem
                     key={task.id}
@@ -446,9 +518,11 @@ const QuickTaskList = () => {
                     next_due={task.next_due}
                     repeat={task.repeat}
                     blocked={!!task.blocked}
+                    urgent={!!task.urgent}
                     onDelete={deleteTask}
                     onPlay={playTask}
                     onToggleBlocked={toggleBlocked}
+                    onToggleUrgent={toggleUrgent}
                     highlight={task.id === randomTaskId}
                     onEdit={onEdit}
                     isEditing={editingId === task.id}
