@@ -8,6 +8,7 @@ import {
   faPlay,
   faBan,
   faPen,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import styles from "./QuickTaskList.module.css";
 import {
@@ -104,7 +105,16 @@ function SortableQTLItem({
         </div>
       ) : (
         <>
-          <span>{title}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {urgent && (
+              <FontAwesomeIcon
+                icon={faStar}
+                style={{ color: "#d00", fontSize: 20, marginRight: 2 }}
+                title="High priority"
+              />
+            )}
+            {title}
+          </span>
           <div
             style={{
               display: "flex",
