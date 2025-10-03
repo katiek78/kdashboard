@@ -36,6 +36,7 @@ function SortableQTLItem({
   onToggleBlocked,
   onToggleUrgent,
   highlight,
+  rowIndex = 0,
   onEdit,
   isEditing,
   editValues,
@@ -54,7 +55,11 @@ function SortableQTLItem({
     justifyContent: "space-between",
     fontFamily: "'Patrick Hand', cursive",
     fontSize: "1.5rem",
-    background: highlight ? "#ffe066" : "none",
+    background: highlight
+      ? "#ffe066"
+      : rowIndex % 2 === 0
+      ? "rgba(0,0,0,0.07)"
+      : "transparent",
     boxShadow: highlight ? "0 0 20px 5px #ffe066" : "none",
     border: highlight ? "2px solid #f79533" : "none",
     padding: 4,
@@ -498,7 +503,7 @@ const QuickTaskList = () => {
                   // Otherwise, keep original order (by id or order field)
                   return (a.order ?? a.id) - (b.order ?? b.id);
                 })
-                .map((task) => (
+                .map((task, idx) => (
                   <SortableQTLItem
                     key={task.id}
                     id={task.id}
@@ -536,6 +541,7 @@ const QuickTaskList = () => {
                     onSaveEdit={onSaveEdit}
                     onCancelEdit={onCancelEdit}
                     onComplete={completeTask}
+                    rowIndex={idx}
                   />
                 ))}
             </div>
