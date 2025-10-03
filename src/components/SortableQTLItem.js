@@ -51,7 +51,7 @@ function SortableQTLItem({
     padding: 4,
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes}>
       {isEditing ? (
         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
           <input
@@ -90,7 +90,10 @@ function SortableQTLItem({
         </div>
       ) : (
         <>
-          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            {...listeners}
+          >
             {urgent && (
               <FontAwesomeIcon
                 icon={faStar}
@@ -238,8 +241,8 @@ function RepeatBadge({ repeat }) {
   const weekdayMap = {
     mon: { label: "M", color: "#e53935" }, // red
     tue: { label: "Tu", color: "#fb8c00" }, // orange
-    wed: { label: "W", color: "#43a047" }, // lime/green
-    thu: { label: "Th", color: "#1e88e5" }, // blue
+    wed: { label: "W", color: "#757575" }, // gray
+    thu: { label: "Th", color: "#43a047" }, // green
     fri: { label: "F", color: "#3949ab" }, // indigo
     sat: { label: "Sa", color: "#8e24aa" }, // violet
     sun: { label: "Su", color: "#757575" }, // gray
@@ -270,7 +273,7 @@ function RepeatBadge({ repeat }) {
     return (
       <span
         style={{
-          background: "#43a047", // green
+          background: "limegreen", // green
           color: "#fff",
           borderRadius: 6,
           fontWeight: 700,
@@ -289,7 +292,7 @@ function RepeatBadge({ repeat }) {
     );
   }
   // Days of month (e.g. 1st, 15th, 30th)
-  if (/^\d+(st|nd|rd|th)$/.test(rep)) {
+  if (/^\d+(st|nd|rd|th)$/.test(rep) || /^\d+m\d{1,2}$/.test(rep)) {
     return (
       <span
         style={{

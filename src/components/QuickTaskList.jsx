@@ -53,7 +53,11 @@ const QuickTaskList = () => {
     setEditingId(id);
     setEditValuesMap((prev) => ({
       ...prev,
-      [id]: { title: t.title, due: t.due || "", repeat: t.repeat || "" },
+      [id]: {
+        title: t.title,
+        next_due: t.next_due || "",
+        repeat: t.repeat || "",
+      },
     }));
   }
 
@@ -64,18 +68,25 @@ const QuickTaskList = () => {
   async function onSaveEdit(id) {
     setLoading(true);
     const vals = editValuesMap[id];
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    let repeat = typeof vals.repeat === "string" ? vals.repeat.trim() : null;
+    // If repeat is like 'Nm', auto-fill with today's day
+    if (repeat && /^\d+m$/.test(repeat)) {
+      const n = repeat.match(/^(\d+)m$/)[1];
+      repeat = `${n}m${today.getDate()}`;
+    }
     let next_due = vals.next_due;
-    if (vals.repeat && !next_due) {
+    if (repeat && !next_due) {
       next_due = todayStr;
     }
-    if (!vals.repeat) {
+    if (!repeat) {
       next_due = null;
     }
     const updateObj = {
       title: vals.title,
       next_due,
-      repeat: typeof vals.repeat === "string" ? vals.repeat : null,
+      repeat,
     };
     console.log("Saving task", id, updateObj);
     const { error, data } = await supabase
@@ -114,7 +125,7 @@ const QuickTaskList = () => {
     fetchTasks();
   }
 
-  // Helper to advance next_due based on repeat string (supports daily, weekly, N days, etc)
+  // Helper to advance next_due based on repeat string (supports daily, weekly, N days, N months on Dth, etc)
   function getNextDue(current, repeat) {
     if (!repeat) return null;
     const base = current ? new Date(current) : new Date();
@@ -149,6 +160,31 @@ const QuickTaskList = () => {
     if (matchW) {
       base.setDate(base.getDate() + 7 * parseInt(matchW[1], 10));
       return base.toISOString().slice(0, 10);
+    }
+    // e.g. 6m3 = every 6 months on the 3rd
+    const matchM = rep.match(/^(\d+)m(\d{1,2})$/);
+    if (matchM) {
+      let n = parseInt(matchM[1], 10);
+      let day = parseInt(matchM[2], 10);
+      let next = new Date(base);
+      // Move to next Nth month
+      next.setMonth(next.getMonth() + n);
+      // Set to the Dth day, but if invalid (e.g. 30th Feb), roll forward to next valid date
+      let year = next.getFullYear();
+      let month = next.getMonth();
+      let maxDay = new Date(year, month + 1, 0).getDate();
+      if (day > maxDay) day = maxDay;
+      next.setDate(day);
+      // If still in the past, roll forward another N months
+      if (next <= base) {
+        next.setMonth(next.getMonth() + n);
+        year = next.getFullYear();
+        month = next.getMonth();
+        maxDay = new Date(year, month + 1, 0).getDate();
+        if (day > maxDay) day = maxDay;
+        next.setDate(day);
+      }
+      return next.toISOString().slice(0, 10);
     }
     // fallback: just add 1 day
     base.setDate(base.getDate() + 1);
