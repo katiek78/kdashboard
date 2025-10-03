@@ -36,6 +36,7 @@ function SortableQTLItem({
   setEditValues,
   onSaveEdit,
   onCancelEdit,
+  onComplete,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
@@ -53,6 +54,7 @@ function SortableQTLItem({
     marginBottom: 4,
     padding: 4,
   };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {isEditing ? (
@@ -128,6 +130,12 @@ function SortableQTLItem({
           <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
             <button onClick={() => onEdit(id)} style={{ marginRight: 2 }}>
               Edit
+            </button>
+            <button
+              onClick={() => onComplete && onComplete(id)}
+              style={{ marginRight: 2 }}
+            >
+              Complete
             </button>
             <button
               title={blocked ? "Unblock task" : "Block task"}
@@ -239,6 +247,60 @@ const QuickTaskList = () => {
     }
     setEditingId(null);
     fetchTasks();
+  }
+
+  // Mark a task as complete: advance next_due if repeat, else clear next_due
+  async function completeTask(id) {
+    const t = tasks.find((task) => task.id === id);
+    if (!t) return;
+    let next_due = null;
+    if (t.repeat) {
+      next_due = getNextDue(t.next_due || todayStr, t.repeat);
+    }
+    setLoading(true);
+    await supabase.from("quicktasks").update({ next_due }).eq("id", id);
+    fetchTasks();
+  }
+
+  // Helper to advance next_due based on repeat string (supports daily, weekly, N days, etc)
+  function getNextDue(current, repeat) {
+    if (!repeat) return null;
+    const base = current ? new Date(current) : new Date();
+    const rep = repeat.trim().toLowerCase();
+    // Handle weekday names (e.g. mon, tue, fri)
+    const weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const repShort = rep.slice(0, 3);
+    const idx = weekdays.indexOf(repShort);
+    if (idx !== -1) {
+      // Advance to next occurrence of that weekday
+      let daysToAdd = (idx - base.getDay() + 7) % 7;
+      if (daysToAdd === 0) daysToAdd = 7; // always go to next week if today
+      base.setDate(base.getDate() + daysToAdd);
+      return base.toISOString().slice(0, 10);
+    }
+    if (rep === "daily") {
+      base.setDate(base.getDate() + 1);
+      return base.toISOString().slice(0, 10);
+    }
+    if (rep === "weekly") {
+      base.setDate(base.getDate() + 7);
+      return base.toISOString().slice(0, 10);
+    }
+    // e.g. 2d, 3d, 2 days
+    const match = rep.match(/^(\d+)\s*(d|day|days)$/);
+    if (match) {
+      base.setDate(base.getDate() + parseInt(match[1], 10));
+      return base.toISOString().slice(0, 10);
+    }
+    // e.g. 2w, 3w, 2 weeks
+    const matchW = rep.match(/^(\d+)\s*(w|week|weeks)$/);
+    if (matchW) {
+      base.setDate(base.getDate() + 7 * parseInt(matchW[1], 10));
+      return base.toISOString().slice(0, 10);
+    }
+    // fallback: just add 1 day
+    base.setDate(base.getDate() + 1);
+    return base.toISOString().slice(0, 10);
   }
 
   const sensors = useSensors(useSensor(PointerSensor));
@@ -369,43 +431,51 @@ const QuickTaskList = () => {
             strategy={verticalListSortingStrategy}
           >
             <div className={styles.quickTaskList}>
-              {tasks.map((task) => (
-                <SortableQTLItem
-                  key={task.id}
-                  id={task.id}
-                  title={task.title}
-                  next_due={task.next_due}
-                  repeat={task.repeat}
-                  blocked={!!task.blocked}
-                  onDelete={deleteTask}
-                  onPlay={playTask}
-                  onToggleBlocked={toggleBlocked}
-                  highlight={task.id === randomTaskId}
-                  onEdit={onEdit}
-                  isEditing={editingId === task.id}
-                  editValues={
-                    editValuesMap[task.id] || {
-                      title: "",
-                      next_due: "",
-                      repeat: "",
+              {tasks
+                .filter((task) => {
+                  if (!task.next_due) return true;
+                  // Only show if next_due is today
+                  const today = new Date().toISOString().slice(0, 10);
+                  return task.next_due === today;
+                })
+                .map((task) => (
+                  <SortableQTLItem
+                    key={task.id}
+                    id={task.id}
+                    title={task.title}
+                    next_due={task.next_due}
+                    repeat={task.repeat}
+                    blocked={!!task.blocked}
+                    onDelete={deleteTask}
+                    onPlay={playTask}
+                    onToggleBlocked={toggleBlocked}
+                    highlight={task.id === randomTaskId}
+                    onEdit={onEdit}
+                    isEditing={editingId === task.id}
+                    editValues={
+                      editValuesMap[task.id] || {
+                        title: "",
+                        next_due: "",
+                        repeat: "",
+                      }
                     }
-                  }
-                  setEditValues={(fn) =>
-                    setEditValuesMap((prev) => ({
-                      ...prev,
-                      [task.id]: fn(
-                        prev[task.id] || {
-                          title: task.title,
-                          next_due: task.next_due || "",
-                          repeat: task.repeat || "",
-                        }
-                      ),
-                    }))
-                  }
-                  onSaveEdit={onSaveEdit}
-                  onCancelEdit={onCancelEdit}
-                />
-              ))}
+                    setEditValues={(fn) =>
+                      setEditValuesMap((prev) => ({
+                        ...prev,
+                        [task.id]: fn(
+                          prev[task.id] || {
+                            title: task.title,
+                            next_due: task.next_due || "",
+                            repeat: task.repeat || "",
+                          }
+                        ),
+                      }))
+                    }
+                    onSaveEdit={onSaveEdit}
+                    onCancelEdit={onCancelEdit}
+                    onComplete={completeTask}
+                  />
+                ))}
             </div>
           </SortableContext>
         </DndContext>
