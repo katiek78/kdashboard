@@ -1,0 +1,22 @@
+.badge {
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 2px 7px;
+  margin-left: 6px;
+  letter-spacing: 1px;
+  display: inline-block;
+}
+
+.badgeWeekdayMon { background: #e53935; }
+.badgeWeekdayTue { background: #fb8c00; }
+.badgeWeekdayWed { background: #757575; }
+.badgeWeekdayThu { background: #43a047; }
+.badgeWeekdayFri { background: #3949ab; }
+.badgeWeekdaySat { background: #8e24aa; }
+.badgeWeekdaySun { background: #757575; }
+
+.badgeDaily { background: limegreen; }
+.badgeMonth { background: #1976d2; }
+.badgeFallback { background: #757575; }
