@@ -1,4 +1,5 @@
 import React from "react";
+import styles from "./SortableQTLItem.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faTrash,
@@ -35,10 +36,6 @@ function SortableQTLItem({
   const style = {
     transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
-    display: "flex",
-    flexDirection: "column",
-    fontFamily: "'Patrick Hand', cursive",
-    fontSize: "1.5rem",
     background: highlight
       ? "#ffe066"
       : rowIndex % 2 === 0
@@ -46,57 +43,26 @@ function SortableQTLItem({
       : "transparent",
     boxShadow: highlight ? "0 0 20px 5px #ffe066" : "none",
     border: highlight ? "2px solid #f79533" : "none",
-    padding: 4,
   };
 
-  // Responsive: row on desktop (buttons right), column on mobile (buttons below)
-  const rowWrapStyle = {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    flexWrap: "nowrap",
-    gap: 4,
-  };
-  const buttonBarStyle = {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-    marginTop: 0,
-    marginLeft: "auto",
-    justifyContent: "flex-end",
-  };
-
-  // Only apply tile style on mobile (max-width: 600px)
-  // We'll inject a style tag for .qtl-tile-btn-mobile
-  const tileButtonStyle = {
-    background: "#f5f5f5",
-    border: "1px solid #ccc",
-    borderRadius: 6,
-    minWidth: 32,
-    minHeight: 32,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 20,
-    cursor: "pointer",
-    transition: "border 0.2s, box-shadow 0.2s",
-  };
+  // All static styles are now in the CSS module
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={styles.qtlRoot}
+      {...attributes}
+    >
       {isEditing ? (
-        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+        <div className={styles.editRow}>
           <input
             type="text"
             value={editValues.title}
             onChange={(e) =>
               setEditValues((v) => ({ ...v, title: e.target.value }))
             }
-            style={{ fontSize: "1.1rem", marginRight: 4 }}
+            className={styles.editInput}
           />
           <input
             type="date"
@@ -104,7 +70,7 @@ function SortableQTLItem({
             onChange={(e) =>
               setEditValues((v) => ({ ...v, next_due: e.target.value }))
             }
-            style={{ fontSize: "1.1rem", marginRight: 4 }}
+            className={styles.editInput}
           />
           <input
             type="text"
@@ -113,29 +79,20 @@ function SortableQTLItem({
               setEditValues((v) => ({ ...v, repeat: e.target.value }))
             }
             placeholder="Repeat"
-            style={{ fontSize: "1.1rem", marginRight: 4, width: 90 }}
+            className={styles.editInputRepeat}
           />
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            <button onClick={() => onSaveEdit(id)} style={{ marginRight: 2 }}>
+          <div className={styles.editBtnBar}>
+            <button onClick={() => onSaveEdit(id)} className={styles.editBtn}>
               Save
             </button>
-            <button onClick={onCancelEdit} style={{ marginRight: 8 }}>
+            <button onClick={onCancelEdit} className={styles.editBtn}>
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className="qtl-row-mobile" style={rowWrapStyle}>
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flex: 1,
-              minWidth: 0,
-            }}
-            {...listeners}
-          >
+        <div className={styles.qtlRowMobile}>
+          <span className={styles.qtlTitleRow} {...listeners}>
             {urgent && (
               <FontAwesomeIcon
                 icon={faStar}
@@ -143,110 +100,63 @@ function SortableQTLItem({
                 title="High priority"
               />
             )}
-            <span
-              style={{
-                overflowWrap: "anywhere",
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                // Fix for mobile: force flex to 1 only
-                flexGrow: 1,
-                flexShrink: 0,
-                flexBasis: "auto",
-              }}
-            >
+            <span className={styles.qtlTitleText}>
               {title}
               {repeat && <RepeatBadge repeat={repeat} />}
             </span>
           </span>
-          <div className="qtl-btnbar-mobile" style={buttonBarStyle}>
-            <style>{`
-              @media (max-width: 600px) {
-                .qtl-row-mobile {
-                  flex-direction: column !important;
-                  align-items: stretch !important;
-                  gap: 0 !important;
-                }
-                .qtl-btnbar-mobile {
-                  margin-left: 0 !important;
-                  margin-top: 4px !important;
-                  justify-content: flex-start !important;
-                }
-                .qtl-tile-btn-mobile {
-                  background: #fff !important;
-                  border: 2px solid #bbb !important;
-                  border-radius: 12px !important;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
-                  min-width: 44px !important;
-                  min-height: 44px !important;
-                  margin: 2px !important;
-                  padding: 4px 10px !important;
-                  font-size: 20px !important;
-                }
-                .qtl-tile-btn-mobile.urgent {
-                  background: #d00 !important;
-                  color: #fff !important;
-                  border-color: #d00 !important;
-                }
-                .qtl-tile-btn-mobile.blocked {
-                  color: #c00 !important;
-                  border-color: #c00 !important;
-                }
-                .qtl-tile-btn-mobile.delete {
-                  color: #c00 !important;
-                  border-color: #c00 !important;
-                }
-              }
-            `}</style>
+          <div className={styles.qtlBtnbarMobile}>
             <input
               type="checkbox"
               onChange={() => onComplete && onComplete(id)}
+              className={styles.qtlTileBtnMobile}
               style={{
-                ...tileButtonStyle,
                 width: 32,
                 height: 32,
                 borderColor: "#4caf50",
                 accentColor: "#4caf50",
                 cursor: "pointer",
               }}
-              className="qtl-tile-btn-mobile"
               title="Mark as complete"
             />
             <button
               title={urgent ? "Unmark urgent" : "Mark as urgent"}
               onClick={() => onToggleUrgent(id, !urgent)}
-              style={{
-                ...tileButtonStyle,
-                background: urgent ? "#d00" : "#fff",
-                color: urgent ? "#fff" : "#d00",
-                borderColor: urgent ? "#d00" : "#bbb",
-                fontWeight: 700,
-              }}
-              className={`qtl-tile-btn-mobile${urgent ? " urgent" : ""}`}
+              className={
+                styles.qtlTileBtnMobile + (urgent ? " " + styles.urgent : "")
+              }
+              style={
+                urgent
+                  ? {
+                      background: "#d00",
+                      color: "#fff",
+                      borderColor: "#d00",
+                      fontWeight: 700,
+                    }
+                  : { color: "#d00", fontWeight: 700 }
+              }
             >
               !
             </button>
             <button
               title="Edit"
               onClick={() => onEdit(id)}
-              style={{
-                ...tileButtonStyle,
-                color: "#333",
-              }}
-              className="qtl-tile-btn-mobile"
+              className={styles.qtlTileBtnMobile}
+              style={{ color: "#333" }}
             >
               <FontAwesomeIcon icon={faPen} />
             </button>
             <button
               title={blocked ? "Unblock task" : "Block task"}
               onClick={() => onToggleBlocked(id, !blocked)}
-              style={{
-                ...tileButtonStyle,
-                color: blocked ? "#c00" : "#888",
-                borderColor: blocked ? "#c00" : "#bbb",
-              }}
-              className={`qtl-tile-btn-mobile${blocked ? " blocked" : ""}`}
+              className={
+                styles.qtlTileBtnMobile + (blocked ? " " + styles.blocked : "")
+              }
+              style={
+                blocked
+                  ? { color: "#c00", borderColor: "#c00" }
+                  : { color: "#888" }
+              }
             >
               <FontAwesomeIcon icon={faBan} />
             </button>
@@ -256,10 +166,7 @@ function SortableQTLItem({
                 e.stopPropagation();
                 onPlay(id);
               }}
-              style={{
-                ...tileButtonStyle,
-              }}
-              className="qtl-tile-btn-mobile"
+              className={styles.qtlTileBtnMobile}
             >
               <FontAwesomeIcon
                 icon={faPlay}
@@ -273,12 +180,8 @@ function SortableQTLItem({
                 e.stopPropagation();
                 onDelete(id);
               }}
-              style={{
-                ...tileButtonStyle,
-                color: "#c00",
-                borderColor: "#c00",
-              }}
-              className="qtl-tile-btn-mobile delete"
+              className={styles.qtlTileBtnMobile + " " + styles.delete}
+              style={{ color: "#c00", borderColor: "#c00" }}
             >
               <FontAwesomeIcon icon={faTrash} size="lg" />
             </button>
