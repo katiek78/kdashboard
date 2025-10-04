@@ -39,7 +39,11 @@ const QuickTaskList = () => {
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     setVisibleTasks(
-      tasks.filter((task) => !task.next_due || task.next_due <= today)
+      tasks.filter((task) => {
+        // Show if next_due is null or today or earlier
+        if (!task.next_due || task.next_due <= today) return true;
+        return false;
+      })
     );
   }, [tasks, loading]);
 
@@ -51,11 +55,20 @@ const QuickTaskList = () => {
   function onEdit(id) {
     const t = tasks.find((task) => task.id === id);
     setEditingId(id);
+    // Always initialize next_due to a valid date string (current value or today)
+    let nextDueInit = t.next_due;
+    if (
+      !nextDueInit ||
+      typeof nextDueInit !== "string" ||
+      nextDueInit.trim() === ""
+    ) {
+      nextDueInit = new Date().toISOString().slice(0, 10);
+    }
     setEditValuesMap((prev) => ({
       ...prev,
       [id]: {
         title: t.title,
-        next_due: t.next_due || "",
+        next_due: nextDueInit,
         repeat: t.repeat || "",
       },
     }));
@@ -77,15 +90,21 @@ const QuickTaskList = () => {
       repeat = `${n}m${today.getDate()}`;
     }
     let next_due = vals.next_due;
+    // If the user clears the date field, treat as null
+    if (typeof next_due === "string" && next_due.trim() === "") {
+      next_due = null;
+    }
+    if (typeof next_due === "undefined") {
+      next_due = null;
+    }
+    // If repeat is set and next_due is empty/null, default to today
     if (repeat && !next_due) {
       next_due = todayStr;
     }
-    if (!repeat) {
-      next_due = null;
-    }
+    // Otherwise, always save the picked date (even if repeat is empty)
     const updateObj = {
       title: vals.title,
-      next_due,
+      next_due: next_due === null ? null : String(next_due),
       repeat,
     };
     console.log("Saving task", id, updateObj);
@@ -108,7 +127,7 @@ const QuickTaskList = () => {
     const t = tasks.find((task) => task.id === id);
     if (!t) return;
     if (!t.repeat) {
-      // Non-repeating: delete
+      // Non-repeating: always delete when completed
       await deleteTask(id);
       return;
     }
@@ -347,15 +366,20 @@ const QuickTaskList = () => {
     const maxOrder =
       tasks.length > 0 ? Math.max(...tasks.map((t) => t.order)) : 0;
     const nextOrder = maxOrder + 1;
-    // Only set next_due if repeat is provided
+    // Always set next_due if provided
+    let insertDue = newDue;
+    if (typeof insertDue === "string" && insertDue.trim() === "") {
+      insertDue = null;
+    }
+    if (typeof insertDue === "undefined") {
+      insertDue = null;
+    }
     const insertObj = {
       title: newTitle,
       order: nextOrder,
       repeat: newRepeat || null,
+      next_due: insertDue === null ? null : String(insertDue),
     };
-    if (newRepeat) {
-      insertObj.next_due = newDue || todayStr;
-    }
     const { error } = await supabase.from("quicktasks").insert([insertObj]);
     if (!error) {
       setNewTitle("");

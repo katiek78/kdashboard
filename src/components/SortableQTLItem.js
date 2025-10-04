@@ -10,6 +10,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import RepeatBadge from "./RepeatBadge.jsx";
 
 function SortableQTLItem({
   id,
@@ -191,7 +192,5 @@ function SortableQTLItem({
     </div>
   );
 }
-
-import RepeatBadge from "./RepeatBadge.jsx";
 
 export default SortableQTLItem;
