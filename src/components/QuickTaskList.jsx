@@ -130,8 +130,23 @@ const QuickTaskList = () => {
     if (!repeat) return null;
     const base = current ? new Date(current) : new Date();
     const rep = repeat.trim().toLowerCase();
-    // Handle weekday names (e.g. mon, tue, fri)
+    // Handle patterns like 2sat, 3mon, etc. (every N weeks on weekday)
     const weekdays = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    const matchNWeekday = rep.match(/^(\d+)(sun|mon|tue|wed|thu|fri|sat)$/);
+    if (matchNWeekday) {
+      const n = parseInt(matchNWeekday[1], 10);
+      const weekday = matchNWeekday[2];
+      const idx = weekdays.indexOf(weekday);
+      let next = new Date(base);
+      // Find the next occurrence of the weekday
+      let daysToAdd = (idx - next.getDay() + 7) % 7;
+      if (daysToAdd === 0)
+        daysToAdd = 7 * n; // always go to next interval if today
+      else daysToAdd += 7 * (n - 1); // add (n-1) weeks if not today
+      next.setDate(next.getDate() + daysToAdd);
+      return next.toISOString().slice(0, 10);
+    }
+    // Handle weekday names (e.g. mon, tue, fri)
     const repShort = rep.slice(0, 3);
     const idx = weekdays.indexOf(repShort);
     if (idx !== -1) {

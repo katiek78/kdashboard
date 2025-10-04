@@ -15,6 +15,21 @@ function RepeatBadge({ repeat }) {
     sat: { label: "Sa", className: styles.badgeWeekdaySat },
     sun: { label: "Su", className: styles.badgeWeekdaySun },
   };
+  // e.g. 2sat, 3mon, etc. (every N weeks on weekday)
+  const matchNWeekday = rep.match(/^(\d+)(mon|tue|wed|thu|fri|sat|sun)$/);
+  if (matchNWeekday) {
+    const n = matchNWeekday[1];
+    const day = matchNWeekday[2];
+    const info = weekdayMap[day];
+    if (info) {
+      return (
+        <span className={`${styles.badge} ${info.className}`} title={repeat}>
+          {n}
+          {info.label}
+        </span>
+      );
+    }
+  }
   if (
     /^(mon|tue|wed|thu|fri|sat|sun)(\+(mon|tue|wed|thu|fri|sat|sun))*$/.test(
       rep
