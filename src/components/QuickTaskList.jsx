@@ -131,7 +131,17 @@ const QuickTaskList = () => {
       await deleteTask(id);
       return;
     }
-    let next_due = getNextDue(t.next_due || todayStr, t.repeat);
+    // For N-days repeat, advance from today; else, from next_due
+    const rep = t.repeat.trim().toLowerCase();
+    let next_due;
+    if (/^\d+\s*(d|day|days)$/.test(rep)) {
+      // Advance from today
+      const today = new Date().toISOString().slice(0, 10);
+      next_due = getNextDue(today, t.repeat);
+    } else {
+      // Advance from previous next_due (default)
+      next_due = getNextDue(t.next_due || todayStr, t.repeat);
+    }
     setLoading(true);
     await supabase.from("quicktasks").update({ next_due }).eq("id", id);
     fetchTasks();
