@@ -39,7 +39,7 @@ const QuickTaskList = () => {
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     setVisibleTasks(
-      tasks.filter((task) => !task.next_due || task.next_due === today)
+      tasks.filter((task) => !task.next_due || task.next_due <= today)
     );
   }, [tasks, loading]);
 
