@@ -13,7 +13,6 @@ import { CSS } from "@dnd-kit/utilities";
 function SortableQTLItem({
   id,
   title,
-  next_due,
   repeat,
   blocked,
   urgent,
@@ -37,8 +36,7 @@ function SortableQTLItem({
     transform: transform ? CSS.Transform.toString(transform) : undefined,
     transition,
     display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
     fontFamily: "'Patrick Hand', cursive",
     fontSize: "1.5rem",
     background: highlight
@@ -50,6 +48,44 @@ function SortableQTLItem({
     border: highlight ? "2px solid #f79533" : "none",
     padding: 4,
   };
+
+  // Responsive: row on desktop (buttons right), column on mobile (buttons below)
+  const rowWrapStyle = {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    flexWrap: "nowrap",
+    gap: 4,
+  };
+  const buttonBarStyle = {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    marginTop: 0,
+    marginLeft: "auto",
+    justifyContent: "flex-end",
+  };
+
+  // Only apply tile style on mobile (max-width: 600px)
+  // We'll inject a style tag for .qtl-tile-btn-mobile
+  const tileButtonStyle = {
+    background: "#f5f5f5",
+    border: "1px solid #ccc",
+    borderRadius: 6,
+    minWidth: 32,
+    minHeight: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 20,
+    cursor: "pointer",
+    transition: "border 0.2s, box-shadow 0.2s",
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {isEditing ? (
@@ -89,9 +125,15 @@ function SortableQTLItem({
           </div>
         </div>
       ) : (
-        <>
+        <div className="qtl-row-mobile" style={rowWrapStyle}>
           <span
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flex: 1,
+              minWidth: 0,
+            }}
             {...listeners}
           >
             {urgent && (
@@ -101,41 +143,87 @@ function SortableQTLItem({
                 title="High priority"
               />
             )}
-            {title}
-            {repeat && <RepeatBadge repeat={repeat} />}
+            <span
+              style={{
+                overflowWrap: "anywhere",
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                // Fix for mobile: force flex to 1 only
+                flexGrow: 1,
+                flexShrink: 0,
+                flexBasis: "auto",
+              }}
+            >
+              {title}
+              {repeat && <RepeatBadge repeat={repeat} />}
+            </span>
           </span>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginLeft: "auto",
-              gap: 10,
-            }}
-          >
+          <div className="qtl-btnbar-mobile" style={buttonBarStyle}>
+            <style>{`
+              @media (max-width: 600px) {
+                .qtl-row-mobile {
+                  flex-direction: column !important;
+                  align-items: stretch !important;
+                  gap: 0 !important;
+                }
+                .qtl-btnbar-mobile {
+                  margin-left: 0 !important;
+                  margin-top: 4px !important;
+                  justify-content: flex-start !important;
+                }
+                .qtl-tile-btn-mobile {
+                  background: #fff !important;
+                  border: 2px solid #bbb !important;
+                  border-radius: 12px !important;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.07) !important;
+                  min-width: 44px !important;
+                  min-height: 44px !important;
+                  margin: 2px !important;
+                  padding: 4px 10px !important;
+                  font-size: 20px !important;
+                }
+                .qtl-tile-btn-mobile.urgent {
+                  background: #d00 !important;
+                  color: #fff !important;
+                  border-color: #d00 !important;
+                }
+                .qtl-tile-btn-mobile.blocked {
+                  color: #c00 !important;
+                  border-color: #c00 !important;
+                }
+                .qtl-tile-btn-mobile.delete {
+                  color: #c00 !important;
+                  border-color: #c00 !important;
+                }
+              }
+            `}</style>
             <input
               type="checkbox"
               onChange={() => onComplete && onComplete(id)}
               style={{
-                width: 25,
-                height: 25,
-                marginTop: "8px",
+                ...tileButtonStyle,
+                width: 32,
+                height: 32,
+                borderColor: "#4caf50",
+                accentColor: "#4caf50",
+                cursor: "pointer",
               }}
+              className="qtl-tile-btn-mobile"
               title="Mark as complete"
             />
             <button
               title={urgent ? "Unmark urgent" : "Mark as urgent"}
               onClick={() => onToggleUrgent(id, !urgent)}
               style={{
-                background: urgent ? "#d00" : "#eee",
+                ...tileButtonStyle,
+                background: urgent ? "#d00" : "#fff",
                 color: urgent ? "#fff" : "#d00",
-                border: urgent ? "2px solid #d00" : "1px solid #ccc",
-                borderRadius: 6,
+                borderColor: urgent ? "#d00" : "#bbb",
                 fontWeight: 700,
-                padding: "2px 8px",
-                cursor: "pointer",
-                minWidth: 32,
-                minHeight: 32,
               }}
+              className={`qtl-tile-btn-mobile${urgent ? " urgent" : ""}`}
             >
               !
             </button>
@@ -143,19 +231,10 @@ function SortableQTLItem({
               title="Edit"
               onClick={() => onEdit(id)}
               style={{
-                background: "#f5f5f5",
-                border: "1px solid #ccc",
-                borderRadius: 6,
-                cursor: "pointer",
+                ...tileButtonStyle,
                 color: "#333",
-                fontSize: 20,
-                padding: "2px 8px",
-                minWidth: 32,
-                minHeight: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
               }}
+              className="qtl-tile-btn-mobile"
             >
               <FontAwesomeIcon icon={faPen} />
             </button>
@@ -163,19 +242,11 @@ function SortableQTLItem({
               title={blocked ? "Unblock task" : "Block task"}
               onClick={() => onToggleBlocked(id, !blocked)}
               style={{
-                background: "#f5f5f5",
-                border: "1px solid #ccc",
-                borderRadius: 6,
-                cursor: "pointer",
+                ...tileButtonStyle,
                 color: blocked ? "#c00" : "#888",
-                fontSize: 20,
-                padding: "2px 8px",
-                minWidth: 32,
-                minHeight: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                borderColor: blocked ? "#c00" : "#bbb",
               }}
+              className={`qtl-tile-btn-mobile${blocked ? " blocked" : ""}`}
             >
               <FontAwesomeIcon icon={faBan} />
             </button>
@@ -186,17 +257,9 @@ function SortableQTLItem({
                 onPlay(id);
               }}
               style={{
-                background: "#f5f5f5",
-                border: "1px solid #ccc",
-                borderRadius: 6,
-                cursor: "pointer",
-                padding: "2px 8px",
-                minWidth: 32,
-                minHeight: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                ...tileButtonStyle,
               }}
+              className="qtl-tile-btn-mobile"
             >
               <FontAwesomeIcon
                 icon={faPlay}
@@ -211,23 +274,16 @@ function SortableQTLItem({
                 onDelete(id);
               }}
               style={{
-                background: "#f5f5f5",
-                border: "1px solid #ccc",
-                borderRadius: 6,
-                cursor: "pointer",
-                color: "black",
-                padding: "2px 8px",
-                minWidth: 32,
-                minHeight: 32,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                ...tileButtonStyle,
+                color: "#c00",
+                borderColor: "#c00",
               }}
+              className="qtl-tile-btn-mobile delete"
             >
               <FontAwesomeIcon icon={faTrash} size="lg" />
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -237,7 +293,7 @@ function SortableQTLItem({
 function RepeatBadge({ repeat }) {
   if (!repeat) return null;
   const rep = repeat.trim().toLowerCase();
-  // Weekday logic
+  // Weekday logic (support multiple, e.g. mon+tue+wed)
   const weekdayMap = {
     mon: { label: "M", color: "#e53935" }, // red
     tue: { label: "Tu", color: "#fb8c00" }, // orange
@@ -247,25 +303,37 @@ function RepeatBadge({ repeat }) {
     sat: { label: "Sa", color: "#8e24aa" }, // violet
     sun: { label: "Su", color: "#757575" }, // gray
   };
-  const repShort = rep.slice(0, 3);
-  if (weekdayMap[repShort]) {
-    const { label, color } = weekdayMap[repShort];
+  if (
+    /^(mon|tue|wed|thu|fri|sat|sun)(\+(mon|tue|wed|thu|fri|sat|sun))*$/.test(
+      rep
+    )
+  ) {
+    const days = rep.split("+");
     return (
-      <span
-        style={{
-          background: color,
-          color: "#fff",
-          borderRadius: 6,
-          fontWeight: 700,
-          fontSize: 14,
-          padding: "2px 7px",
-          marginLeft: 6,
-          letterSpacing: 1,
-        }}
-        title={repeat}
-      >
-        {label}
-      </span>
+      <>
+        {days.map((d, i) => {
+          const info = weekdayMap[d];
+          if (!info) return null;
+          return (
+            <span
+              key={d + i}
+              style={{
+                background: info.color,
+                color: "#fff",
+                borderRadius: 6,
+                fontWeight: 700,
+                fontSize: 14,
+                padding: "2px 7px",
+                marginLeft: 6,
+                letterSpacing: 1,
+              }}
+              title={repeat}
+            >
+              {info.label}
+            </span>
+          );
+        })}
+      </>
     );
   }
   // Daily/ND logic (e.g. daily, 2d, 3d, 2 days)
