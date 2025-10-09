@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import styles from "./SortableQTLItem.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -11,6 +11,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import RepeatBadge from "./RepeatBadge.jsx";
+import SubtaskList from "./SubtaskList.jsx";
 
 function SortableQTLItem({
   id,
@@ -32,6 +33,8 @@ function SortableQTLItem({
   onCancelEdit,
   onComplete,
 }) {
+  const [subtasksExpanded, setSubtasksExpanded] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
   const style = {
@@ -188,6 +191,16 @@ function SortableQTLItem({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Subtasks Section */}
+      {!isEditing && (
+        <SubtaskList
+          parentTaskId={id}
+          isExpanded={subtasksExpanded}
+          onToggleExpanded={() => setSubtasksExpanded(!subtasksExpanded)}
+          canEdit={true}
+        />
       )}
     </div>
   );

@@ -23,7 +23,6 @@ const QuickTaskList = () => {
     router.push(`/focus/${id}`);
   }
   const [tasks, setTasks] = useState([]);
-  const [taskCount, setTaskCount] = useState(0);
   const [visibleTasks, setVisibleTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
   // Default next_due to today (YYYY-MM-DD)
@@ -365,7 +364,6 @@ const QuickTaskList = () => {
       .order("order", { ascending: true });
     if (!error) {
       setTasks(data);
-      setTaskCount(count ?? data.length);
     }
     setLoading(false);
   }
@@ -457,7 +455,7 @@ const QuickTaskList = () => {
         <button onClick={addTask}>Add Task</button>
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
-        Total tasks: {taskCount}
+        Total tasks: {visibleTasks?.length}
       </div>
       <button onClick={pickRandomTask}>Pick Random Task</button>
 

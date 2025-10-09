@@ -1,0 +1,183 @@
+.subtaskList {
+  margin-top: 8px;
+}
+
+.toggleButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #b0b0b0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.toggleButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #d0d0d0;
+}
+
+.chevron {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.tasksIcon {
+  color: #666;
+  font-size: 12px;
+}
+
+.count {
+  flex: 1;
+  font-weight: 500;
+}
+
+.expandedContent {
+  margin-top: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+}
+
+.loading {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  padding: 12px;
+}
+
+.subtaskItems {
+  margin-bottom: 12px;
+}
+
+.emptyState {
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  padding: 12px;
+  font-style: italic;
+}
+
+.addSubtaskSection {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+}
+
+.showAddButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 122, 204, 0.1);
+  border: 1px dashed rgba(0, 122, 204, 0.3);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #007acc;
+  cursor: pointer;
+  font-size: 13px;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.showAddButton:hover {
+  background: rgba(0, 122, 204, 0.15);
+  border-color: rgba(0, 122, 204, 0.5);
+}
+
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addInput {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+
+.addInput:focus {
+  border-color: #007acc;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.addInput::placeholder {
+  color: #ccc;
+}
+
+.addButtons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.addButton {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  padding: 6px 12px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saveButton:disabled:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+.cancelButton:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: #f44336;
+  color: #f44336;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .toggleButton {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  
+  .expandedContent {
+    padding: 8px;
+  }
+  
+  .addInput {
+    font-size: 13px;
+  }
+  
+  .addButtons {
+    flex-direction: column;
+  }
+  
+  .addButton {
+    width: 100%;
+  }
+}
