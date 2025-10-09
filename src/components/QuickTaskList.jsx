@@ -16,6 +16,11 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import {
+  fetchSubtasks,
+  deleteSubtask,
+  updateSubtask,
+} from "../utils/subtaskUtils";
 
 const QuickTaskList = () => {
   const router = useRouter();
@@ -130,20 +135,43 @@ const QuickTaskList = () => {
       await deleteTask(id);
       return;
     }
-    // For N-days repeat, advance from today; else, from next_due
-    const rep = t.repeat.trim().toLowerCase();
-    let next_due;
-    if (/^\d+\s*(d|day|days)$/.test(rep)) {
-      // Advance from today
-      const today = new Date().toISOString().slice(0, 10);
-      next_due = getNextDue(today, t.repeat);
-    } else {
-      // Advance from previous next_due (default)
-      next_due = getNextDue(t.next_due || todayStr, t.repeat);
-    }
+
     setLoading(true);
-    await supabase.from("quicktasks").update({ next_due }).eq("id", id);
-    fetchTasks();
+
+    try {
+      // For repeating tasks: advance the due date AND reset subtasks
+      const rep = t.repeat.trim().toLowerCase();
+      let next_due;
+      if (/^\d+\s*(d|day|days)$/.test(rep)) {
+        // Advance from today
+        const today = new Date().toISOString().slice(0, 10);
+        next_due = getNextDue(today, t.repeat);
+      } else {
+        // Advance from previous next_due (default)
+        next_due = getNextDue(t.next_due || todayStr, t.repeat);
+      }
+
+      // Update the task's next due date
+      await supabase.from("quicktasks").update({ next_due }).eq("id", id);
+
+      // Reset all subtasks to uncompleted for the next iteration
+      const subtasks = await fetchSubtasks(id);
+      if (subtasks.length > 0) {
+        console.log(
+          `Resetting ${subtasks.length} subtasks for repeating task ${id}`
+        );
+        await Promise.all(
+          subtasks.map((subtask) =>
+            updateSubtask(subtask.id, { completed: false })
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error completing repeating task:", error);
+      alert("Failed to complete task. Please try again.");
+    } finally {
+      fetchTasks();
+    }
   }
 
   // Toggle urgent flag
@@ -398,10 +426,47 @@ const QuickTaskList = () => {
   }
 
   async function deleteTask(id) {
-    console.log(id);
+    // Find the task to get its title for the confirmation dialog
+    const task = tasks.find((t) => t.id === id);
+    const taskTitle = task ? task.title : "this task";
+
+    // Show confirmation dialog
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${taskTitle}"?\n\nThis will also delete all subtasks associated with this task. This action cannot be undone.`
+    );
+
+    if (!confirmDelete) {
+      return; // User cancelled
+    }
+
+    console.log("Deleting task:", id);
     setLoading(true);
-    await supabase.from("quicktasks").delete().eq("id", id);
-    fetchTasks();
+
+    try {
+      // First, get all subtasks for this task
+      const subtasks = await fetchSubtasks(id);
+
+      // Delete all subtasks first
+      if (subtasks.length > 0) {
+        console.log(`Deleting ${subtasks.length} subtasks for task ${id}`);
+        await Promise.all(subtasks.map((subtask) => deleteSubtask(subtask.id)));
+      }
+
+      // Then delete the main task
+      const { error } = await supabase.from("quicktasks").delete().eq("id", id);
+
+      if (error) {
+        console.error("Error deleting task:", error);
+        alert("Failed to delete task. Please try again.");
+      } else {
+        console.log("Task and subtasks deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error during task deletion:", error);
+      alert("Failed to delete task. Please try again.");
+    } finally {
+      fetchTasks();
+    }
   }
 
   function pickRandomTask() {
