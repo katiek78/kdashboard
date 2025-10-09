@@ -41,6 +41,7 @@ function SubtaskList({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [counts, setCounts] = useState({ total: 0, completed: 0 });
+  const [countsLoaded, setCountsLoaded] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -57,10 +58,17 @@ function SubtaskList({
     }
   }, [parentTaskId, isExpanded]);
 
-  // Always fetch counts for display in the toggle button
+  // Only fetch counts when component first mounts or parentTaskId changes
+  // Use countsLoaded flag to prevent excessive API calls
   useEffect(() => {
-    loadCounts();
+    setCountsLoaded(false); // Reset when parentTaskId changes
   }, [parentTaskId]);
+
+  useEffect(() => {
+    if (!countsLoaded) {
+      loadCounts();
+    }
+  }, [parentTaskId, countsLoaded]);
 
   const loadSubtasks = async () => {
     setLoading(true);
@@ -82,6 +90,7 @@ function SubtaskList({
     try {
       const countsData = await getSubtaskCounts(parentTaskId);
       setCounts(countsData);
+      setCountsLoaded(true);
     } catch (error) {
       console.error("Error loading subtask counts:", error);
     }

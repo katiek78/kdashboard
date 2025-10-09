@@ -112,7 +112,22 @@ function SortableQTLItem({
           <div className={styles.qtlBtnbarMobile}>
             <input
               type="checkbox"
-              onChange={() => onComplete && onComplete(id)}
+              onChange={(e) => {
+                console.log(
+                  "Checkbox clicked for task:",
+                  id,
+                  "onComplete exists:",
+                  !!onComplete
+                );
+                e.preventDefault(); // Prevent checkbox from actually checking
+                if (onComplete) {
+                  onComplete(id);
+                } else {
+                  console.warn(
+                    "onComplete function not provided to SortableQTLItem"
+                  );
+                }
+              }}
               className={styles.qtlTileBtnMobile}
               style={{
                 width: 32,

@@ -20,6 +20,7 @@ import {
   fetchSubtasks,
   deleteSubtask,
   updateSubtask,
+  getSubtaskCounts,
 } from "../utils/subtaskUtils";
 
 const QuickTaskList = () => {
@@ -38,6 +39,27 @@ const QuickTaskList = () => {
   const [randomTaskId, setRandomTaskId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValuesMap, setEditValuesMap] = useState({});
+  const [completingTaskId, setCompletingTaskId] = useState(null);
+
+  // Debug function to reset stuck state
+  const resetCompletingState = () => {
+    console.log("Resetting completingTaskId from:", completingTaskId);
+    setCompletingTaskId(null);
+  };
+
+  // Auto-reset completing state after 10 seconds (failsafe)
+  useEffect(() => {
+    if (completingTaskId !== null) {
+      const timer = setTimeout(() => {
+        console.warn(
+          "Auto-resetting stuck completingTaskId:",
+          completingTaskId
+        );
+        setCompletingTaskId(null);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [completingTaskId]);
 
   // Update visibleTasks whenever tasks or loading changes
   useEffect(() => {
@@ -128,57 +150,174 @@ const QuickTaskList = () => {
 
   // Mark a task as complete: advance next_due if repeat, else delete
   async function completeTask(id) {
-    const t = tasks.find((task) => task.id === id);
-    if (!t) return;
-    if (!t.repeat) {
-      // Non-repeating: always delete when completed
-      await deleteTask(id);
+    console.log(
+      "completeTask called with id:",
+      id,
+      "completingTaskId:",
+      completingTaskId
+    );
+
+    // Prevent double-clicks/multiple calls
+    if (completingTaskId === id) {
+      console.log("Task completion already in progress for:", id);
       return;
     }
 
-    setLoading(true);
+    // Also prevent if any task is currently being completed
+    if (completingTaskId !== null) {
+      console.log(
+        "Another task completion in progress:",
+        completingTaskId,
+        "ignoring:",
+        id
+      );
+      return;
+    }
+
+    const t = tasks.find((task) => task.id === id);
+    if (!t) {
+      console.log("Task not found:", id);
+      return;
+    }
+
+    setCompletingTaskId(id);
+    console.log("Starting task completion for:", id, "repeat:", t.repeat);
 
     try {
-      // For repeating tasks: advance the due date AND reset subtasks
+      if (!t.repeat) {
+        // Non-repeating: always delete when completed
+        console.log("Non-repeating task - calling deleteTask");
+        // Don't return early - let deleteTask handle its own completion state
+        // but clear our state first to prevent conflicts
+        setCompletingTaskId(null);
+        await deleteTask(id);
+        return;
+      }
+
+      setLoading(true);
+
+      // For repeating tasks: advance the due date based on repeat type
       const rep = t.repeat.trim().toLowerCase();
       let next_due;
       if (/^\d+\s*(d|day|days)$/.test(rep)) {
-        // Advance from today
+        // Advance from today for day-based repeats
         const today = new Date().toISOString().slice(0, 10);
         next_due = getNextDue(today, t.repeat);
       } else {
-        // Advance from previous next_due (default)
+        // Advance from previous next_due for schedule-based repeats
         next_due = getNextDue(t.next_due || todayStr, t.repeat);
       }
+
+      console.log("Advancing repeating task due date to:", next_due);
 
       // Update the task's next due date
       await supabase.from("quicktasks").update({ next_due }).eq("id", id);
 
-      // Reset all subtasks to uncompleted for the next iteration
-      const subtasks = await fetchSubtasks(id);
-      if (subtasks.length > 0) {
+      // Check if there are any subtasks before trying to reset them
+      const subtaskCounts = await getSubtaskCounts(id);
+      if (subtaskCounts.total > 0) {
         console.log(
-          `Resetting ${subtasks.length} subtasks for repeating task ${id}`
+          `Resetting ${subtaskCounts.total} subtasks for repeating task ${id}`
         );
-        await Promise.all(
-          subtasks.map((subtask) =>
-            updateSubtask(subtask.id, { completed: false })
-          )
-        );
+        // Reset all subtasks to uncompleted using a single UPDATE query
+        await supabase
+          .from("subtasks")
+          .update({ completed: false })
+          .eq("parent_task_id", id);
+      } else {
+        console.log("No subtasks to reset for repeating task", id);
       }
+
+      // Update task state locally instead of refetching all tasks
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => (task.id === id ? { ...task, next_due } : task))
+      );
+
+      console.log("Repeating task completion successful");
     } catch (error) {
-      console.error("Error completing repeating task:", error);
+      console.error("Error completing task:", error);
       alert("Failed to complete task. Please try again.");
     } finally {
-      fetchTasks();
+      setLoading(false);
+      setCompletingTaskId(null);
     }
   }
 
-  // Toggle urgent flag
+  // Toggle urgent flag and reorder tasks accordingly
   async function toggleUrgent(id, urgent) {
     setLoading(true);
-    await supabase.from("quicktasks").update({ urgent }).eq("id", id);
-    fetchTasks();
+
+    try {
+      const currentTask = tasks.find((task) => task.id === id);
+      if (!currentTask) return;
+
+      if (urgent) {
+        // Making task urgent: move to bottom of urgent tasks
+        const urgentTasks = tasks.filter(
+          (task) => task.urgent && task.id !== id
+        );
+        const nonUrgentTasks = tasks.filter(
+          (task) => !task.urgent && task.id !== id
+        );
+
+        // New order: [existing urgent tasks, newly urgent task, non-urgent tasks]
+        const newTaskOrder = [
+          ...urgentTasks,
+          { ...currentTask, urgent: true },
+          ...nonUrgentTasks,
+        ];
+
+        // Update all affected tasks with new order values
+        const updates = newTaskOrder.map((task, index) => {
+          const updateData = { order: index + 1 };
+          if (task.id === id) {
+            updateData.urgent = urgent;
+          }
+          return supabase
+            .from("quicktasks")
+            .update(updateData)
+            .eq("id", task.id);
+        });
+
+        await Promise.all(updates);
+      } else {
+        // Making task non-urgent: move to bottom of all tasks
+        const urgentTasks = tasks.filter(
+          (task) => task.urgent && task.id !== id
+        );
+        const nonUrgentTasks = tasks.filter(
+          (task) => !task.urgent && task.id !== id
+        );
+
+        // New order: [urgent tasks, non-urgent tasks, newly non-urgent task]
+        const newTaskOrder = [
+          ...urgentTasks,
+          ...nonUrgentTasks,
+          { ...currentTask, urgent: false },
+        ];
+
+        // Update all affected tasks with new order values
+        const updates = newTaskOrder.map((task, index) => {
+          const updateData = { order: index + 1 };
+          if (task.id === id) {
+            updateData.urgent = urgent;
+          }
+          return supabase
+            .from("quicktasks")
+            .update(updateData)
+            .eq("id", task.id);
+        });
+
+        await Promise.all(updates);
+      }
+
+      console.log(`Task ${id} urgency changed to ${urgent} and reordered`);
+    } catch (error) {
+      console.error("Error toggling urgency and reordering:", error);
+      alert("Failed to update task urgency. Please try again.");
+    } finally {
+      fetchTasks();
+    }
   }
 
   // Helper to advance next_due based on repeat string (supports daily, weekly, N days, N months on Dth, etc)
@@ -426,6 +565,12 @@ const QuickTaskList = () => {
   }
 
   async function deleteTask(id) {
+    // Prevent double-clicks/multiple calls
+    if (completingTaskId === id) {
+      console.log("Delete already in progress for task:", id);
+      return;
+    }
+
     // Find the task to get its title for the confirmation dialog
     const task = tasks.find((t) => t.id === id);
     const taskTitle = task ? task.title : "this task";
@@ -436,36 +581,35 @@ const QuickTaskList = () => {
     );
 
     if (!confirmDelete) {
+      console.log("User cancelled deletion of task:", id);
       return; // User cancelled
     }
 
-    console.log("Deleting task:", id);
+    console.log("User confirmed deletion of task:", id);
+    setCompletingTaskId(id);
     setLoading(true);
 
     try {
-      // First, get all subtasks for this task
-      const subtasks = await fetchSubtasks(id);
-
-      // Delete all subtasks first
-      if (subtasks.length > 0) {
-        console.log(`Deleting ${subtasks.length} subtasks for task ${id}`);
-        await Promise.all(subtasks.map((subtask) => deleteSubtask(subtask.id)));
-      }
-
-      // Then delete the main task
+      // Delete the main task - subtasks will be automatically deleted due to CASCADE constraint
       const { error } = await supabase.from("quicktasks").delete().eq("id", id);
 
       if (error) {
         console.error("Error deleting task:", error);
         alert("Failed to delete task. Please try again.");
       } else {
-        console.log("Task and subtasks deleted successfully");
+        console.log(
+          "Task deleted successfully (subtasks auto-deleted by CASCADE):",
+          id
+        );
+        // Remove task from state locally instead of refetching all tasks
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
       }
     } catch (error) {
       console.error("Error during task deletion:", error);
       alert("Failed to delete task. Please try again.");
     } finally {
-      fetchTasks();
+      setLoading(false);
+      setCompletingTaskId(null);
     }
   }
 
@@ -521,6 +665,17 @@ const QuickTaskList = () => {
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
         Total tasks: {visibleTasks?.length}
+        {completingTaskId && (
+          <span style={{ marginLeft: 20, color: "#ff9800", fontSize: 14 }}>
+            Completing: {completingTaskId}
+            <button
+              onClick={resetCompletingState}
+              style={{ marginLeft: 8, fontSize: 12, padding: "2px 6px" }}
+            >
+              Reset
+            </button>
+          </span>
+        )}
       </div>
       <button onClick={pickRandomTask}>Pick Random Task</button>
 
