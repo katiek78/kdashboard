@@ -33,10 +33,14 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
     router.push(`/focus/${id}`);
   };
 
-  const handleTaskComplete = (taskId) => {
+  const handleTaskComplete = async (taskId) => {
     console.log("BoardView handling task completion:", taskId);
     if (onTaskComplete) {
-      onTaskComplete(taskId);
+      await onTaskComplete(taskId);
+      // Refresh tasks after completion to ensure board updates
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
     }
   };
 
@@ -426,13 +430,17 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       // Handle repeating tasks
       if (task.repeat) {
         const rep = task.repeat.trim().toLowerCase();
-        // ONLY pure daily tasks (d, daily) always show on today
-        // Numbered day tasks (2d, 3d, etc.) should respect their next_due date
+        // Pure daily tasks (d, daily) should still respect their next_due date
+        // but if they have no next_due date, they go to today
         if (rep === "d" || rep === "daily") {
-          if (tasksByColumn[today]) {
-            tasksByColumn[today].push(task);
+          if (!task.next_due) {
+            // Daily tasks with no due date go to today
+            if (tasksByColumn[today]) {
+              tasksByColumn[today].push(task);
+            }
+            return;
           }
-          return;
+          // If daily task has a next_due date, fall through to use that date
         }
       }
 

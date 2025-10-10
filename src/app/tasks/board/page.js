@@ -179,7 +179,7 @@ const BoardPage = () => {
     <div className={styles.pageContainer}>
       <BoardView
         tasks={tasks}
-        onTaskUpdate={handleTaskUpdate}
+        onTaskUpdate={fetchTasks}
         onTaskComplete={handleTaskComplete}
         router={router}
       />
