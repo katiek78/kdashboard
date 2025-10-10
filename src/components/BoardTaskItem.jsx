@@ -10,7 +10,7 @@ import { CSS } from "@dnd-kit/utilities";
 import RepeatBadge from "./RepeatBadge";
 import styles from "./BoardTaskItem.module.css";
 
-const BoardTaskItem = ({ task, onPlay, onComplete }) => {
+const BoardTaskItem = ({ task, onComplete, onClick }) => {
   const {
     attributes,
     listeners,
@@ -41,6 +41,17 @@ const BoardTaskItem = ({ task, onPlay, onComplete }) => {
     }
   };
 
+  const handleTaskClick = (e) => {
+    // Don't trigger click if clicking on checkbox or drag handle
+    if (e.target.type === 'checkbox' || e.target.closest(`.${styles.dragHandle}`)) {
+      return;
+    }
+    
+    if (onClick) {
+      onClick(task);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -48,6 +59,7 @@ const BoardTaskItem = ({ task, onPlay, onComplete }) => {
       className={`${styles.taskItem} ${task.urgent ? styles.urgent : ""} ${
         task.blocked ? styles.blocked : ""
       } ${isDragging ? styles.dragging : ""}`}
+      onClick={handleTaskClick}
     >
       <div className={styles.taskHeader}>
         <div className={styles.taskTitleRow}>

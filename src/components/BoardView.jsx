@@ -14,11 +14,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import BoardTaskItem from "./BoardTaskItem";
+import TaskDetailModal from "./TaskDetailModal";
 import styles from "./BoardView.module.css";
 
 const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
   const router = useRouter();
   const [activeTask, setActiveTask] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -36,6 +39,176 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
     console.log("BoardView handling task completion:", taskId);
     if (onTaskComplete) {
       onTaskComplete(taskId);
+    }
+  };
+
+  // Modal handlers
+  const handleTaskClick = async (task) => {
+    try {
+      // Fetch subtasks for this task
+      const { data: subtasks, error } = await supabase
+        .from("subtasks")
+        .select("*")
+        .eq("parent_task_id", task.id)
+        .order("order");
+
+      if (error) throw error;
+
+      // Add subtasks to the task object
+      const taskWithSubtasks = { ...task, subtasks: subtasks || [] };
+      
+      setSelectedTask(taskWithSubtasks);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching subtasks:", error);
+      // Still open modal even if subtasks fail to load
+      setSelectedTask({ ...task, subtasks: [] });
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleTaskSave = async (updatedTask) => {
+    try {
+      const { error } = await supabase
+        .from("quicktasks")
+        .update({
+          title: updatedTask.title,
+          description: updatedTask.description,
+          next_due: updatedTask.next_due,
+          urgent: updatedTask.urgent,
+          blocked: updatedTask.blocked,
+        })
+        .eq("id", updatedTask.id);
+
+      if (error) throw error;
+
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+      
+      handleModalClose();
+    } catch (error) {
+      console.error("Error updating task:", error);
+      alert("Failed to update task");
+    }
+  };
+
+  const handleTaskDelete = async (taskId) => {
+    try {
+      // Delete subtasks first
+      const { error: subtaskError } = await supabase
+        .from("subtasks")
+        .delete()
+        .eq("parent_task_id", taskId);
+
+      if (subtaskError) throw subtaskError;
+
+      // Delete the main task
+      const { error } = await supabase
+        .from("quicktasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+      
+      handleModalClose();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      alert("Failed to delete task");
+    }
+  };
+
+  const handleSubtaskAdd = async (taskId, title) => {
+    try {
+      const { error } = await supabase
+        .from("subtasks")
+        .insert({
+          parent_task_id: taskId,
+          title: title,
+          completed: false,
+          order: Date.now(), // Simple ordering
+        });
+
+      if (error) throw error;
+
+      // Refresh subtasks in the modal
+      await refreshSelectedTaskSubtasks();
+      
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+    } catch (error) {
+      console.error("Error adding subtask:", error);
+      alert("Failed to add subtask");
+    }
+  };
+
+  const handleSubtaskUpdate = async (subtaskId, updates) => {
+    try {
+      const { error } = await supabase
+        .from("subtasks")
+        .update(updates)
+        .eq("id", subtaskId);
+
+      if (error) throw error;
+
+      // Refresh subtasks in the modal
+      await refreshSelectedTaskSubtasks();
+      
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+    } catch (error) {
+      console.error("Error updating subtask:", error);
+      alert("Failed to update subtask");
+    }
+  };
+
+  const handleSubtaskDelete = async (subtaskId) => {
+    try {
+      const { error } = await supabase
+        .from("subtasks")
+        .delete()
+        .eq("id", subtaskId);
+
+      if (error) throw error;
+
+      // Refresh subtasks in the modal
+      await refreshSelectedTaskSubtasks();
+      
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+    } catch (error) {
+      console.error("Error deleting subtask:", error);
+      alert("Failed to delete subtask");
+    }
+  };
+
+  const refreshSelectedTaskSubtasks = async () => {
+    if (!selectedTask) return;
+    
+    try {
+      const { data: subtasks, error } = await supabase
+        .from("subtasks")
+        .select("*")
+        .eq("parent_task_id", selectedTask.id)
+        .order("order");
+
+      if (error) throw error;
+
+      setSelectedTask(prev => ({ ...prev, subtasks: subtasks || [] }));
+    } catch (error) {
+      console.error("Error refreshing subtasks:", error);
     }
   };
 
@@ -316,8 +489,8 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
                           <BoardTaskItem
                             key={task.id}
                             task={task}
-                            onPlay={playTask}
                             onComplete={handleTaskComplete}
+                            onClick={handleTaskClick}
                           />
                         ))
                       ) : (
@@ -349,8 +522,8 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
                       <BoardTaskItem
                         key={task.id}
                         task={task}
-                        onPlay={playTask}
                         onComplete={handleTaskComplete}
+                        onClick={handleTaskClick}
                       />
                     ))
                   ) : (
@@ -366,14 +539,26 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
               <div className={styles.dragOverlay}>
                 <BoardTaskItem
                   task={activeTask}
-                  onPlay={() => {}} // Disabled during drag
                   onComplete={() => {}} // Disabled during drag
+                  onClick={() => {}} // Disabled during drag
                 />
               </div>
             ) : null}
           </DragOverlay>
         </DndContext>
       </div>
+      
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        onSave={handleTaskSave}
+        onDelete={handleTaskDelete}
+        onSubtaskAdd={handleSubtaskAdd}
+        onSubtaskUpdate={handleSubtaskUpdate}
+        onSubtaskDelete={handleSubtaskDelete}
+      />
     </div>
   );
 };
