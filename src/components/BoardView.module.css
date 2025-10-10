@@ -105,6 +105,89 @@
   text-transform: uppercase;
 }
 
+.addTaskButton {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: inherit;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.addTaskButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.addTaskForm {
+  padding: 12px;
+  background: #333;
+  border-bottom: 1px solid #444;
+}
+
+.addTaskInput {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.addTaskInput:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.addTaskActions {
+  display: flex;
+  gap: 8px;
+}
+
+.addTaskSave, .addTaskCancel {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.addTaskSave {
+  background: #007acc;
+  color: white;
+}
+
+.addTaskSave:hover:not(:disabled) {
+  background: #005a9e;
+}
+
+.addTaskSave:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.addTaskCancel {
+  background: #666;
+  color: white;
+}
+
+.addTaskCancel:hover {
+  background: #555;
+}
+
 .taskList {
   flex: 1;
   padding: 16px;

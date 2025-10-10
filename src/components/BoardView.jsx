@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import supabase from "../utils/supabaseClient";
 import {
   DndContext,
@@ -20,6 +20,8 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const [activeTask, setActiveTask] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [addingToColumn, setAddingToColumn] = useState(null);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -209,6 +211,64 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       setSelectedTask((prev) => ({ ...prev, subtasks: subtasks || [] }));
     } catch (error) {
       console.error("Error refreshing subtasks:", error);
+    }
+  };
+
+  // Task creation handlers
+  const handleAddTaskToColumn = (columnId) => {
+    setAddingToColumn(columnId);
+    setNewTaskTitle("");
+  };
+
+  const handleCancelAddTask = () => {
+    setAddingToColumn(null);
+    setNewTaskTitle("");
+  };
+
+  const handleCreateTask = async (columnId) => {
+    if (!newTaskTitle.trim()) return;
+
+    try {
+      // Determine the next_due date based on the column
+      let nextDue = null;
+      if (columnId !== "future") {
+        nextDue = columnId; // columnId is the date string (YYYY-MM-DD)
+      }
+      // For future column, nextDue stays null
+
+      // Find the highest order value for proper task ordering
+      const maxOrder = tasks.length > 0 ? Math.max(...tasks.map((t) => t.order || 0)) : 0;
+      const nextOrder = maxOrder + 1;
+
+      const { error } = await supabase.from("quicktasks").insert({
+        title: newTaskTitle.trim(),
+        order: nextOrder,
+        next_due: nextDue,
+        urgent: false,
+        blocked: false,
+        repeat: null,
+      });
+
+      if (error) throw error;
+
+      // Reset form and refresh tasks
+      setAddingToColumn(null);
+      setNewTaskTitle("");
+      
+      if (onTaskUpdate) {
+        onTaskUpdate();
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Failed to create task");
+    }
+  };
+
+  const handleKeyPress = (e, columnId) => {
+    if (e.key === "Enter") {
+      handleCreateTask(columnId);
+    } else if (e.key === "Escape") {
+      handleCancelAddTask();
     }
   };
 
@@ -477,7 +537,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
     return { tasksByColumn, futureTasks, days };
   };
 
-  const { tasksByColumn, futureTasks, days } = distributeTasksToColumns();
+  const { tasksByColumn, futureTasks, days } = useMemo(() => {
+    return distributeTasksToColumns();
+  }, [tasks]);
 
   return (
     <div className={styles.boardContainer}>
@@ -520,7 +582,44 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                     {day.isToday && (
                       <div className={styles.todayLabel}>Today</div>
                     )}
+                    <button
+                      className={styles.addTaskButton}
+                      onClick={() => handleAddTaskToColumn(day.date)}
+                      title={`Add task to ${day.dayName}`}
+                    >
+                      +
+                    </button>
                   </div>
+
+                  {/* Add task input for this column */}
+                  {addingToColumn === day.date && (
+                    <div className={styles.addTaskForm}>
+                      <input
+                        type="text"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        onKeyDown={(e) => handleKeyPress(e, day.date)}
+                        placeholder="Enter task title..."
+                        className={styles.addTaskInput}
+                        autoFocus
+                      />
+                      <div className={styles.addTaskActions}>
+                        <button 
+                          onClick={() => handleCreateTask(day.date)}
+                          className={styles.addTaskSave}
+                          disabled={!newTaskTitle.trim()}
+                        >
+                          Add
+                        </button>
+                        <button 
+                          onClick={handleCancelAddTask}
+                          className={styles.addTaskCancel}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <SortableContext
                     id={day.date}
@@ -553,7 +652,44 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
               <div className={`${styles.dayHeader} ${styles.futureHeader}`}>
                 <div className={styles.dayName}>Future</div>
                 <div className={styles.monthDay}>Later</div>
+                <button
+                  className={styles.addTaskButton}
+                  onClick={() => handleAddTaskToColumn("future")}
+                  title="Add task to Future"
+                >
+                  +
+                </button>
               </div>
+
+              {/* Add task input for Future column */}
+              {addingToColumn === "future" && (
+                <div className={styles.addTaskForm}>
+                  <input
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, "future")}
+                    placeholder="Enter task title..."
+                    className={styles.addTaskInput}
+                    autoFocus
+                  />
+                  <div className={styles.addTaskActions}>
+                    <button 
+                      onClick={() => handleCreateTask("future")}
+                      className={styles.addTaskSave}
+                      disabled={!newTaskTitle.trim()}
+                    >
+                      Add
+                    </button>
+                    <button 
+                      onClick={handleCancelAddTask}
+                      className={styles.addTaskCancel}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <SortableContext
                 id="future"
