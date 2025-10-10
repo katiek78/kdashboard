@@ -1,13 +1,22 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faClock, faRepeat } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faClock } from "@fortawesome/free-solid-svg-icons";
+import RepeatBadge from "./RepeatBadge";
 import styles from "./BoardTaskItem.module.css";
 
-const BoardTaskItem = ({ task, onPlay }) => {
+const BoardTaskItem = ({ task, onPlay, onComplete }) => {
   const handlePlay = (e) => {
     e.stopPropagation();
     if (onPlay) {
       onPlay(task.id);
+    }
+  };
+
+  const handleComplete = (e) => {
+    e.stopPropagation();
+    console.log("Board task completion checkbox clicked for task:", task.id);
+    if (onComplete) {
+      onComplete(task.id);
     }
   };
 
@@ -18,14 +27,16 @@ const BoardTaskItem = ({ task, onPlay }) => {
       }`}
     >
       <div className={styles.taskHeader}>
-        <span className={styles.taskTitle}>{task.title}</span>
-        {task.repeat && (
-          <FontAwesomeIcon
-            icon={faRepeat}
-            className={styles.repeatIcon}
-            title={`Repeats: ${task.repeat}`}
+        <div className={styles.taskTitleRow}>
+          <input
+            type="checkbox"
+            onChange={handleComplete}
+            className={styles.completeCheckbox}
+            title="Mark as complete"
           />
-        )}
+          <span className={styles.taskTitle}>{task.title}</span>
+        </div>
+        {task.repeat && <RepeatBadge repeat={task.repeat} />}
       </div>
 
       {task.next_due && (

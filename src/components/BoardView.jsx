@@ -3,11 +3,18 @@ import { useRouter } from "next/navigation";
 import BoardTaskItem from "./BoardTaskItem";
 import styles from "./BoardView.module.css";
 
-const BoardView = ({ tasks = [], onTaskUpdate }) => {
+const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
   const router = useRouter();
 
   const playTask = (id) => {
     router.push(`/focus/${id}`);
+  };
+
+  const handleTaskComplete = (taskId) => {
+    console.log("BoardView handling task completion:", taskId);
+    if (onTaskComplete) {
+      onTaskComplete(taskId);
+    }
   };
 
   // Generate the next 10 days starting from today
@@ -58,12 +65,9 @@ const BoardView = ({ tasks = [], onTaskUpdate }) => {
       // Handle repeating tasks
       if (task.repeat) {
         const rep = task.repeat.trim().toLowerCase();
-        // Daily tasks (d, daily, 2d, etc.) only show on today
-        if (
-          rep === "d" ||
-          rep === "daily" ||
-          /^\d+\s*(d|day|days)$/.test(rep)
-        ) {
+        // ONLY pure daily tasks (d, daily) always show on today
+        // Numbered day tasks (2d, 3d, etc.) should respect their next_due date
+        if (rep === "d" || rep === "daily") {
           if (tasksByColumn[today]) {
             tasksByColumn[today].push(task);
           }
@@ -130,6 +134,7 @@ const BoardView = ({ tasks = [], onTaskUpdate }) => {
                         key={task.id}
                         task={task}
                         onPlay={playTask}
+                        onComplete={handleTaskComplete}
                       />
                     ))
                   ) : (
@@ -150,7 +155,12 @@ const BoardView = ({ tasks = [], onTaskUpdate }) => {
             <div className={styles.taskList}>
               {futureTasks.length > 0 ? (
                 futureTasks.map((task) => (
-                  <BoardTaskItem key={task.id} task={task} onPlay={playTask} />
+                  <BoardTaskItem
+                    key={task.id}
+                    task={task}
+                    onPlay={playTask}
+                    onComplete={handleTaskComplete}
+                  />
                 ))
               ) : (
                 <div className={styles.emptyState}>No future tasks</div>

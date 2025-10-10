@@ -30,13 +30,29 @@
   margin-bottom: 8px;
 }
 
+.taskTitleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.completeCheckbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  accent-color: #4caf50;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .taskTitle {
   font-weight: 500;
   color: #fff;
   font-size: 14px;
   line-height: 1.3;
   flex: 1;
-  margin-right: 8px;
 }
 
 .repeatIcon {
