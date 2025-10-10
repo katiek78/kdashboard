@@ -67,7 +67,11 @@ const BoardTaskItem = ({ task, onPlay, onComplete }) => {
             <FontAwesomeIcon icon={faGripVertical} />
           </button>
         </div>
-        {task.repeat && <RepeatBadge repeat={task.repeat} />}
+        {task.repeat && (
+          <div className={styles.repeatBadgeContainer}>
+            <RepeatBadge repeat={task.repeat} />
+          </div>
+        )}
       </div>
 
       {task.next_due && (
