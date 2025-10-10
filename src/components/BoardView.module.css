@@ -1,0 +1,136 @@
+.boardContainer {
+  width: 100%;
+  height: 100vh;
+  background: #1a1a1a;
+  color: white;
+  overflow: hidden;
+}
+
+.boardHeader {
+  padding: 20px;
+  border-bottom: 1px solid #333;
+  background: #222;
+}
+
+.boardHeader h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.boardScrollContainer {
+  height: calc(100vh - 80px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 20px 0;
+}
+
+.board {
+  display: flex;
+  gap: 20px;
+  padding: 0 20px;
+  min-width: fit-content;
+}
+
+.dayColumn {
+  min-width: 280px;
+  max-width: 280px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 120px);
+}
+
+.dayHeader {
+  padding: 16px;
+  border-bottom: 1px solid #444;
+  text-align: center;
+  background: #333;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+}
+
+.dayHeader.today {
+  background: #1976d2;
+  color: white;
+}
+
+.dayName {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.monthDay {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.todayLabel {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.taskList {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emptyState {
+  color: #888;
+  text-align: center;
+  font-style: italic;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+/* Scrollbar styling for webkit browsers */
+.boardScrollContainer::-webkit-scrollbar {
+  height: 8px;
+}
+
+.boardScrollContainer::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.boardScrollContainer::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.boardScrollContainer::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.taskList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.taskList::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 3px;
+}
+
+.taskList::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+.taskList::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
