@@ -56,6 +56,11 @@
   color: white;
 }
 
+.dayHeader.futureHeader {
+  background: #7b1fa2;
+  color: white;
+}
+
 .dayName {
   font-size: 14px;
   font-weight: 600;

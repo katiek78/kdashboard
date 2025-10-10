@@ -15,17 +15,17 @@ export default function TasksPage() {
       <main className="main">
         <div className="title">
           Tasks
-          <Link 
-            href="/tasks/board" 
+          <Link
+            href="/tasks/board"
             style={{
-              marginLeft: '20px',
-              padding: '8px 16px',
-              background: '#1976d2',
-              color: 'white',
-              textDecoration: 'none',
-              borderRadius: '4px',
-              fontSize: '14px',
-              fontWeight: 'normal'
+              marginLeft: "20px",
+              padding: "8px 16px",
+              background: "#1976d2",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: "4px",
+              fontSize: "14px",
+              fontWeight: "normal",
             }}
           >
             Board View

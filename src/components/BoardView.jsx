@@ -1,57 +1,152 @@
 import React from "react";
+import { useRouter } from "next/navigation";
+import BoardTaskItem from "./BoardTaskItem";
 import styles from "./BoardView.module.css";
 
 const BoardView = ({ tasks = [], onTaskUpdate }) => {
+  const router = useRouter();
+
+  const playTask = (id) => {
+    router.push(`/focus/${id}`);
+  };
+
   // Generate the next 10 days starting from today
   const generateDays = () => {
     const days = [];
     const today = new Date();
-    
+
     for (let i = 0; i < 10; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      
+
       const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD format
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      
+      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+      const monthDay = date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+
       days.push({
         date: dateStr,
         dayName,
         monthDay,
-        isToday: i === 0
+        isToday: i === 0,
       });
     }
-    
+
     return days;
   };
 
-  const days = generateDays();
+  // Distribute tasks to appropriate columns
+  const distributeTasksToColumns = () => {
+    const days = generateDays();
+    const today = new Date().toISOString().slice(0, 10);
+    const maxDate = days[days.length - 1].date; // Last day in our 10-day view
+
+    const tasksByColumn = {};
+    const futureTasks = [];
+
+    // Initialize empty arrays for each day
+    days.forEach((day) => {
+      tasksByColumn[day.date] = [];
+    });
+
+    tasks.forEach((task) => {
+      // Handle repeating tasks
+      if (task.repeat) {
+        const rep = task.repeat.trim().toLowerCase();
+        // Daily tasks (d, daily, 2d, etc.) only show on today
+        if (
+          rep === "d" ||
+          rep === "daily" ||
+          /^\d+\s*(d|day|days)$/.test(rep)
+        ) {
+          if (tasksByColumn[today]) {
+            tasksByColumn[today].push(task);
+          }
+          return;
+        }
+      }
+
+      // For non-daily repeating tasks and one-time tasks, use their next_due date
+      if (task.next_due) {
+        if (task.next_due <= maxDate && tasksByColumn[task.next_due]) {
+          tasksByColumn[task.next_due].push(task);
+        } else if (task.next_due > maxDate) {
+          futureTasks.push(task);
+        }
+      } else {
+        // Tasks with no due date go to today
+        if (tasksByColumn[today]) {
+          tasksByColumn[today].push(task);
+        }
+      }
+    });
+
+    return { tasksByColumn, futureTasks, days };
+  };
+
+  const { tasksByColumn, futureTasks, days } = distributeTasksToColumns();
 
   return (
     <div className={styles.boardContainer}>
       <div className={styles.boardHeader}>
         <h2>Board View - Next 10 Days</h2>
       </div>
-      
+
       <div className={styles.boardScrollContainer}>
         <div className={styles.board}>
-          {days.map((day) => (
-            <div key={day.date} className={styles.dayColumn}>
-              <div className={`${styles.dayHeader} ${day.isToday ? styles.today : ''}`}>
-                <div className={styles.dayName}>{day.dayName}</div>
-                <div className={styles.monthDay}>{day.monthDay}</div>
-                {day.isToday && <div className={styles.todayLabel}>Today</div>}
-              </div>
-              
-              <div className={styles.taskList}>
-                {/* Tasks will go here */}
-                <div className={styles.emptyState}>
-                  No tasks scheduled
+          {/* Day columns */}
+          {days.map((day) => {
+            const dayTasks = tasksByColumn[day.date] || [];
+            return (
+              <div key={day.date} className={styles.dayColumn}>
+                <div
+                  className={`${styles.dayHeader} ${
+                    day.isToday ? styles.today : ""
+                  }`}
+                >
+                  <div className={styles.dayName}>{day.dayName}</div>
+                  <div className={styles.monthDay}>{day.monthDay}</div>
+                  {day.isToday && (
+                    <div className={styles.todayLabel}>Today</div>
+                  )}
+                </div>
+
+                <div className={styles.taskList}>
+                  {dayTasks.length > 0 ? (
+                    dayTasks.map((task) => (
+                      <BoardTaskItem
+                        key={task.id}
+                        task={task}
+                        onPlay={playTask}
+                      />
+                    ))
+                  ) : (
+                    <div className={styles.emptyState}>No tasks scheduled</div>
+                  )}
                 </div>
               </div>
+            );
+          })}
+
+          {/* Future column */}
+          <div className={styles.dayColumn}>
+            <div className={`${styles.dayHeader} ${styles.futureHeader}`}>
+              <div className={styles.dayName}>Future</div>
+              <div className={styles.monthDay}>Later</div>
             </div>
-          ))}
+
+            <div className={styles.taskList}>
+              {futureTasks.length > 0 ? (
+                futureTasks.map((task) => (
+                  <BoardTaskItem key={task.id} task={task} onPlay={playTask} />
+                ))
+              ) : (
+                <div className={styles.emptyState}>No future tasks</div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
