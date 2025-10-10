@@ -199,12 +199,19 @@ const QuickTaskList = () => {
       // For repeating tasks: advance the due date based on repeat type
       const rep = t.repeat.trim().toLowerCase();
       let next_due;
-      if (/^\d+\s*(d|day|days)$/.test(rep)) {
+      if (/^\d+\s*(d|day|days)$/.test(rep) || rep === "d" || rep === "daily") {
         // Advance from today for day-based repeats
         const today = new Date().toISOString().slice(0, 10);
+        console.log("Day-based repeat detected, using today:", today);
         next_due = getNextDue(today, t.repeat);
       } else {
         // Advance from previous next_due for schedule-based repeats
+        console.log(
+          "Schedule-based repeat, using previous next_due:",
+          t.next_due,
+          "or todayStr:",
+          todayStr
+        );
         next_due = getNextDue(t.next_due || todayStr, t.repeat);
       }
 
@@ -351,11 +358,11 @@ const QuickTaskList = () => {
       base.setDate(base.getDate() + daysToAdd);
       return base.toISOString().slice(0, 10);
     }
-    if (rep === "daily") {
+    if (rep === "daily" || rep === "d") {
       base.setDate(base.getDate() + 1);
       return base.toISOString().slice(0, 10);
     }
-    if (rep === "weekly") {
+    if (rep === "weekly" || rep === "w") {
       base.setDate(base.getDate() + 7);
       return base.toISOString().slice(0, 10);
     }
@@ -664,8 +671,8 @@ const QuickTaskList = () => {
         <button onClick={addTask}>Add Task</button>
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
-        Total tasks: {visibleTasks?.length}
-        {completingTaskId && (
+        Total tasks for today: {visibleTasks?.length}
+        {/* {completingTaskId && (
           <span style={{ marginLeft: 20, color: "#ff9800", fontSize: 14 }}>
             Completing: {completingTaskId}
             <button
@@ -675,7 +682,7 @@ const QuickTaskList = () => {
               Reset
             </button>
           </span>
-        )}
+        )} */}
       </div>
       <button onClick={pickRandomTask}>Pick Random Task</button>
 
