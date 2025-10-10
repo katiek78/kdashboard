@@ -139,3 +139,16 @@
 .taskList::-webkit-scrollbar-thumb:hover {
   background: #666;
 }
+
+/* Drag overlay styling */
+.dragOverlay {
+  width: 260px; /* Match day column width minus padding */
+  transform: rotate(5deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.dragOverlay .taskItem {
+  background: #444;
+  border: 2px solid #1976d2;
+}
