@@ -43,6 +43,9 @@ const BoardView = ({ tasks = [], onTaskUpdate }) => {
     const today = new Date().toISOString().slice(0, 10);
     const maxDate = days[days.length - 1].date; // Last day in our 10-day view
 
+    console.log("Board View - Distributing tasks:", tasks.length, "tasks");
+    console.log("Today:", today, "MaxDate:", maxDate);
+
     const tasksByColumn = {};
     const futureTasks = [];
 
@@ -70,9 +73,16 @@ const BoardView = ({ tasks = [], onTaskUpdate }) => {
 
       // For non-daily repeating tasks and one-time tasks, use their next_due date
       if (task.next_due) {
-        if (task.next_due <= maxDate && tasksByColumn[task.next_due]) {
+        if (task.next_due <= today) {
+          // Tasks due today or in the past go to today's column
+          if (tasksByColumn[today]) {
+            tasksByColumn[today].push(task);
+          }
+        } else if (task.next_due <= maxDate && tasksByColumn[task.next_due]) {
+          // Tasks due within our 10-day view go to their specific day
           tasksByColumn[task.next_due].push(task);
         } else if (task.next_due > maxDate) {
+          // Tasks due beyond our 10-day view go to Future
           futureTasks.push(task);
         }
       } else {
