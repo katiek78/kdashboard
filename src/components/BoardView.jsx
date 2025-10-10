@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import supabase from "../utils/supabaseClient";
 import {
   DndContext,
@@ -17,8 +16,7 @@ import BoardTaskItem from "./BoardTaskItem";
 import TaskDetailModal from "./TaskDetailModal";
 import styles from "./BoardView.module.css";
 
-const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
-  const router = useRouter();
+const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const [activeTask, setActiveTask] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -476,7 +474,15 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
   return (
     <div className={styles.boardContainer}>
       <div className={styles.boardHeader}>
-        <h2>Board View - Next 10 Days</h2>
+        <h2>Board View</h2>
+        {router && (
+          <button
+            onClick={() => router.push("/tasks")}
+            className={styles.backButton}
+          >
+            Back to Today View
+          </button>
+        )}
       </div>
 
       <div className={styles.boardScrollContainer}>
@@ -496,9 +502,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
                     className={`${styles.dayHeader} ${
                       day.isToday ? styles.today : ""
                     }`}
-                    style={{ 
-                      backgroundColor: day.headerColor, 
-                      color: day.textColor 
+                    style={{
+                      backgroundColor: day.headerColor,
+                      color: day.textColor,
                     }}
                   >
                     <div className={styles.dayName}>{day.dayName}</div>

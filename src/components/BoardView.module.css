@@ -10,12 +10,31 @@
   padding: 20px;
   border-bottom: 1px solid #333;
   background: #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .boardHeader h2 {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
+}
+
+.backButton {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.backButton:hover {
+  background: #1565c0;
 }
 
 .boardScrollContainer {
@@ -138,6 +157,31 @@
 
 .taskList::-webkit-scrollbar-thumb:hover {
   background: #666;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .boardHeader {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .boardHeader h2 {
+    font-size: 20px;
+    text-align: center;
+  }
+  
+  .backButton {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .dayColumn {
+    min-width: 250px;
+    max-width: 250px;
+  }
 }
 
 /* Drag overlay styling */

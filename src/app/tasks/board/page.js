@@ -177,20 +177,11 @@ const BoardPage = () => {
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.header}>
-        <button
-          onClick={() => router.push("/tasks")}
-          className={styles.backButton}
-        >
-          ← Back to Today View
-        </button>
-        <h1>Task Board</h1>
-      </div>
-
       <BoardView
         tasks={tasks}
         onTaskUpdate={handleTaskUpdate}
         onTaskComplete={handleTaskComplete}
+        router={router}
       />
     </div>
   );

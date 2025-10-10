@@ -17,8 +17,9 @@
   border-radius: 12px;
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   color: #fff;
 }
@@ -55,6 +56,8 @@
 
 .modalBody {
   padding: 24px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .field {
@@ -380,12 +383,13 @@
 /* Responsive design */
 @media (max-width: 768px) {
   .modalOverlay {
-    padding: 10px;
+    padding: 5px;
   }
   
   .modalContent {
     max-width: 100%;
     max-height: 95vh;
+    border-radius: 8px;
   }
   
   .modalHeader, .modalBody, .modalFooter {
@@ -399,6 +403,7 @@
   .modalFooter {
     flex-direction: column;
     gap: 12px;
+    flex-shrink: 0;
   }
   
   .leftActions, .rightActions {
