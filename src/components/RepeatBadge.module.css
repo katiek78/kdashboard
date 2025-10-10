@@ -11,11 +11,11 @@
 
 .badgeWeekdayMon { background: #e53935; }
 .badgeWeekdayTue { background: #fb8c00; }
-.badgeWeekdayWed { background: #757575; }
+.badgeWeekdayWed { background: #ffff00; color: #000; }
 .badgeWeekdayThu { background: #43a047; }
 .badgeWeekdayFri { background: #3949ab; }
 .badgeWeekdaySat { background: #8e24aa; }
-.badgeWeekdaySun { background: #757575; }
+.badgeWeekdaySun { background: #c71c6c; }
 
 .badgeDaily { background: limegreen; }
 .badgeMonth { background: #1976d2; }

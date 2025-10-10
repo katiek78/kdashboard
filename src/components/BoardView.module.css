@@ -52,8 +52,8 @@
 }
 
 .dayHeader.today {
-  background: #1976d2;
   color: white;
+  /* background color will be set inline based on weekday */
 }
 
 .dayHeader.futureHeader {

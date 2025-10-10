@@ -43,10 +43,13 @@ const BoardTaskItem = ({ task, onComplete, onClick }) => {
 
   const handleTaskClick = (e) => {
     // Don't trigger click if clicking on checkbox or drag handle
-    if (e.target.type === 'checkbox' || e.target.closest(`.${styles.dragHandle}`)) {
+    if (
+      e.target.type === "checkbox" ||
+      e.target.closest(`.${styles.dragHandle}`)
+    ) {
       return;
     }
-    
+
     if (onClick) {
       onClick(task);
     }

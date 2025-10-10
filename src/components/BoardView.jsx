@@ -56,7 +56,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
       // Add subtasks to the task object
       const taskWithSubtasks = { ...task, subtasks: subtasks || [] };
-      
+
       setSelectedTask(taskWithSubtasks);
       setIsModalOpen(true);
     } catch (error) {
@@ -90,7 +90,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
       if (onTaskUpdate) {
         onTaskUpdate();
       }
-      
+
       handleModalClose();
     } catch (error) {
       console.error("Error updating task:", error);
@@ -119,7 +119,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
       if (onTaskUpdate) {
         onTaskUpdate();
       }
-      
+
       handleModalClose();
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -129,20 +129,18 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
   const handleSubtaskAdd = async (taskId, title) => {
     try {
-      const { error } = await supabase
-        .from("subtasks")
-        .insert({
-          parent_task_id: taskId,
-          title: title,
-          completed: false,
-          order: Date.now(), // Simple ordering
-        });
+      const { error } = await supabase.from("subtasks").insert({
+        parent_task_id: taskId,
+        title: title,
+        completed: false,
+        order: Date.now(), // Simple ordering
+      });
 
       if (error) throw error;
 
       // Refresh subtasks in the modal
       await refreshSelectedTaskSubtasks();
-      
+
       if (onTaskUpdate) {
         onTaskUpdate();
       }
@@ -163,7 +161,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
       // Refresh subtasks in the modal
       await refreshSelectedTaskSubtasks();
-      
+
       if (onTaskUpdate) {
         onTaskUpdate();
       }
@@ -184,7 +182,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
       // Refresh subtasks in the modal
       await refreshSelectedTaskSubtasks();
-      
+
       if (onTaskUpdate) {
         onTaskUpdate();
       }
@@ -196,7 +194,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
   const refreshSelectedTaskSubtasks = async () => {
     if (!selectedTask) return;
-    
+
     try {
       const { data: subtasks, error } = await supabase
         .from("subtasks")
@@ -206,7 +204,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
 
       if (error) throw error;
 
-      setSelectedTask(prev => ({ ...prev, subtasks: subtasks || [] }));
+      setSelectedTask((prev) => ({ ...prev, subtasks: subtasks || [] }));
     } catch (error) {
       console.error("Error refreshing subtasks:", error);
     }
@@ -359,6 +357,28 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
     const days = [];
     const today = new Date();
 
+    // Color mapping for weekdays (same as RepeatBadge)
+    const weekdayColors = {
+      0: "#c71c6c", // Sunday - pink
+      1: "#e53935", // Monday - red
+      2: "#fb8c00", // Tuesday - orange
+      3: "#ffff00", // Wednesday - yellow
+      4: "#43a047", // Thursday - green
+      5: "#3949ab", // Friday - blue
+      6: "#8e24aa", // Saturday - purple
+    };
+
+    // Text color mapping (black for yellow, white for others)
+    const weekdayTextColors = {
+      0: "#fff", // Sunday - white text
+      1: "#fff", // Monday - white text
+      2: "#fff", // Tuesday - white text
+      3: "#000", // Wednesday - black text (yellow background)
+      4: "#fff", // Thursday - white text
+      5: "#fff", // Friday - white text
+      6: "#fff", // Saturday - white text
+    };
+
     for (let i = 0; i < 10; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
@@ -370,11 +390,17 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
         day: "numeric",
       });
 
+      const weekdayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const headerColor = weekdayColors[weekdayIndex];
+      const textColor = weekdayTextColors[weekdayIndex];
+
       days.push({
         date: dateStr,
         dayName,
         monthDay,
         isToday: i === 0,
+        headerColor,
+        textColor,
       });
     }
 
@@ -435,10 +461,10 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
     });
 
     // Sort tasks within each column by their order field
-    Object.keys(tasksByColumn).forEach(columnDate => {
+    Object.keys(tasksByColumn).forEach((columnDate) => {
       tasksByColumn[columnDate].sort((a, b) => (a.order || 0) - (b.order || 0));
     });
-    
+
     // Sort future tasks by their order field as well
     futureTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -470,6 +496,10 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
                     className={`${styles.dayHeader} ${
                       day.isToday ? styles.today : ""
                     }`}
+                    style={{ 
+                      backgroundColor: day.headerColor, 
+                      color: day.textColor 
+                    }}
                   >
                     <div className={styles.dayName}>{day.dayName}</div>
                     <div className={styles.monthDay}>{day.monthDay}</div>
@@ -547,7 +577,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete }) => {
           </DragOverlay>
         </DndContext>
       </div>
-      
+
       {/* Task Detail Modal */}
       <TaskDetailModal
         task={selectedTask}

@@ -1,34 +1,34 @@
-import { useState, useEffect } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faTimes, 
-  faTrash, 
-  faSave, 
-  faPlus, 
+import { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTimes,
+  faTrash,
+  faSave,
+  faPlus,
   faGripVertical,
   faCheck,
   faEdit,
   faBan,
-  faExclamation
-} from '@fortawesome/free-solid-svg-icons';
-import RepeatBadge from './RepeatBadge';
-import styles from './TaskDetailModal.module.css';
+  faExclamation,
+} from "@fortawesome/free-solid-svg-icons";
+import RepeatBadge from "./RepeatBadge";
+import styles from "./TaskDetailModal.module.css";
 
-const TaskDetailModal = ({ 
-  task, 
-  isOpen, 
-  onClose, 
-  onSave, 
-  onDelete, 
-  onSubtaskAdd, 
-  onSubtaskUpdate, 
-  onSubtaskDelete, 
-  onSubtaskReorder 
+const TaskDetailModal = ({
+  task,
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  onSubtaskAdd,
+  onSubtaskUpdate,
+  onSubtaskDelete,
+  onSubtaskReorder,
 }) => {
   const [editedTask, setEditedTask] = useState(task || {});
   const [subtasks, setSubtasks] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ const TaskDetailModal = ({
   };
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
+    if (confirm("Are you sure you want to delete this task?")) {
       onDelete(task.id);
       onClose();
     }
@@ -53,7 +53,7 @@ const TaskDetailModal = ({
   const handleAddSubtask = () => {
     if (newSubtaskTitle.trim()) {
       onSubtaskAdd(task.id, newSubtaskTitle.trim());
-      setNewSubtaskTitle('');
+      setNewSubtaskTitle("");
     }
   };
 
@@ -67,7 +67,7 @@ const TaskDetailModal = ({
   };
 
   const handleKeyPress = (e, action) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       action();
     }
   };
@@ -91,8 +91,10 @@ const TaskDetailModal = ({
             {isEditing ? (
               <input
                 type="text"
-                value={editedTask.title || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                value={editedTask.title || ""}
+                onChange={(e) =>
+                  setEditedTask({ ...editedTask, title: e.target.value })
+                }
                 className={styles.input}
                 autoFocus
               />
@@ -109,8 +111,10 @@ const TaskDetailModal = ({
             <label>Description</label>
             {isEditing ? (
               <textarea
-                value={editedTask.description || ''}
-                onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                value={editedTask.description || ""}
+                onChange={(e) =>
+                  setEditedTask({ ...editedTask, description: e.target.value })
+                }
                 className={styles.textarea}
                 rows={3}
                 placeholder="Add a description..."
@@ -129,56 +133,76 @@ const TaskDetailModal = ({
               {isEditing ? (
                 <input
                   type="date"
-                  value={editedTask.next_due || ''}
-                  onChange={(e) => setEditedTask({ ...editedTask, next_due: e.target.value || null })}
+                  value={editedTask.next_due || ""}
+                  onChange={(e) =>
+                    setEditedTask({
+                      ...editedTask,
+                      next_due: e.target.value || null,
+                    })
+                  }
                   className={styles.dateInput}
                 />
               ) : (
-                <span>{task.next_due ? new Date(task.next_due).toLocaleDateString() : 'Not set'}</span>
+                <span>
+                  {task.next_due
+                    ? new Date(task.next_due).toLocaleDateString()
+                    : "Not set"}
+                </span>
               )}
             </div>
-            
+
             {task.repeat && (
               <div className={styles.property}>
                 <label>Repeat</label>
                 <span>{task.repeat}</span>
               </div>
             )}
-            
+
             <div className={styles.property}>
               <label>Priority</label>
               {isEditing ? (
                 <button
-                  onClick={() => setEditedTask({ ...editedTask, urgent: !editedTask.urgent })}
-                  className={`${styles.toggleButton} ${editedTask.urgent ? styles.active : ''}`}
+                  onClick={() =>
+                    setEditedTask({ ...editedTask, urgent: !editedTask.urgent })
+                  }
+                  className={`${styles.toggleButton} ${
+                    editedTask.urgent ? styles.active : ""
+                  }`}
                   title="Toggle urgent priority"
                 >
                   <FontAwesomeIcon icon={faExclamation} />
-                  {editedTask.urgent ? ' Urgent' : ' Normal'}
+                  {editedTask.urgent ? " Urgent" : " Normal"}
                 </button>
               ) : (
                 <span className={styles.statusDisplay}>
                   {task.urgent && <FontAwesomeIcon icon={faExclamation} />}
-                  {task.urgent ? ' Urgent' : 'Normal'}
+                  {task.urgent ? " Urgent" : "Normal"}
                 </span>
               )}
             </div>
-            
+
             <div className={styles.property}>
               <label>Status</label>
               {isEditing ? (
                 <button
-                  onClick={() => setEditedTask({ ...editedTask, blocked: !editedTask.blocked })}
-                  className={`${styles.toggleButton} ${editedTask.blocked ? styles.active : ''}`}
+                  onClick={() =>
+                    setEditedTask({
+                      ...editedTask,
+                      blocked: !editedTask.blocked,
+                    })
+                  }
+                  className={`${styles.toggleButton} ${
+                    editedTask.blocked ? styles.active : ""
+                  }`}
                   title="Toggle blocked status"
                 >
                   <FontAwesomeIcon icon={faBan} />
-                  {editedTask.blocked ? ' Blocked' : ' Active'}
+                  {editedTask.blocked ? " Blocked" : " Active"}
                 </button>
               ) : (
                 <span className={styles.statusDisplay}>
                   {task.blocked && <FontAwesomeIcon icon={faBan} />}
-                  {task.blocked ? ' Blocked' : 'Active'}
+                  {task.blocked ? " Blocked" : "Active"}
                 </span>
               )}
             </div>
@@ -189,7 +213,7 @@ const TaskDetailModal = ({
             <div className={styles.subtasksHeader}>
               <h3>Subtasks ({subtasks.length})</h3>
             </div>
-            
+
             {/* Add new subtask */}
             <div className={styles.addSubtask}>
               <input
@@ -200,7 +224,7 @@ const TaskDetailModal = ({
                 placeholder="Add a subtask..."
                 className={styles.input}
               />
-              <button 
+              <button
                 onClick={handleAddSubtask}
                 className={styles.addButton}
                 disabled={!newSubtaskTitle.trim()}
@@ -217,17 +241,21 @@ const TaskDetailModal = ({
                     <input
                       type="checkbox"
                       checked={subtask.completed}
-                      onChange={(e) => handleSubtaskComplete(subtask.id, e.target.checked)}
+                      onChange={(e) =>
+                        handleSubtaskComplete(subtask.id, e.target.checked)
+                      }
                       className={styles.checkbox}
                     />
-                    
+
                     {editingSubtaskId === subtask.id ? (
                       <input
                         type="text"
                         defaultValue={subtask.title}
-                        onBlur={(e) => handleSubtaskEdit(subtask.id, e.target.value)}
+                        onBlur={(e) =>
+                          handleSubtaskEdit(subtask.id, e.target.value)
+                        }
                         onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
+                          if (e.key === "Enter") {
                             handleSubtaskEdit(subtask.id, e.target.value);
                           }
                         }}
@@ -235,15 +263,17 @@ const TaskDetailModal = ({
                         autoFocus
                       />
                     ) : (
-                      <span 
-                        className={`${styles.subtaskTitle} ${subtask.completed ? styles.completed : ''}`}
+                      <span
+                        className={`${styles.subtaskTitle} ${
+                          subtask.completed ? styles.completed : ""
+                        }`}
                         onClick={() => setEditingSubtaskId(subtask.id)}
                       >
                         {subtask.title}
                       </span>
                     )}
                   </div>
-                  
+
                   <button
                     onClick={() => onSubtaskDelete(subtask.id)}
                     className={styles.deleteSubtaskButton}
@@ -259,34 +289,28 @@ const TaskDetailModal = ({
 
         <div className={styles.modalFooter}>
           <div className={styles.leftActions}>
-            <button 
-              onClick={handleDelete}
-              className={styles.deleteButton}
-            >
+            <button onClick={handleDelete} className={styles.deleteButton}>
               <FontAwesomeIcon icon={faTrash} />
               Delete Task
             </button>
           </div>
-          
+
           <div className={styles.rightActions}>
             {isEditing ? (
               <>
-                <button 
+                <button
                   onClick={() => setIsEditing(false)}
                   className={styles.cancelButton}
                 >
                   Cancel
                 </button>
-                <button 
-                  onClick={handleSave}
-                  className={styles.saveButton}
-                >
+                <button onClick={handleSave} className={styles.saveButton}>
                   <FontAwesomeIcon icon={faSave} />
                   Save
                 </button>
               </>
             ) : (
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className={styles.editButton}
               >
