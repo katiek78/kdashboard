@@ -403,6 +403,30 @@ const QuickTaskList = () => {
       }
       return next.toISOString().slice(0, 10);
     }
+    // e.g. 07/10 = every year on 7th October (DD/MM format)
+    const matchDate = rep.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (matchDate) {
+      const day = parseInt(matchDate[1], 10);
+      const month = parseInt(matchDate[2], 10) - 1; // JavaScript months are 0-indexed
+      let next = new Date(base.getFullYear(), month, day);
+      
+      // If the date has already passed this year, move to next year
+      if (next <= base) {
+        next.setFullYear(next.getFullYear() + 1);
+      }
+      
+      // Handle invalid dates (e.g. 30/02 -> Feb 30th doesn't exist)
+      if (next.getMonth() !== month) {
+        // Date overflowed to next month, so set to last day of target month
+        next = new Date(next.getFullYear(), month + 1, 0); // Last day of target month
+        // If this is still in the past, try next year
+        if (next <= base) {
+          next = new Date(next.getFullYear() + 1, month + 1, 0);
+        }
+      }
+      
+      return next.toISOString().slice(0, 10);
+    }
     // fallback: just add 1 day
     base.setDate(base.getDate() + 1);
     return base.toISOString().slice(0, 10);
@@ -666,7 +690,7 @@ const QuickTaskList = () => {
           name="repeat"
           value={newRepeat}
           onChange={(e) => setNewRepeat(e.target.value)}
-          placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, etc)"
+          placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc)"
         />
         <button onClick={addTask}>Add Task</button>
       </div>

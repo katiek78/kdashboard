@@ -65,8 +65,8 @@ function RepeatBadge({ repeat }) {
       </span>
     );
   }
-  // Days of month (e.g. 1st, 15th, 30th)
-  if (/^\d+(st|nd|rd|th)$/.test(rep) || /^\d+m\d{1,2}$/.test(rep)) {
+  // Days of month (e.g. 1st, 15th, 30th) and date patterns (e.g. 07/10)
+  if (/^\d+(st|nd|rd|th)$/.test(rep) || /^\d+m\d{1,2}$/.test(rep) || /^\d{1,2}\/\d{1,2}$/.test(rep)) {
     return (
       <span className={`${styles.badge} ${styles.badgeMonth}`} title={repeat}>
         {rep.toUpperCase()}

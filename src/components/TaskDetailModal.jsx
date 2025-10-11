@@ -160,7 +160,7 @@ const TaskDetailModal = ({
                   onChange={(e) =>
                     setEditedTask({ ...editedTask, repeat: e.target.value })
                   }
-                  placeholder="e.g. daily, weekly, 2w, 1m, Mon, 1st, etc"
+                  placeholder="e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc"
                   className={styles.input}
                 />
               ) : (
