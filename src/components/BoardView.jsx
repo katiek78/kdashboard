@@ -78,18 +78,101 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
 
   const handleTaskSave = async (updatedTask) => {
     try {
-      const { error } = await supabase
-        .from("quicktasks")
-        .update({
-          title: updatedTask.title,
-          description: updatedTask.description,
-          next_due: updatedTask.next_due,
-          urgent: updatedTask.urgent,
-          blocked: updatedTask.blocked,
-        })
-        .eq("id", updatedTask.id);
+      const originalTask = tasks.find((t) => t.id === updatedTask.id);
+      const urgentStatusChanged = originalTask && originalTask.urgent !== updatedTask.urgent;
 
-      if (error) throw error;
+      if (urgentStatusChanged) {
+        // Handle urgent status change with reordering
+        const currentTask = originalTask;
+        const urgent = updatedTask.urgent;
+
+        if (urgent) {
+          // Making task urgent: move to bottom of urgent tasks
+          const urgentTasks = tasks.filter(
+            (task) => task.urgent && task.id !== updatedTask.id
+          );
+          const nonUrgentTasks = tasks.filter(
+            (task) => !task.urgent && task.id !== updatedTask.id
+          );
+
+          // New order: [existing urgent tasks, newly urgent task, non-urgent tasks]
+          const newTaskOrder = [
+            ...urgentTasks,
+            { ...currentTask, urgent: true },
+            ...nonUrgentTasks,
+          ];
+
+          // Update all affected tasks with new order values
+          const updates = newTaskOrder.map((task, index) => {
+            const updateData = { order: index + 1 };
+            if (task.id === updatedTask.id) {
+              // Include all the updated fields for the main task
+              updateData.title = updatedTask.title;
+              updateData.description = updatedTask.description;
+              updateData.next_due = updatedTask.next_due;
+              updateData.urgent = updatedTask.urgent;
+              updateData.blocked = updatedTask.blocked;
+              updateData.repeat = updatedTask.repeat;
+            }
+            return supabase
+              .from("quicktasks")
+              .update(updateData)
+              .eq("id", task.id);
+          });
+
+          await Promise.all(updates);
+        } else {
+          // Making task non-urgent: move to bottom of all tasks
+          const urgentTasks = tasks.filter(
+            (task) => task.urgent && task.id !== updatedTask.id
+          );
+          const nonUrgentTasks = tasks.filter(
+            (task) => !task.urgent && task.id !== updatedTask.id
+          );
+
+          // New order: [urgent tasks, non-urgent tasks, newly non-urgent task]
+          const newTaskOrder = [
+            ...urgentTasks,
+            ...nonUrgentTasks,
+            { ...currentTask, urgent: false },
+          ];
+
+          // Update all affected tasks with new order values
+          const updates = newTaskOrder.map((task, index) => {
+            const updateData = { order: index + 1 };
+            if (task.id === updatedTask.id) {
+              // Include all the updated fields for the main task
+              updateData.title = updatedTask.title;
+              updateData.description = updatedTask.description;
+              updateData.next_due = updatedTask.next_due;
+              updateData.urgent = updatedTask.urgent;
+              updateData.blocked = updatedTask.blocked;
+              updateData.repeat = updatedTask.repeat;
+            }
+            return supabase
+              .from("quicktasks")
+              .update(updateData)
+              .eq("id", task.id);
+          });
+
+          await Promise.all(updates);
+        }
+      } else {
+        // No urgent status change, just update the task normally
+        const { error } = await supabase
+          .from("quicktasks")
+          .update({
+            title: updatedTask.title,
+            description: updatedTask.description,
+            next_due: updatedTask.next_due,
+            urgent: updatedTask.urgent,
+            blocked: updatedTask.blocked,
+            repeat: updatedTask.repeat,
+          })
+          .eq("id", updatedTask.id);
+
+        if (error) throw error;
+      }
 
       if (onTaskUpdate) {
         onTaskUpdate();
@@ -237,7 +320,8 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       // For future column, nextDue stays null
 
       // Find the highest order value for proper task ordering
-      const maxOrder = tasks.length > 0 ? Math.max(...tasks.map((t) => t.order || 0)) : 0;
+      const maxOrder =
+        tasks.length > 0 ? Math.max(...tasks.map((t) => t.order || 0)) : 0;
       const nextOrder = maxOrder + 1;
 
       const { error } = await supabase.from("quicktasks").insert({
@@ -254,7 +338,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       // Reset form and refresh tasks
       setAddingToColumn(null);
       setNewTaskTitle("");
-      
+
       if (onTaskUpdate) {
         onTaskUpdate();
       }
@@ -577,9 +661,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                       color: day.textColor,
                     }}
                   >
-                    <div className={styles.dayName}>
-                      {day.dayName}
-                    </div>
+                    <div className={styles.dayName}>{day.dayName}</div>
                     <div className={styles.monthDay}>{day.monthDay}</div>
                     {day.isToday && (
                       <div className={styles.todayLabel}>Today</div>
@@ -609,14 +691,14 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                         autoFocus
                       />
                       <div className={styles.addTaskActions}>
-                        <button 
+                        <button
                           onClick={() => handleCreateTask(day.date)}
                           className={styles.addTaskSave}
                           disabled={!newTaskTitle.trim()}
                         >
                           Add
                         </button>
-                        <button 
+                        <button
                           onClick={handleCancelAddTask}
                           className={styles.addTaskCancel}
                         >
@@ -655,9 +737,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
             {/* Future column */}
             <div className={styles.dayColumn}>
               <div className={`${styles.dayHeader} ${styles.futureHeader}`}>
-                <div className={styles.dayName}>
-                  Future
-                </div>
+                <div className={styles.dayName}>Future</div>
                 <div className={styles.monthDay}>Later</div>
                 <button
                   className={styles.addTaskButton}
@@ -691,14 +771,14 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                     autoFocus
                   />
                   <div className={styles.addTaskActions}>
-                    <button 
+                    <button
                       onClick={() => handleCreateTask("future")}
                       className={styles.addTaskSave}
                       disabled={!newTaskTitle.trim()}
                     >
                       Add
                     </button>
-                    <button 
+                    <button
                       onClick={handleCancelAddTask}
                       className={styles.addTaskCancel}
                     >

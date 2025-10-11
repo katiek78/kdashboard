@@ -151,12 +151,22 @@ const TaskDetailModal = ({
               )}
             </div>
 
-            {task.repeat && (
-              <div className={styles.property}>
-                <label>Repeat</label>
-                <span>{task.repeat}</span>
-              </div>
-            )}
+            <div className={styles.property}>
+              <label>Repeat</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedTask.repeat || ""}
+                  onChange={(e) =>
+                    setEditedTask({ ...editedTask, repeat: e.target.value })
+                  }
+                  placeholder="e.g. daily, weekly, 2w, 1m, Mon, 1st, etc"
+                  className={styles.input}
+                />
+              ) : (
+                <span>{task.repeat || "None"}</span>
+              )}
+            </div>
 
             <div className={styles.property}>
               <label>Priority</label>
