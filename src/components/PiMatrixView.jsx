@@ -41,9 +41,15 @@ export default function PiMatrixView() {
         }
       }
 
-      // Get position numbers for this page
-      const positions =
-        chunksData?.map((chunk) => chunk.position.toString()) || [];
+      // Get position numbers for this page, using special rule for 1-9
+      const positions = chunksData?.map((chunk) => {
+        // For positions 1-9, look up using padded format (01, 02, etc.)
+        if (chunk.position >= 1 && chunk.position <= 9) {
+          return chunk.position.toString().padStart(2, "0");
+        }
+        // For positions 10+, use regular format
+        return chunk.position.toString();
+      }) || [];
 
       // Fetch all person data for these positions in one query
       console.log("Looking for positions:", positions);
@@ -66,10 +72,17 @@ export default function PiMatrixView() {
 
       // Add person data to chunks
       const chunksWithPersons =
-        chunksData?.map((chunk) => ({
-          ...chunk,
-          person: personMap[chunk.position.toString()],
-        })) || [];
+        chunksData?.map((chunk) => {
+          // Use the same lookup key as we used for the database query
+          const lookupKey = chunk.position >= 1 && chunk.position <= 9 
+            ? chunk.position.toString().padStart(2, "0")
+            : chunk.position.toString();
+          
+          return {
+            ...chunk,
+            person: personMap[lookupKey],
+          };
+        }) || [];
 
       setChunks(chunksWithPersons);
       setLoading(false);
@@ -116,7 +129,7 @@ export default function PiMatrixView() {
             Previous
           </button>
           <span className={styles.pageInfo}>
-            Page {currentPage} of {totalPages}(
+            Page {currentPage} of {totalPages} (
             {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
             {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount}{" "}
             chunks)
@@ -146,6 +159,11 @@ export default function PiMatrixView() {
               const endDigit = chunk.position * 5;
               const digitRange = `(${startDigit}-${endDigit})`;
               const formattedDigits = chunk.digits.split("").join(" ");
+              
+              // Special rule: for positions 1-9, link to 01-09
+              const linkPosition = chunk.position >= 1 && chunk.position <= 9 
+                ? chunk.position.toString().padStart(2, "0")
+                : chunk.position.toString();
 
               return (
                 <tr key={chunk.position} className={styles.chunkRow}>
@@ -158,14 +176,14 @@ export default function PiMatrixView() {
                   <td className={styles.personCell}>
                     {chunk.person ? (
                       <a
-                        href={`/number-locations/${chunk.position}`}
+                        href={`/number-locations/${linkPosition}`}
                         className={styles.personLink}
                       >
                         {chunk.person}
                       </a>
                     ) : (
                       <a
-                        href={`/number-locations/${chunk.position}`}
+                        href={`/number-locations/${linkPosition}`}
                         className={styles.numberLocationLink}
                       >
                         &lt;number location&gt;
