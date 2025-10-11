@@ -42,14 +42,15 @@ export default function PiMatrixView() {
       }
 
       // Get position numbers for this page, using special rule for 1-9
-      const positions = chunksData?.map((chunk) => {
-        // For positions 1-9, look up using padded format (01, 02, etc.)
-        if (chunk.position >= 1 && chunk.position <= 9) {
-          return chunk.position.toString().padStart(2, "0");
-        }
-        // For positions 10+, use regular format
-        return chunk.position.toString();
-      }) || [];
+      const positions =
+        chunksData?.map((chunk) => {
+          // For positions 1-9, look up using padded format (01, 02, etc.)
+          if (chunk.position >= 1 && chunk.position <= 9) {
+            return chunk.position.toString().padStart(2, "0");
+          }
+          // For positions 10+, use regular format
+          return chunk.position.toString();
+        }) || [];
 
       // Fetch all person data for these positions in one query
       console.log("Looking for positions:", positions);
@@ -74,10 +75,11 @@ export default function PiMatrixView() {
       const chunksWithPersons =
         chunksData?.map((chunk) => {
           // Use the same lookup key as we used for the database query
-          const lookupKey = chunk.position >= 1 && chunk.position <= 9 
-            ? chunk.position.toString().padStart(2, "0")
-            : chunk.position.toString();
-          
+          const lookupKey =
+            chunk.position >= 1 && chunk.position <= 9
+              ? chunk.position.toString().padStart(2, "0")
+              : chunk.position.toString();
+
           return {
             ...chunk,
             person: personMap[lookupKey],
@@ -116,10 +118,6 @@ export default function PiMatrixView() {
     <div className={styles.piContainer + " pageContainer"}>
       <div className={styles.header}>
         <h2>Pi Matrix - First 10,000 Digits</h2>
-        <p>
-          Each row shows a 5-digit chunk with its position number and associated
-          person. Future columns will include test frequency and accuracy.
-        </p>
         <div className={styles.pagination}>
           <button
             onClick={() => handlePageChange(currentPage - 1)}
@@ -159,11 +157,12 @@ export default function PiMatrixView() {
               const endDigit = chunk.position * 5;
               const digitRange = `(${startDigit}-${endDigit})`;
               const formattedDigits = chunk.digits.split("").join(" ");
-              
+
               // Special rule: for positions 1-9, link to 01-09
-              const linkPosition = chunk.position >= 1 && chunk.position <= 9 
-                ? chunk.position.toString().padStart(2, "0")
-                : chunk.position.toString();
+              const linkPosition =
+                chunk.position >= 1 && chunk.position <= 9
+                  ? chunk.position.toString().padStart(2, "0")
+                  : chunk.position.toString();
 
               return (
                 <tr key={chunk.position} className={styles.chunkRow}>

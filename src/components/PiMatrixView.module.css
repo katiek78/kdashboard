@@ -6,6 +6,17 @@
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     font-family: 'Karla', sans-serif;
+    width: 80%;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .piContainer {
+        width: 100%;
+        overflow-x: auto;
+    }
 }
 
 .header {
@@ -13,6 +24,22 @@
     border-bottom: 1px solid #ddd;
     background: white;
     border-radius: 8px 8px 0 0;
+}
+
+/* Mobile responsive header */
+@media (max-width: 768px) {
+    .header {
+        padding: 15px 10px;
+        border-radius: 0;
+    }
+    
+    .header h2 {
+        font-size: 20px;
+    }
+    
+    .header p {
+        font-size: 13px;
+    }
 }
 
 .header h2 {
@@ -70,6 +97,17 @@
     background: white;
     max-height: 70vh;
     overflow-y: auto;
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* Mobile responsive table adjustments */
+@media (max-width: 768px) {
+    .tableContainer {
+        padding: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 }
 
 .chunksTable {
@@ -77,6 +115,16 @@
     border-collapse: collapse;
     font-size: 14px;
     font-family: 'Karla', sans-serif;
+    min-width: 600px; /* Prevent table from getting too narrow */
+}
+
+/* Mobile responsive table styling */
+@media (max-width: 768px) {
+    .chunksTable {
+        font-size: 12px;
+        min-width: unset; /* Remove minimum width constraint */
+        width: 100%;
+    }
 }
 
 .chunksTable thead {
@@ -105,6 +153,38 @@
 .chunksTable th:nth-child(3) {
     text-align: center;
     width: 150px;
+}
+
+/* Mobile responsive column widths */
+@media (max-width: 768px) {
+    .chunksTable th:first-child {
+        width: 40px; /* Much smaller position column */
+    }
+    
+    .chunksTable th:nth-child(2) {
+        width: 100px; /* Smaller person column */
+    }
+    
+    .chunksTable th:nth-child(3) {
+        width: auto; /* Let digits take remaining space */
+    }
+    
+    .chunksTable td {
+        padding: 8px 4px;
+    }
+    
+    .positionNumber {
+        font-size: 1em; /* Much smaller position number */
+        margin-bottom: 0;
+    }
+    
+    .digitRange {
+        display: none; /* Hide the (1-5) range on mobile */
+    }
+    
+    .indexCell {
+        padding: 4px 2px !important;
+    }
 }
 
 .chunkRow {
@@ -181,6 +261,17 @@
     font-size: 16px;
     color: #28a745;
     letter-spacing: 2px;
+    white-space: nowrap; /* Prevent digit wrapping */
+    font-family: monospace, 'Karla', sans-serif; /* Ensure consistent spacing */
+}
+
+/* Mobile responsive digits styling */
+@media (max-width: 768px) {
+    .digitsCell {
+        font-size: 14px;
+        letter-spacing: 1px;
+        padding: 8px 4px;
+    }
 }
 
 .bottomPagination {
