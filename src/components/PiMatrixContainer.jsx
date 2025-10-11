@@ -1,6 +1,6 @@
-import styles from "./PiMatrixContainer.module.css";
+import styles from "./PiMatrixView.module.css";
 
-export default function PiMatrixContainer() {
+export default function PiMatrixView() {
   return (
     <div className={styles.piContainer + " pageContainer"}>
       <div>Hello</div>

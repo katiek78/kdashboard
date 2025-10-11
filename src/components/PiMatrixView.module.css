@@ -1,0 +1,199 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
+
+.piContainer {
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: 'Karla', sans-serif;
+}
+
+.header {
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+    background: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.header h2 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 24px;
+    font-family: 'Karla', sans-serif;
+    font-weight: 600;
+}
+
+.header p {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.pagination, .bottomPagination {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    justify-content: center;
+}
+
+.pageButton {
+    padding: 8px 16px;
+    background: #007acc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Karla', sans-serif;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.pageButton:hover:not(:disabled) {
+    background: #005a99;
+}
+
+.pageButton:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.pageInfo {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+    font-family: 'Karla', sans-serif;
+}
+
+.tableContainer {
+    padding: 20px;
+    background: white;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.chunksTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    font-family: 'Karla', sans-serif;
+}
+
+.chunksTable thead {
+    background: #007bff;
+}
+
+.chunksTable th {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid #0056b3;
+    font-weight: 600;
+    color: white;
+    background: #007bff;
+    font-family: 'Karla', sans-serif;
+}
+
+.chunksTable th:first-child {
+    text-align: center;
+    width: 120px;
+}
+
+.chunksTable th:nth-child(2) {
+    width: 200px;
+}
+
+.chunksTable th:nth-child(3) {
+    text-align: center;
+    width: 150px;
+}
+
+.chunkRow {
+    border-bottom: 1px solid #dee2e6;
+    transition: background-color 0.2s ease;
+}
+
+.chunkRow:hover {
+    background-color: #f8f9fa;
+}
+
+.chunksTable td {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+
+.indexCell {
+    text-align: center;
+}
+
+.positionNumber {
+    font-size: 2em;
+    font-weight: 700;
+    color: #333;
+    line-height: 1;
+    margin-bottom: 2px;
+    font-family: 'Karla', sans-serif;
+}
+
+.digitRange {
+    font-size: 0.75em;
+    color: #666;
+    font-weight: 400;
+    font-family: 'Karla', sans-serif;
+}
+
+.personCell {
+    color: #555;
+}
+
+.personLink {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    font-family: 'Karla', sans-serif;
+}
+
+.personLink:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.numberLocationLink {
+    color: #6c757d;
+    text-decoration: none;
+    font-weight: 400;
+    font-style: italic;
+    font-family: 'Karla', sans-serif;
+}
+
+.numberLocationLink:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+
+.noPerson {
+    color: #ccc;
+    font-style: italic;
+}
+
+.digitsCell {
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: #28a745;
+    letter-spacing: 2px;
+}
+
+.bottomPagination {
+    padding: 20px;
+    border-top: 1px solid #ddd;
+    background: white;
+    border-radius: 0 0 8px 8px;
+}
+
+.loading {
+    padding: 40px;
+    text-align: center;
+    color: #666;
+    font-size: 16px;
+    font-family: 'Karla', sans-serif;
+}

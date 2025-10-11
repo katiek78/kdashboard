@@ -1,5 +1,5 @@
 "use client";
-import PiMatrixContainer from "@/components/PiMatrixContainer";
+import PiMatrixView from "@/components/PiMatrixView";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 
 export default function PiPage() {
@@ -13,7 +13,7 @@ export default function PiPage() {
     <div className="page">
       <main className="main">
         <div className="title">Pi</div>
-        <PiMatrixContainer />
+        <PiMatrixView />
       </main>
     </div>
   );
