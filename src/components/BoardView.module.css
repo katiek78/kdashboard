@@ -96,7 +96,7 @@
 .todayLabel {
   position: absolute;
   top: 4px;
-  right: 8px;
+  right: 30px; /* Move left to avoid overlap with plus button */
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 6px;
   border-radius: 4px;
@@ -278,4 +278,22 @@
 .dragOverlay .taskItem {
   background: #444;
   border: 2px solid #1976d2;
+}
+
+/* Task count styling */
+.taskCount {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

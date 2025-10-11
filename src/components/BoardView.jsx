@@ -577,7 +577,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                       color: day.textColor,
                     }}
                   >
-                    <div className={styles.dayName}>{day.dayName}</div>
+                    <div className={styles.dayName}>
+                      {day.dayName}
+                    </div>
                     <div className={styles.monthDay}>{day.monthDay}</div>
                     {day.isToday && (
                       <div className={styles.todayLabel}>Today</div>
@@ -589,6 +591,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                     >
                       +
                     </button>
+                    {dayTasks.length > 0 && (
+                      <div className={styles.taskCount}>{dayTasks.length}</div>
+                    )}
                   </div>
 
                   {/* Add task input for this column */}
@@ -650,8 +655,20 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
             {/* Future column */}
             <div className={styles.dayColumn}>
               <div className={`${styles.dayHeader} ${styles.futureHeader}`}>
-                <div className={styles.dayName}>Future</div>
+                <div className={styles.dayName}>
+                  Future
+                </div>
                 <div className={styles.monthDay}>Later</div>
+                <button
+                  className={styles.addTaskButton}
+                  onClick={() => handleAddTaskToColumn("future")}
+                  title="Add task to Future"
+                >
+                  +
+                </button>
+                {futureTasks.length > 0 && (
+                  <div className={styles.taskCount}>{futureTasks.length}</div>
+                )}
                 <button
                   className={styles.addTaskButton}
                   onClick={() => handleAddTaskToColumn("future")}
