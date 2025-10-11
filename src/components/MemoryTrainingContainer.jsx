@@ -260,7 +260,7 @@ export default function MemoryTrainingContainer() {
             rows={10}
             style={{ width: "100%", fontFamily: "monospace", fontSize: 14 }}
             placeholder={
-              "Paste numberstring and comp image, separated by tab, comma, or space. One per line."
+              "Paste numberstring (2-digit, 3-digit, or 4-digit) and comp image, separated by tab, comma, or space. One per line."
             }
           />
           <div style={{ margin: "8px 0" }}>
