@@ -271,6 +271,21 @@
         font-size: 14px;
         letter-spacing: 1px;
         padding: 8px 4px;
+        cursor: pointer; /* Indicate tappable on mobile */
+    }
+    
+    .digitTooltip {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        top: auto;
+        margin-bottom: 0;
+        z-index: 1001;
+    }
+    
+    .digitTooltip::after {
+        display: none; /* Hide arrow on mobile for fixed positioning */
     }
 }
 
@@ -287,4 +302,76 @@
     color: #666;
     font-size: 16px;
     font-family: 'Karla', sans-serif;
+}
+
+/* Inline editing styles */
+.editingContainer {
+    display: flex;
+    align-items: center;
+}
+
+.personInput {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Karla', sans-serif;
+    outline: none;
+}
+
+.personInput:focus {
+    border-color: #0056b3;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.addPersonButton {
+    background: none;
+    border: 1px dashed #6c757d;
+    color: #6c757d;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'Karla', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.addPersonButton:hover {
+    border-color: #007bff;
+    color: #007bff;
+    background-color: #f8f9fa;
+}
+
+/* Digit meaning tooltip styles */
+.digitsContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.digitTooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+    font-family: 'Karla', sans-serif;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.digitTooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
 }

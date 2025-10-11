@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import supabase from "../utils/supabaseClient";
+import { fetchCompImage } from "../utils/compImagesUtils";
 import styles from "./PiMatrixView.module.css";
 
 const ITEMS_PER_PAGE = 50;
@@ -9,6 +10,117 @@ export default function PiMatrixView() {
   const [chunks, setChunks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [editingPosition, setEditingPosition] = useState(null);
+  const [editingValue, setEditingValue] = useState("");
+  const [hoveredDigits, setHoveredDigits] = useState(null);
+  const [digitMeaning, setDigitMeaning] = useState("");
+  const [tooltipTimeout, setTooltipTimeout] = useState(null);
+
+  // Function to get meaning of 5 digits (first 2 + next 3)
+  const getDigitMeaning = async (digits) => {
+    if (digits.length !== 5) return "";
+    
+    try {
+      const first2 = digits.substring(0, 2);
+      const next3 = digits.substring(2, 5);
+      
+      // Fetch competition images for both parts
+      const [comp2, comp3] = await Promise.all([
+        fetchCompImage(first2),
+        fetchCompImage(next3)
+      ]);
+      
+      const meaning2 = comp2?.comp_image || first2;
+      const meaning3 = comp3?.comp_image || next3;
+      
+      return `${meaning2} + ${meaning3}`;
+    } catch (error) {
+      console.error("Error fetching digit meaning:", error);
+      return "";
+    }
+  };
+
+  // Function to save person name to database
+  const savePerson = async (position, personName) => {
+    if (!personName.trim()) return;
+
+    try {
+      // Determine the correct lookup key (padded for 1-9, unpadded for 10+)
+      const lookupKey = position >= 1 && position <= 9 
+        ? position.toString().padStart(2, "0")
+        : position.toString();
+
+      const { error } = await supabase
+        .from("numberstrings")
+        .upsert([{ 
+          num_string: lookupKey, 
+          person: personName.trim() 
+        }], {
+          onConflict: ["num_string"]
+        });
+
+      if (error) {
+        console.error("Error saving person:", error);
+        return;
+      }
+
+      // Update local state to reflect the change
+      setChunks(prev => prev.map(chunk => 
+        chunk.position === position 
+          ? { ...chunk, person: personName.trim() }
+          : chunk
+      ));
+      
+      setEditingPosition(null);
+      setEditingValue("");
+    } catch (error) {
+      console.error("Unexpected error saving person:", error);
+    }
+  };
+
+  const handleStartEdit = (position) => {
+    setEditingPosition(position);
+    setEditingValue("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (editingPosition !== null) {
+      await savePerson(editingPosition, editingValue);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPosition(null);
+    setEditingValue("");
+  };
+
+  const handleDigitsHover = async (digits, position) => {
+    // Clear any existing timeout
+    if (tooltipTimeout) {
+      clearTimeout(tooltipTimeout);
+      setTooltipTimeout(null);
+    }
+    
+    setHoveredDigits(position);
+    const meaning = await getDigitMeaning(digits);
+    setDigitMeaning(meaning);
+  };
+
+  const handleDigitsLeave = () => {
+    setHoveredDigits(null);
+    setDigitMeaning("");
+  };
+
+  const handleDigitsTap = async (digits, position) => {
+    // For mobile - show tooltip and auto-hide after 3 seconds
+    await handleDigitsHover(digits, position);
+    
+    const timeout = setTimeout(() => {
+      handleDigitsLeave();
+    }, 3000);
+    
+    setTooltipTimeout(timeout);
+  };
 
   // Fetch chunks for current page from database
   const fetchPageChunks = useCallback(async (page) => {
@@ -180,16 +292,46 @@ export default function PiMatrixView() {
                       >
                         {chunk.person}
                       </a>
+                    ) : editingPosition === chunk.position ? (
+                      <div className={styles.editingContainer}>
+                        <input
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={handleSaveEdit}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit();
+                            if (e.key === 'Escape') handleCancelEdit();
+                          }}
+                          className={styles.personInput}
+                          placeholder="Enter person name"
+                          autoFocus
+                        />
+                      </div>
                     ) : (
-                      <a
-                        href={`/number-locations/${linkPosition}`}
-                        className={styles.numberLocationLink}
+                      <button
+                        onClick={() => handleStartEdit(chunk.position)}
+                        className={styles.addPersonButton}
                       >
-                        &lt;number location&gt;
-                      </a>
+                        + Add person
+                      </button>
                     )}
                   </td>
-                  <td className={styles.digitsCell}>{formattedDigits}</td>
+                  <td 
+                    className={styles.digitsCell}
+                    onMouseEnter={() => handleDigitsHover(chunk.digits, chunk.position)}
+                    onMouseLeave={handleDigitsLeave}
+                    onClick={() => handleDigitsTap(chunk.digits, chunk.position)} // For mobile tap with auto-hide
+                  >
+                    <div className={styles.digitsContainer}>
+                      {formattedDigits}
+                      {hoveredDigits === chunk.position && digitMeaning && (
+                        <div className={styles.digitTooltip}>
+                          {digitMeaning}
+                        </div>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
