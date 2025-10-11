@@ -19,20 +19,20 @@ export default function PiMatrixView() {
   // Function to get meaning of 5 digits (first 2 + next 3)
   const getDigitMeaning = async (digits) => {
     if (digits.length !== 5) return "";
-    
+
     try {
       const first2 = digits.substring(0, 2);
       const next3 = digits.substring(2, 5);
-      
+
       // Fetch competition images for both parts
       const [comp2, comp3] = await Promise.all([
         fetchCompImage(first2),
-        fetchCompImage(next3)
+        fetchCompImage(next3),
       ]);
-      
+
       const meaning2 = comp2?.comp_image || first2;
       const meaning3 = comp3?.comp_image || next3;
-      
+
       return `${meaning2} + ${meaning3}`;
     } catch (error) {
       console.error("Error fetching digit meaning:", error);
@@ -46,18 +46,22 @@ export default function PiMatrixView() {
 
     try {
       // Determine the correct lookup key (padded for 1-9, unpadded for 10+)
-      const lookupKey = position >= 1 && position <= 9 
-        ? position.toString().padStart(2, "0")
-        : position.toString();
+      const lookupKey =
+        position >= 1 && position <= 9
+          ? position.toString().padStart(2, "0")
+          : position.toString();
 
-      const { error } = await supabase
-        .from("numberstrings")
-        .upsert([{ 
-          num_string: lookupKey, 
-          person: personName.trim() 
-        }], {
-          onConflict: ["num_string"]
-        });
+      const { error } = await supabase.from("numberstrings").upsert(
+        [
+          {
+            num_string: lookupKey,
+            person: personName.trim(),
+          },
+        ],
+        {
+          onConflict: ["num_string"],
+        }
+      );
 
       if (error) {
         console.error("Error saving person:", error);
@@ -65,12 +69,14 @@ export default function PiMatrixView() {
       }
 
       // Update local state to reflect the change
-      setChunks(prev => prev.map(chunk => 
-        chunk.position === position 
-          ? { ...chunk, person: personName.trim() }
-          : chunk
-      ));
-      
+      setChunks((prev) =>
+        prev.map((chunk) =>
+          chunk.position === position
+            ? { ...chunk, person: personName.trim() }
+            : chunk
+        )
+      );
+
       setEditingPosition(null);
       setEditingValue("");
     } catch (error) {
@@ -100,7 +106,7 @@ export default function PiMatrixView() {
       clearTimeout(tooltipTimeout);
       setTooltipTimeout(null);
     }
-    
+
     setHoveredDigits(position);
     const meaning = await getDigitMeaning(digits);
     setDigitMeaning(meaning);
@@ -114,11 +120,11 @@ export default function PiMatrixView() {
   const handleDigitsTap = async (digits, position) => {
     // For mobile - show tooltip and auto-hide after 3 seconds
     await handleDigitsHover(digits, position);
-    
+
     const timeout = setTimeout(() => {
       handleDigitsLeave();
     }, 3000);
-    
+
     setTooltipTimeout(timeout);
   };
 
@@ -300,8 +306,8 @@ export default function PiMatrixView() {
                           onChange={(e) => setEditingValue(e.target.value)}
                           onBlur={handleSaveEdit}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit();
-                            if (e.key === 'Escape') handleCancelEdit();
+                            if (e.key === "Enter") handleSaveEdit();
+                            if (e.key === "Escape") handleCancelEdit();
                           }}
                           className={styles.personInput}
                           placeholder="Enter person name"
@@ -317,11 +323,15 @@ export default function PiMatrixView() {
                       </button>
                     )}
                   </td>
-                  <td 
+                  <td
                     className={styles.digitsCell}
-                    onMouseEnter={() => handleDigitsHover(chunk.digits, chunk.position)}
+                    onMouseEnter={() =>
+                      handleDigitsHover(chunk.digits, chunk.position)
+                    }
                     onMouseLeave={handleDigitsLeave}
-                    onClick={() => handleDigitsTap(chunk.digits, chunk.position)} // For mobile tap with auto-hide
+                    onClick={() =>
+                      handleDigitsTap(chunk.digits, chunk.position)
+                    } // For mobile tap with auto-hide
                   >
                     <div className={styles.digitsContainer}>
                       {formattedDigits}
