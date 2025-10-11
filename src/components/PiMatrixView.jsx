@@ -15,6 +15,7 @@ export default function PiMatrixView() {
   const [hoveredDigits, setHoveredDigits] = useState(null);
   const [digitMeaning, setDigitMeaning] = useState("");
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
+  const [jumpToPageValue, setJumpToPageValue] = useState("");
 
   // Function to get meaning of 5 digits (first 2 + next 3)
   const getDigitMeaning = async (digits) => {
@@ -224,6 +225,20 @@ export default function PiMatrixView() {
     }
   };
 
+  const handleJumpToPage = () => {
+    const pageNum = parseInt(jumpToPageValue);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+      setJumpToPageValue(""); // Clear the input after successful jump
+    }
+  };
+
+  const handleJumpInputKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleJumpToPage();
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.piContainer}>
@@ -257,6 +272,25 @@ export default function PiMatrixView() {
           >
             Next
           </button>
+          <div className={styles.jumpToPage}>
+            <input
+              type="number"
+              value={jumpToPageValue}
+              onChange={(e) => setJumpToPageValue(e.target.value)}
+              onKeyPress={handleJumpInputKeyPress}
+              placeholder="Page #"
+              min="1"
+              max={totalPages}
+              className={styles.jumpInput}
+            />
+            <button
+              onClick={handleJumpToPage}
+              className={styles.jumpButton}
+              disabled={!jumpToPageValue || loading}
+            >
+              Go
+            </button>
+          </div>
         </div>
       </div>
 
@@ -367,6 +401,25 @@ export default function PiMatrixView() {
         >
           Next
         </button>
+        <div className={styles.jumpToPage}>
+          <input
+            type="number"
+            value={jumpToPageValue}
+            onChange={(e) => setJumpToPageValue(e.target.value)}
+            onKeyPress={handleJumpInputKeyPress}
+            placeholder="Page #"
+            min="1"
+            max={totalPages}
+            className={styles.jumpInput}
+          />
+          <button
+            onClick={handleJumpToPage}
+            className={styles.jumpButton}
+            disabled={!jumpToPageValue || loading}
+          >
+            Go
+          </button>
+        </div>
       </div>
     </div>
   );
