@@ -165,15 +165,25 @@ const BoardPage = () => {
       const day = parseInt(matchDate[1], 10);
       const month = parseInt(matchDate[2], 10) - 1; // JavaScript months are 0-indexed
       let next = new Date(base.getFullYear(), month, day);
-      
-      console.log("Date pattern found:", matchDate[0], "day:", day, "month:", month + 1);
-      
+
+      console.log(
+        "Date pattern found:",
+        matchDate[0],
+        "day:",
+        day,
+        "month:",
+        month + 1
+      );
+
       // If the date has already passed this year, move to next year
       if (next <= base) {
         next.setFullYear(next.getFullYear() + 1);
-        console.log("Date has passed, moving to next year:", next.getFullYear());
+        console.log(
+          "Date has passed, moving to next year:",
+          next.getFullYear()
+        );
       }
-      
+
       // Handle invalid dates (e.g. 30/02 -> Feb 30th doesn't exist)
       if (next.getMonth() !== month) {
         // Date overflowed to next month, so set to last day of target month
@@ -185,7 +195,7 @@ const BoardPage = () => {
           console.log("Still in past, moved to next year:", next.getFullYear());
         }
       }
-      
+
       const result = next.toISOString().slice(0, 10);
       console.log("Date pattern result:", result);
       return result;

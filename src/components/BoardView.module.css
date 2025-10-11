@@ -4,6 +4,9 @@
   background: #1a1a1a;
   color: white;
   overflow: hidden;
+  /* Prevent browser back gesture navigation */
+  overscroll-behavior-x: none;
+  touch-action: pan-y pinch-zoom;
 }
 
 .boardHeader {
@@ -42,6 +45,9 @@
   overflow-x: auto;
   overflow-y: hidden;
   padding: 20px 0;
+  /* Prevent browser back gesture navigation on horizontal scroll */
+  overscroll-behavior-x: none;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .board {

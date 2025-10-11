@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import supabase from "../utils/supabaseClient";
 import {
   DndContext,
@@ -22,6 +22,35 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addingToColumn, setAddingToColumn] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const boardContainerRef = useRef(null);
+
+  // Prevent browser back navigation on horizontal scroll/swipe
+  useEffect(() => {
+    const handleWheel = (e) => {
+      // Only prevent if we're in the board area and it's primarily horizontal scrolling
+      const target = e.target;
+      const isInBoard = target.closest(`.${styles.boardContainer}`) || target.closest(`.${styles.boardScrollContainer}`);
+      
+      if (isInBoard && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        // This is primarily horizontal scrolling within the board
+        e.preventDefault();
+        
+        // Manually handle the scroll
+        const scrollContainer = target.closest(`.${styles.boardScrollContainer}`) || 
+                               document.querySelector(`.${styles.boardScrollContainer}`);
+        if (scrollContainer) {
+          scrollContainer.scrollLeft += e.deltaX;
+        }
+      }
+    };
+
+    // Add the event listener to the document to catch all wheel events
+    document.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -79,7 +108,8 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const handleTaskSave = async (updatedTask) => {
     try {
       const originalTask = tasks.find((t) => t.id === updatedTask.id);
-      const urgentStatusChanged = originalTask && originalTask.urgent !== updatedTask.urgent;
+      const urgentStatusChanged =
+        originalTask && originalTask.urgent !== updatedTask.urgent;
 
       if (urgentStatusChanged) {
         // Handle urgent status change with reordering
@@ -626,7 +656,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   }, [tasks]);
 
   return (
-    <div className={styles.boardContainer}>
+    <div className={styles.boardContainer} ref={boardContainerRef}>
       <div className={styles.boardHeader}>
         <h2>Board View</h2>
         {router && (

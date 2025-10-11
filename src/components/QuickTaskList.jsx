@@ -409,12 +409,12 @@ const QuickTaskList = () => {
       const day = parseInt(matchDate[1], 10);
       const month = parseInt(matchDate[2], 10) - 1; // JavaScript months are 0-indexed
       let next = new Date(base.getFullYear(), month, day);
-      
+
       // If the date has already passed this year, move to next year
       if (next <= base) {
         next.setFullYear(next.getFullYear() + 1);
       }
-      
+
       // Handle invalid dates (e.g. 30/02 -> Feb 30th doesn't exist)
       if (next.getMonth() !== month) {
         // Date overflowed to next month, so set to last day of target month
@@ -424,7 +424,7 @@ const QuickTaskList = () => {
           next = new Date(next.getFullYear() + 1, month + 1, 0);
         }
       }
-      
+
       return next.toISOString().slice(0, 10);
     }
     // fallback: just add 1 day
