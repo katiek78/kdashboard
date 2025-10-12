@@ -24,6 +24,65 @@ export default function PiTestContainer() {
   const [digitRangeStart, setDigitRangeStart] = useState(1);
   const [digitRangeEnd, setDigitRangeEnd] = useState(500);
   const [filteredChunks, setFilteredChunks] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Temporary input states for editing (to avoid validation on every keystroke)
+  const [tempChunkStart, setTempChunkStart] = useState("1");
+  const [tempChunkEnd, setTempChunkEnd] = useState("100");
+  const [tempDigitStart, setTempDigitStart] = useState("1");
+  const [tempDigitEnd, setTempDigitEnd] = useState("500");
+
+  // Check if we're on mobile and set default settings visibility
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      // Set initial state based on screen size
+      if (mobile) {
+        setShowSettings(false); // Hide settings on mobile by default
+      } else {
+        setShowSettings(true); // Show settings on desktop by default
+      }
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Update temp states when actual values change (e.g., from presets)
+  useEffect(() => {
+    setTempChunkStart(chunkRangeStart.toString());
+    setTempChunkEnd(chunkRangeEnd.toString());
+    setTempDigitStart(digitRangeStart.toString());
+    setTempDigitEnd(digitRangeEnd.toString());
+  }, [chunkRangeStart, chunkRangeEnd, digitRangeStart, digitRangeEnd]);
+
+  // Input validation helpers
+  const handleChunkStartBlur = () => {
+    const value = Math.max(1, parseInt(tempChunkStart) || 1);
+    setChunkRangeStart(value);
+    setTempChunkStart(value.toString());
+  };
+
+  const handleChunkEndBlur = () => {
+    const value = Math.min(2000, parseInt(tempChunkEnd) || 100);
+    setChunkRangeEnd(value);
+    setTempChunkEnd(value.toString());
+  };
+
+  const handleDigitStartBlur = () => {
+    const value = Math.max(1, parseInt(tempDigitStart) || 1);
+    setDigitRangeStart(value);
+    setTempDigitStart(value.toString());
+  };
+
+  const handleDigitEndBlur = () => {
+    const value = Math.min(10000, parseInt(tempDigitEnd) || 500);
+    setDigitRangeEnd(value);
+    setTempDigitEnd(value.toString());
+  };
 
   // Load all chunks on component mount
   useEffect(() => {
@@ -156,134 +215,140 @@ export default function PiTestContainer() {
   return (
     <div className={styles.container + " pageContainer"}>
       <div className={styles.header}>
-        <h1>Pi Chunks Test</h1>
-        <p>Test your knowledge of pi digit chunks and their positions</p>
-
-        <div className={styles.controls}>
-          <div className={styles.modeSelector}>
-            <label>Test Mode:</label>
-            <select
-              value={testMode}
-              onChange={(e) => changeTestMode(e.target.value)}
-              className={styles.modeSelect}
-            >
-              <option value={TEST_MODES.DIGITS_TO_CHUNK}>Digits → Chunk</option>
-              <option value={TEST_MODES.CHUNK_TO_DIGITS}>Chunk → Digits</option>
-            </select>
-          </div>
-
-          <div className={styles.scoreDisplay}>
-            <span className={styles.scoreText}>
-              Score: {score.correct}/{score.total}
-              {score.total > 0 && (
-                <span className={styles.percentage}>
-                  ({Math.round((score.correct / score.total) * 100)}%)
-                </span>
-              )}
-            </span>
-            <button onClick={resetScore} className={styles.resetButton}>
-              Reset
-            </button>
-          </div>
+        <div className={styles.headerTop}>
+          <h1>Pi Test</h1>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={styles.settingsToggle}
+          >
+            ⚙️ {showSettings ? "Hide" : "Settings"}
+          </button>
         </div>
 
-        <div className={styles.rangeControls}>
-          <div className={styles.rangeSelector}>
-            <label>Range:</label>
-            <select
-              value={rangeMode}
-              onChange={(e) => setRangeMode(e.target.value)}
-              className={styles.rangeSelect}
-            >
-              <option value="all">All Chunks (1-2000)</option>
-              <option value="chunks">Chunk Range</option>
-              <option value="digits">Digit Range</option>
-            </select>
+        {/* Score display - always visible */}
+        <div className={styles.scoreDisplay}>
+          <span className={styles.scoreText}>
+            Score: {score.correct}/{score.total}
+            {score.total > 0 && (
+              <span className={styles.percentage}>
+                ({Math.round((score.correct / score.total) * 100)}%)
+              </span>
+            )}
+          </span>
+          <button onClick={resetScore} className={styles.resetButton}>
+            Reset
+          </button>
+        </div>
+
+        <div
+          className={`${styles.settingsSection} ${
+            showSettings ? styles.settingsVisible : styles.settingsHidden
+          }`}
+        >
+          <div className={styles.controls}>
+            <div className={styles.modeSelector}>
+              <label>Test Mode:</label>
+              <select
+                value={testMode}
+                onChange={(e) => changeTestMode(e.target.value)}
+                className={styles.modeSelect}
+              >
+                <option value={TEST_MODES.DIGITS_TO_CHUNK}>
+                  Digits → Chunk
+                </option>
+                <option value={TEST_MODES.CHUNK_TO_DIGITS}>
+                  Chunk → Digits
+                </option>
+              </select>
+            </div>
           </div>
 
-          {rangeMode === "chunks" && (
-            <div className={styles.rangeInputs}>
-              <div className={styles.rangeInput}>
-                <label>From Chunk:</label>
-                <input
-                  type="number"
-                  value={chunkRangeStart}
-                  onChange={(e) =>
-                    setChunkRangeStart(
-                      Math.max(1, parseInt(e.target.value) || 1)
-                    )
-                  }
-                  min="1"
-                  max="2000"
-                  className={styles.numberInput}
-                />
-              </div>
-              <div className={styles.rangeInput}>
-                <label>To Chunk:</label>
-                <input
-                  type="number"
-                  value={chunkRangeEnd}
-                  onChange={(e) =>
-                    setChunkRangeEnd(
-                      Math.min(2000, parseInt(e.target.value) || 100)
-                    )
-                  }
-                  min="1"
-                  max="2000"
-                  className={styles.numberInput}
-                />
-              </div>
-              <div className={styles.rangeInfo}>
-                ({Math.max(0, chunkRangeEnd - chunkRangeStart + 1)} chunks)
-              </div>
+          <div className={styles.rangeControls}>
+            <div className={styles.rangeSelector}>
+              <label>Range:</label>
+              <select
+                value={rangeMode}
+                onChange={(e) => setRangeMode(e.target.value)}
+                className={styles.rangeSelect}
+              >
+                <option value="all">All Chunks (1-2000)</option>
+                <option value="chunks">Chunk Range</option>
+                <option value="digits">Digit Range</option>
+              </select>
             </div>
-          )}
 
-          {rangeMode === "digits" && (
-            <div className={styles.rangeInputs}>
-              <div className={styles.rangeInput}>
-                <label>From Digit:</label>
-                <input
-                  type="number"
-                  value={digitRangeStart}
-                  onChange={(e) =>
-                    setDigitRangeStart(
-                      Math.max(1, parseInt(e.target.value) || 1)
-                    )
-                  }
-                  min="1"
-                  max="10000"
-                  className={styles.numberInput}
-                />
+            {rangeMode === "chunks" && (
+              <div className={styles.rangeInputs}>
+                <div className={styles.rangeInput}>
+                  <label>From Chunk:</label>
+                  <input
+                    type="number"
+                    value={tempChunkStart}
+                    onChange={(e) => setTempChunkStart(e.target.value)}
+                    onBlur={handleChunkStartBlur}
+                    min="1"
+                    max="2000"
+                    className={styles.numberInput}
+                  />
+                </div>
+                <div className={styles.rangeInput}>
+                  <label>To Chunk:</label>
+                  <input
+                    type="number"
+                    value={tempChunkEnd}
+                    onChange={(e) => setTempChunkEnd(e.target.value)}
+                    onBlur={handleChunkEndBlur}
+                    min="1"
+                    max="2000"
+                    className={styles.numberInput}
+                  />
+                </div>
+                <div className={styles.rangeInfo}>
+                  ({Math.max(0, chunkRangeEnd - chunkRangeStart + 1)} chunks)
+                </div>
               </div>
-              <div className={styles.rangeInput}>
-                <label>To Digit:</label>
-                <input
-                  type="number"
-                  value={digitRangeEnd}
-                  onChange={(e) =>
-                    setDigitRangeEnd(
-                      Math.min(10000, parseInt(e.target.value) || 500)
-                    )
-                  }
-                  min="1"
-                  max="10000"
-                  className={styles.numberInput}
-                />
-              </div>
-              <div className={styles.rangeInfo}>
-                (Chunks {Math.ceil(digitRangeStart / 5)}-
-                {Math.ceil(digitRangeEnd / 5)},{" "}
-                {Math.ceil((digitRangeEnd - digitRangeStart + 1) / 5)} chunks)
-              </div>
-            </div>
-          )}
+            )}
 
-          {filteredChunks.length > 0 && rangeMode !== "all" && (
-            <div className={styles.activeRange}>
-              Active range: {filteredChunks.length} chunks
-            </div>
-          )}
+            {rangeMode === "digits" && (
+              <div className={styles.rangeInputs}>
+                <div className={styles.rangeInput}>
+                  <label>From Digit:</label>
+                  <input
+                    type="number"
+                    value={tempDigitStart}
+                    onChange={(e) => setTempDigitStart(e.target.value)}
+                    onBlur={handleDigitStartBlur}
+                    min="1"
+                    max="10000"
+                    className={styles.numberInput}
+                  />
+                </div>
+                <div className={styles.rangeInput}>
+                  <label>To Digit:</label>
+                  <input
+                    type="number"
+                    value={tempDigitEnd}
+                    onChange={(e) => setTempDigitEnd(e.target.value)}
+                    onBlur={handleDigitEndBlur}
+                    min="1"
+                    max="10000"
+                    className={styles.numberInput}
+                  />
+                </div>
+                <div className={styles.rangeInfo}>
+                  (Chunks {Math.ceil(digitRangeStart / 5)}-
+                  {Math.ceil(digitRangeEnd / 5)},{" "}
+                  {Math.ceil((digitRangeEnd - digitRangeStart + 1) / 5)} chunks)
+                </div>
+              </div>
+            )}
+
+            {filteredChunks.length > 0 && rangeMode !== "all" && (
+              <div className={styles.activeRange}>
+                Active range: {filteredChunks.length} chunks
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

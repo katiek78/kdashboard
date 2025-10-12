@@ -26,6 +26,51 @@
     font-size: 16px;
 }
 
+.headerTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.settingsToggle {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: 'Karla', sans-serif;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settingsToggle:hover {
+    background: #5a6268;
+}
+
+.settingsSection {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.settingsVisible {
+    max-height: 1000px;
+    opacity: 1;
+}
+
+.settingsHidden {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+}
+
 .controls {
     display: flex;
     justify-content: space-between;
@@ -361,6 +406,32 @@
         font-size: 24px;
     }
     
+    .headerTop {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .headerTop h1 {
+        text-align: center;
+        margin: 0;
+    }
+    
+    .settingsToggle {
+        align-self: center;
+        font-size: 16px;
+        padding: 10px 16px;
+    }
+    
+    /* Hide settings by default on mobile */
+    .settingsSection {
+        margin-top: 15px;
+    }
+    
+    .settingsHidden {
+        display: none;
+    }
+    
     .controls {
         flex-direction: column;
         align-items: stretch;
@@ -370,6 +441,12 @@
     
     .rangeControls {
         padding: 15px;
+        margin: 0 -5px; /* Prevent overflow on small screens */
+    }
+    
+    .rangeSelect {
+        width: 100%;
+        max-width: none;
     }
     
     .rangeInputs {
@@ -380,23 +457,44 @@
     
     .rangeInput {
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
     }
     
     .rangeInput label {
         min-width: auto;
         flex: 1;
+        min-width: 100px;
     }
     
     .numberInput {
         width: 100px;
+        max-width: 30%;
+        min-width: 80px;
+    }
+    
+    .rangeInfo {
+        text-align: center;
+        margin-top: 5px;
     }
     
     .modeSelector {
         justify-content: center;
     }
     
+    .modeSelect {
+        width: 100%;
+        max-width: none;
+    }
+    
     .scoreDisplay {
         justify-content: center;
+        text-align: center;
+    }
+    
+    .activeRange {
+        margin-top: 15px;
+        text-align: center;
     }
     
     .questionContainer {
