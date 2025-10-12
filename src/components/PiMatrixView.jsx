@@ -234,7 +234,7 @@ export default function PiMatrixView() {
   };
 
   const handleJumpInputKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleJumpToPage();
     }
   };
@@ -250,7 +250,12 @@ export default function PiMatrixView() {
   return (
     <div className={styles.piContainer + " pageContainer"}>
       <div className={styles.header}>
-        <h2>Pi Matrix - First 10,000 Digits</h2>
+        <div className={styles.headerTop}>
+          <h2>Pi Matrix - First 10,000 Digits</h2>
+          <a href="/pi/test" className={styles.testLink}>
+            📝 Test Your Knowledge
+          </a>
+        </div>
         <div className={styles.pagination}>
           <button
             onClick={() => handlePageChange(currentPage - 1)}
