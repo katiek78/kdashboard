@@ -47,12 +47,70 @@ export default function PiTestContainer() {
   const [filteredChunks, setFilteredChunks] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [sessionRestored, setSessionRestored] = useState(false);
+  const [isRestoringSession, setIsRestoringSession] = useState(false);
 
   // Temporary input states for editing (to avoid validation on every keystroke)
   const [tempChunkStart, setTempChunkStart] = useState("1");
   const [tempChunkEnd, setTempChunkEnd] = useState("100");
   const [tempDigitStart, setTempDigitStart] = useState("1");
   const [tempDigitEnd, setTempDigitEnd] = useState("500");
+
+  // Session persistence functions
+  const saveSessionToLocalStorage = () => {
+    const sessionData = {
+      testMode,
+      trainingMode,
+      score,
+      finiteStack,
+      masteredItems: Array.from(masteredItems),
+      itemCorrectCounts: Array.from(itemCorrectCounts.entries()),
+      priorityQueue,
+      itemCounter,
+      sessionStats: {
+        ...sessionStats,
+        attempted: Array.from(sessionStats.attempted),
+      },
+      rangeMode,
+      chunkRangeStart,
+      chunkRangeEnd,
+      digitRangeStart,
+      digitRangeEnd,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem("piTestSession", JSON.stringify(sessionData));
+  };
+
+  const loadSessionFromLocalStorage = () => {
+    try {
+      const saved = localStorage.getItem("piTestSession");
+      if (saved) {
+        const sessionData = JSON.parse(saved);
+
+        // Check if session is less than 24 hours old
+        const hoursSinceLastSession =
+          (Date.now() - sessionData.timestamp) / (1000 * 60 * 60);
+        if (hoursSinceLastSession < 24) {
+          return {
+            ...sessionData,
+            masteredItems: new Set(sessionData.masteredItems),
+            itemCorrectCounts: new Map(sessionData.itemCorrectCounts),
+            sessionStats: {
+              ...sessionData.sessionStats,
+              attempted: new Set(sessionData.sessionStats.attempted),
+            },
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Error loading session from localStorage:", error);
+    }
+    return null;
+  };
+
+  const clearSession = () => {
+    localStorage.removeItem("piTestSession");
+  };
 
   // Get detailed breakdown for a chunk (person + digit meanings)
   // Priority queue management for wrong answers
@@ -108,7 +166,17 @@ export default function PiTestContainer() {
   };
 
   // Initialize finite mode stack
-  const initializeFiniteMode = () => {
+  const initializeFiniteMode = (forceReset = false) => {
+    // Don't reset if we're restoring a session or if there's existing progress (unless forced)
+    if (
+      !forceReset &&
+      (isRestoringSession ||
+        sessionStats.mastered > 0 ||
+        priorityQueue.length > 0)
+    ) {
+      return;
+    }
+
     const chunksToUse = filteredChunks.length > 0 ? filteredChunks : allChunks;
     setFiniteStack([...chunksToUse]);
     setMasteredItems(new Set());
@@ -249,6 +317,35 @@ export default function PiTestContainer() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Load saved session on component mount
+  useEffect(() => {
+    const savedSession = loadSessionFromLocalStorage();
+    if (savedSession) {
+      setIsRestoringSession(true);
+      setTestMode(savedSession.testMode);
+      setTrainingMode(savedSession.trainingMode);
+      setScore(savedSession.score);
+      setFiniteStack(savedSession.finiteStack);
+      setMasteredItems(savedSession.masteredItems);
+      setItemCorrectCounts(savedSession.itemCorrectCounts);
+      setPriorityQueue(savedSession.priorityQueue);
+      setItemCounter(savedSession.itemCounter);
+      setSessionStats(savedSession.sessionStats);
+      setRangeMode(savedSession.rangeMode);
+      setChunkRangeStart(savedSession.chunkRangeStart);
+      setChunkRangeEnd(savedSession.chunkRangeEnd);
+      setDigitRangeStart(savedSession.digitRangeStart);
+      setDigitRangeEnd(savedSession.digitRangeEnd);
+      setSessionRestored(true);
+
+      // Clear the restoring flag after a brief delay
+      setTimeout(() => setIsRestoringSession(false), 100);
+
+      // Hide the restored message after 3 seconds
+      setTimeout(() => setSessionRestored(false), 3000);
+    }
+  }, []);
+
   // Update temp states when actual values change (e.g., from presets)
   useEffect(() => {
     setTempChunkStart(chunkRangeStart.toString());
@@ -336,15 +433,42 @@ export default function PiTestContainer() {
     digitRangeEnd,
   ]);
 
-  // Initialize finite mode when chunks change
+  // Initialize finite mode when chunks change (but not during session restore)
   useEffect(() => {
     if (
+      !isRestoringSession &&
       trainingMode === TRAINING_MODES.FINITE &&
       (filteredChunks.length > 0 || allChunks.length > 0)
     ) {
       initializeFiniteMode();
     }
-  }, [filteredChunks, allChunks, trainingMode]);
+  }, [filteredChunks, allChunks, trainingMode, isRestoringSession]);
+
+  // Auto-save session when important state changes
+  useEffect(() => {
+    // Only save if we have some actual session data and we're not currently restoring
+    if (
+      !isRestoringSession &&
+      (score.total > 0 || sessionStats.mastered > 0 || priorityQueue.length > 0)
+    ) {
+      saveSessionToLocalStorage();
+    }
+  }, [
+    testMode,
+    trainingMode,
+    score,
+    finiteStack,
+    masteredItems,
+    itemCorrectCounts,
+    priorityQueue,
+    itemCounter,
+    sessionStats,
+    rangeMode,
+    chunkRangeStart,
+    chunkRangeEnd,
+    digitRangeStart,
+    digitRangeEnd,
+  ]);
 
   // Generate a new question based on the current test mode
   const handleShowBreakdown = async () => {
@@ -517,8 +641,11 @@ export default function PiTestContainer() {
     setItemCounter(0);
 
     if (trainingMode === TRAINING_MODES.FINITE) {
-      initializeFiniteMode();
+      initializeFiniteMode(true); // Force reset when user clicks reset
     }
+
+    // Clear saved session when resetting
+    clearSession();
   };
 
   const changeTestMode = (newMode) => {
@@ -528,13 +655,18 @@ export default function PiTestContainer() {
   };
 
   const changeTrainingMode = (newMode) => {
+    const wasActualChange = newMode !== trainingMode;
     setTrainingMode(newMode);
     setCurrentQuestion(null);
     setShowAnswer(false);
-    resetScore();
+
+    // Only reset score if this is a real user change, not session restoration
+    if (wasActualChange && !isRestoringSession) {
+      resetScore();
+    }
 
     if (newMode === TRAINING_MODES.FINITE) {
-      initializeFiniteMode();
+      initializeFiniteMode(wasActualChange && !isRestoringSession); // Only force reset if it's a real user change
     }
   };
 
@@ -551,6 +683,9 @@ export default function PiTestContainer() {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <h1>Pi Test</h1>
+          {sessionRestored && (
+            <span className={styles.sessionRestored}>↻ Session restored</span>
+          )}
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={styles.settingsToggle}
