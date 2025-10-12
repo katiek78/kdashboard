@@ -257,7 +257,7 @@
     font-weight: 700;
     color: #28a745;
     font-family: monospace, 'Karla', sans-serif;
-    letter-spacing: 8px;
+    letter-spacing: 4px;
 }
 
 .chunkDisplay {
@@ -279,6 +279,7 @@
     font-weight: 700;
     color: #007bff;
     margin-bottom: 10px;
+    letter-spacing: normal;
 }
 
 .chunkRange {
@@ -333,7 +334,7 @@
     color: #333;
     margin-bottom: 10px;
     font-family: monospace, 'Karla', sans-serif;
-    letter-spacing: 8px;
+    letter-spacing: 4px;
 }
 
 .answerDetail {
@@ -394,6 +395,78 @@
     color: #666;
     font-size: 18px;
     font-family: 'Karla', sans-serif;
+}
+
+/* Detailed breakdown styles */
+.breakdownButton {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin: 10px 0;
+    font-family: 'Karla', sans-serif;
+    transition: background 0.2s ease;
+}
+
+.breakdownButton:hover {
+    background: #138496;
+}
+
+.detailedBreakdown {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 10px 0;
+    font-size: 14px;
+    color: #495057;
+    text-align: center;
+    position: relative;
+}
+
+.hideBreakdownButton {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.hideBreakdownButton:hover {
+    background: #e9ecef;
+}
+
+.breakdownSentence {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    line-height: 1.4;
+    margin-top: 4px;
+}
+
+.personName {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.verbMeaning {
+    color: #fd7e14;
+    font-weight: 600;
+}
+
+.itemMeaning {
+    color: #28a745;
+    font-weight: 600;
 }
 
 /* Mobile responsive styles */
@@ -507,17 +580,18 @@
     }
     
     .digitsValue {
-        font-size: 24px;
-        letter-spacing: 4px;
+        font-size: 22px;
+        letter-spacing: 2px;
     }
     
     .chunkValue {
         font-size: 36px;
+        letter-spacing: normal;
     }
     
     .answerMain {
-        font-size: 24px;
-        letter-spacing: 4px;
+        font-size: 22px;
+        letter-spacing: 2px;
     }
     
     .revealButton {
@@ -533,5 +607,32 @@
     .correctButton, .incorrectButton, .skipButton {
         padding: 10px 16px;
         font-size: 13px;
+    }
+    
+    .breakdownButton {
+        font-size: 11px;
+        padding: 6px 12px;
+    }
+    
+    .detailedBreakdown {
+        font-size: 12px;
+        padding: 10px;
+    }
+    
+    .breakdownSentence {
+        gap: 1px;
+        font-size: 11px;
+    }
+    
+    .personName {
+        font-size: 11px;
+    }
+    
+    .verbMeaning {
+        font-size: 11px;
+    }
+    
+    .itemMeaning {
+        font-size: 11px;
     }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import supabase from "../utils/supabaseClient";
+import { fetchCompImage } from "../utils/compImagesUtils";
 import styles from "./PiTestContainer.module.css";
 
 const TEST_MODES = {
@@ -13,6 +14,8 @@ export default function PiTestContainer() {
   const [testMode, setTestMode] = useState(TEST_MODES.DIGITS_TO_CHUNK);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
+  const [chunkBreakdown, setChunkBreakdown] = useState(null);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [loading, setLoading] = useState(false);
   const [allChunks, setAllChunks] = useState([]);
@@ -32,6 +35,62 @@ export default function PiTestContainer() {
   const [tempChunkEnd, setTempChunkEnd] = useState("100");
   const [tempDigitStart, setTempDigitStart] = useState("1");
   const [tempDigitEnd, setTempDigitEnd] = useState("500");
+
+  // Get detailed breakdown for a chunk (person + digit meanings)
+  const getChunkBreakdown = async (chunkNumber) => {
+    try {
+      // Get the chunk data
+      const { data: chunkData, error: chunkError } = await supabase
+        .from("pi_matrix")
+        .select("digits")
+        .eq("position", chunkNumber)
+        .single();
+
+      if (chunkError) throw chunkError;
+
+      const digits = chunkData.digits;
+
+      // Get person data using same logic as PiMatrixView
+      const lookupKey =
+        chunkNumber < 10
+          ? chunkNumber.toString().padStart(2, "0")
+          : chunkNumber.toString();
+
+      const { data: personData, error: personError } = await supabase
+        .from("numberstrings")
+        .select("person")
+        .eq("num_string", lookupKey)
+        .single();
+
+      const person = personData?.person || null;
+
+      // Split into 2+3 digits for meanings
+      const firstTwo = digits.substring(0, 2);
+      const lastThree = digits.substring(2, 5);
+
+      // Get competition image meanings
+      const firstTwoMeaning = await fetchCompImage(firstTwo);
+      const lastThreeMeaning = await fetchCompImage(lastThree);
+
+      return {
+        digits,
+        person,
+        breakdown: {
+          firstTwo: {
+            digits: firstTwo,
+            meaning: firstTwoMeaning?.comp_image || "No meaning found",
+          },
+          lastThree: {
+            digits: lastThree,
+            meaning: lastThreeMeaning?.comp_image || "No meaning found",
+          },
+        },
+      };
+    } catch (error) {
+      console.error("Error getting chunk breakdown:", error);
+      return null;
+    }
+  };
 
   // Check if we're on mobile and set default settings visibility
   useEffect(() => {
@@ -139,12 +198,29 @@ export default function PiTestContainer() {
   ]);
 
   // Generate a new question based on the current test mode
+  const handleShowBreakdown = async () => {
+    if (!currentQuestion) return;
+
+    let chunkNumber;
+    if (currentQuestion.type === "digits-to-chunk") {
+      chunkNumber = currentQuestion.correctAnswer;
+    } else {
+      chunkNumber = currentQuestion.position;
+    }
+
+    const breakdown = await getChunkBreakdown(chunkNumber);
+    setChunkBreakdown(breakdown);
+    setShowDetailedBreakdown(true);
+  };
+
   const generateQuestion = () => {
     const chunksToUse = filteredChunks.length > 0 ? filteredChunks : allChunks;
     if (chunksToUse.length === 0) return;
 
     setLoading(true);
     setShowAnswer(false);
+    setShowDetailedBreakdown(false);
+    setChunkBreakdown(null);
 
     const randomChunk =
       chunksToUse[Math.floor(Math.random() * chunksToUse.length)];
@@ -411,6 +487,40 @@ export default function PiTestContainer() {
                     </div>
                   )}
                 </div>
+
+                {/* Button to show detailed breakdown */}
+                {!showDetailedBreakdown ? (
+                  <button
+                    onClick={handleShowBreakdown}
+                    className={styles.breakdownButton}
+                  >
+                    Show Details
+                  </button>
+                ) : (
+                  chunkBreakdown && (
+                    <div className={styles.detailedBreakdown}>
+                      <button
+                        onClick={() => setShowDetailedBreakdown(false)}
+                        className={styles.hideBreakdownButton}
+                      >
+                        ✕
+                      </button>
+                      <div className={styles.breakdownSentence}>
+                        <span className={styles.personName}>
+                          {chunkBreakdown.person || "<person>"}
+                        </span>
+                        {" • "}
+                        <span className={styles.verbMeaning}>
+                          {chunkBreakdown.breakdown.firstTwo.meaning}
+                        </span>
+                        {" • "}
+                        <span className={styles.itemMeaning}>
+                          {chunkBreakdown.breakdown.lastThree.meaning}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                )}
 
                 <div className={styles.responseButtons}>
                   <button
