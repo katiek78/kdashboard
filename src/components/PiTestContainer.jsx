@@ -37,6 +37,7 @@ export default function PiTestContainer() {
     mastered: 0,
     remaining: 0,
   });
+  const [lastShownChunk, setLastShownChunk] = useState(null); // Track last shown to prevent immediate repeats
 
   // Range selection state
   const [rangeMode, setRangeMode] = useState("all"); // "all", "chunks", "digits"
@@ -71,6 +72,7 @@ export default function PiTestContainer() {
         ...sessionStats,
         attempted: Array.from(sessionStats.attempted),
       },
+      lastShownChunk,
       rangeMode,
       chunkRangeStart,
       chunkRangeEnd,
@@ -239,9 +241,19 @@ export default function PiTestContainer() {
 
   // Handle wrong answer in finite mode
   const handleFiniteWrong = (chunkId) => {
-    // Reset consecutive correct count and add to priority queue
+    // Reset consecutive correct count
     setItemCorrectCounts((prev) => new Map(prev.set(chunkId, 0)));
-    addToPriorityQueue(chunkId, 1);
+
+    // Check if item is already in priority queue
+    const existingItem = priorityQueue.find((item) => item.chunkId === chunkId);
+    if (existingItem) {
+      // Item already in review - just reset its intervals with updated priority
+      const newPriority = Math.min(existingItem.priority + 1, 3);
+      addToPriorityQueue(chunkId, newPriority);
+    } else {
+      // New item to add to review queue
+      addToPriorityQueue(chunkId, 1);
+    }
   };
 
   const getChunkBreakdown = async (chunkNumber) => {
@@ -280,6 +292,7 @@ export default function PiTestContainer() {
       const lastThreeMeaning = await fetchCompImage(lastThree);
 
       return {
+        chunkNumber,
         digits,
         person,
         breakdown: {
@@ -331,6 +344,7 @@ export default function PiTestContainer() {
       setPriorityQueue(savedSession.priorityQueue);
       setItemCounter(savedSession.itemCounter);
       setSessionStats(savedSession.sessionStats);
+      setLastShownChunk(savedSession.lastShownChunk);
       setRangeMode(savedSession.rangeMode);
       setChunkRangeStart(savedSession.chunkRangeStart);
       setChunkRangeEnd(savedSession.chunkRangeEnd);
@@ -463,6 +477,7 @@ export default function PiTestContainer() {
     priorityQueue,
     itemCounter,
     sessionStats,
+    lastShownChunk,
     rangeMode,
     chunkRangeStart,
     chunkRangeEnd,
@@ -513,9 +528,22 @@ export default function PiTestContainer() {
         const availableStack = finiteStack.filter(
           (chunk) => !masteredItems.has(chunk.position)
         );
+
         if (availableStack.length > 0) {
+          // Prevent immediate repeats unless it's the only item left
+          let candidateStack = availableStack;
+          if (availableStack.length > 1 && lastShownChunk) {
+            candidateStack = availableStack.filter(
+              (chunk) => chunk.position !== lastShownChunk
+            );
+            // If filtering leaves us with no options, use the full stack
+            if (candidateStack.length === 0) {
+              candidateStack = availableStack;
+            }
+          }
+
           selectedChunk =
-            availableStack[Math.floor(Math.random() * availableStack.length)];
+            candidateStack[Math.floor(Math.random() * candidateStack.length)];
         }
       }
 
@@ -542,8 +570,20 @@ export default function PiTestContainer() {
         const chunksToUse =
           filteredChunks.length > 0 ? filteredChunks : allChunks;
         if (chunksToUse.length > 0) {
+          // Prevent immediate repeats unless it's the only chunk available
+          let candidateChunks = chunksToUse;
+          if (chunksToUse.length > 1 && lastShownChunk) {
+            candidateChunks = chunksToUse.filter(
+              (chunk) => chunk.position !== lastShownChunk
+            );
+            // If filtering leaves us with no options, use the full list
+            if (candidateChunks.length === 0) {
+              candidateChunks = chunksToUse;
+            }
+          }
+
           selectedChunk =
-            chunksToUse[Math.floor(Math.random() * chunksToUse.length)];
+            candidateChunks[Math.floor(Math.random() * candidateChunks.length)];
         }
       }
     }
@@ -552,6 +592,9 @@ export default function PiTestContainer() {
       setLoading(false);
       return;
     }
+
+    // Track the last shown chunk to prevent immediate repeats
+    setLastShownChunk(selectedChunk.position);
 
     // Track attempted items in finite mode
     if (trainingMode === TRAINING_MODES.FINITE) {
@@ -931,17 +974,32 @@ export default function PiTestContainer() {
                         ✕
                       </button>
                       <div className={styles.breakdownSentence}>
-                        <span className={styles.personName}>
+                        <a
+                          href={`/number-locations/${chunkBreakdown.chunkNumber}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.personName}
+                        >
                           {chunkBreakdown.person || "<person>"}
-                        </span>
+                        </a>
                         {" • "}
-                        <span className={styles.verbMeaning}>
+                        <a
+                          href={`/number-locations/${chunkBreakdown.breakdown.firstTwo.digits}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.verbMeaning}
+                        >
                           {chunkBreakdown.breakdown.firstTwo.meaning}
-                        </span>
+                        </a>
                         {" • "}
-                        <span className={styles.itemMeaning}>
+                        <a
+                          href={`/number-locations/${chunkBreakdown.breakdown.lastThree.digits}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.itemMeaning}
+                        >
                           {chunkBreakdown.breakdown.lastThree.meaning}
-                        </span>
+                        </a>
                       </div>
                     </div>
                   )
