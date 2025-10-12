@@ -358,6 +358,14 @@
     font-style: italic;
 }
 
+.duplicateNote {
+    font-size: 12px;
+    color: #ff8c00;
+    font-weight: 600;
+    margin-top: 5px;
+    font-style: italic;
+}
+
 .responseButtons {
     display: flex;
     justify-content: center;

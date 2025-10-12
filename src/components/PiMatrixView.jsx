@@ -16,6 +16,41 @@ export default function PiMatrixView() {
   const [digitMeaning, setDigitMeaning] = useState("");
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
   const [jumpToPageValue, setJumpToPageValue] = useState("");
+  const [duplicateDigits, setDuplicateDigits] = useState(new Set()); // Track duplicate digit sequences
+
+  // Function to find all duplicate digit sequences
+  const findDuplicateDigits = useCallback(async () => {
+    try {
+      const { data: allChunks, error } = await supabase
+        .from("pi_matrix")
+        .select("digits")
+        .order("position");
+
+      if (error) {
+        console.error("Error fetching chunks for duplicate detection:", error);
+        return;
+      }
+
+      // Count occurrences of each digit sequence
+      const digitCounts = {};
+      allChunks.forEach((chunk) => {
+        digitCounts[chunk.digits] = (digitCounts[chunk.digits] || 0) + 1;
+      });
+
+      // Find sequences that appear more than once
+      const duplicates = new Set();
+      Object.entries(digitCounts).forEach(([digits, count]) => {
+        if (count > 1) {
+          duplicates.add(digits);
+        }
+      });
+
+      setDuplicateDigits(duplicates);
+      console.log("Found duplicate digit sequences:", Array.from(duplicates));
+    } catch (error) {
+      console.error("Error detecting duplicates:", error);
+    }
+  }, []);
 
   // Function to get meaning of 5 digits (first 2 + next 3)
   const getDigitMeaning = async (digits) => {
@@ -217,6 +252,11 @@ export default function PiMatrixView() {
     fetchPageChunks(currentPage);
   }, [currentPage, fetchPageChunks]);
 
+  // Load duplicates on component mount
+  useEffect(() => {
+    findDuplicateDigits();
+  }, [findDuplicateDigits]);
+
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const handlePageChange = (newPage) => {
@@ -321,8 +361,16 @@ export default function PiMatrixView() {
                   ? chunk.position.toString().padStart(2, "0")
                   : chunk.position.toString();
 
+              // Check if this chunk has duplicate digits
+              const isDuplicate = duplicateDigits.has(chunk.digits);
+
               return (
-                <tr key={chunk.position} className={styles.chunkRow}>
+                <tr
+                  key={chunk.position}
+                  className={`${styles.chunkRow} ${
+                    isDuplicate ? styles.duplicateRow : ""
+                  }`}
+                >
                   <td className={styles.indexCell}>
                     <div className={styles.positionNumber}>
                       {chunk.position}

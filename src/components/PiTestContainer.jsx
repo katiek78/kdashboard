@@ -605,11 +605,22 @@ export default function PiTestContainer() {
     }
 
     if (testMode === TEST_MODES.DIGITS_TO_CHUNK) {
+      // Find ALL chunks with these digits that are in the current range
+      const chunksToUse =
+        filteredChunks.length > 0 ? filteredChunks : allChunks;
+      const allMatchingChunks = chunksToUse.filter(
+        (chunk) => chunk.digits === selectedChunk.digits
+      );
+
       setCurrentQuestion({
         type: "digits-to-chunk",
         digits: selectedChunk.digits,
-        correctAnswer: selectedChunk.position,
-        question: `Which chunk do these digits belong to?`,
+        correctAnswer: selectedChunk.position, // Primary answer for display
+        allCorrectAnswers: allMatchingChunks.map((chunk) => chunk.position), // All valid answers
+        question:
+          allMatchingChunks.length > 1
+            ? `Which chunk do these digits belong to? (Multiple chunks have these digits)`
+            : `Which chunk do these digits belong to?`,
         chunkId: selectedChunk.position,
       });
     } else if (testMode === TEST_MODES.CHUNK_TO_DIGITS) {
@@ -909,6 +920,14 @@ export default function PiTestContainer() {
                 <div className={styles.digitsValue}>
                   {currentQuestion.digits.split("").join(" ")}
                 </div>
+                {currentQuestion.allCorrectAnswers &&
+                  currentQuestion.allCorrectAnswers.length > 1 && (
+                    <div className={styles.duplicateNote}>
+                      ⚠️ These digits appear in{" "}
+                      {currentQuestion.allCorrectAnswers.length} different
+                      chunks
+                    </div>
+                  )}
               </div>
             )}
 
@@ -941,11 +960,28 @@ export default function PiTestContainer() {
                   {currentQuestion.type === "digits-to-chunk" && (
                     <>
                       <div className={styles.answerMain}>
-                        {currentQuestion.correctAnswer}
+                        {currentQuestion.allCorrectAnswers &&
+                        currentQuestion.allCorrectAnswers.length > 1 ? (
+                          <div>
+                            <div>
+                              Chunks:{" "}
+                              {currentQuestion.allCorrectAnswers.join(", ")}
+                            </div>
+                            <div className={styles.duplicateNote}>
+                              (These digits appear in multiple chunks)
+                            </div>
+                          </div>
+                        ) : (
+                          currentQuestion.correctAnswer
+                        )}
                       </div>
                       <div className={styles.answerDetail}>
-                        (Digits {(currentQuestion.correctAnswer - 1) * 5 + 1}-
-                        {currentQuestion.correctAnswer * 5} of π)
+                        {currentQuestion.allCorrectAnswers &&
+                        currentQuestion.allCorrectAnswers.length > 1
+                          ? `Multiple occurrences of digits ${currentQuestion.digits}`
+                          : `(Digits ${
+                              (currentQuestion.correctAnswer - 1) * 5 + 1
+                            }-${currentQuestion.correctAnswer * 5} of π)`}
                       </div>
                     </>
                   )}
