@@ -621,17 +621,37 @@ const QuickTaskList = () => {
     setLoading(true);
 
     try {
-      // Delete the main task - subtasks will be automatically deleted due to CASCADE constraint
+      // First, delete all subtasks associated with this task
+      console.log("Deleting subtasks for task:", id);
+      const { error: subtaskError, count: deletedCount } = await supabase
+        .from("subtasks")
+        .delete()
+        .eq("parent_task_id", id);
+
+      // Only treat it as an error if it's a real error (not just "no rows found")
+      if (subtaskError && subtaskError.code !== "PGRST116") {
+        console.error("Error deleting subtasks:", subtaskError);
+        alert("Failed to delete subtasks. Please try again.");
+        return;
+      }
+
+      if (deletedCount > 0) {
+        console.log(
+          `${deletedCount} subtasks deleted successfully for task:`,
+          id
+        );
+      } else {
+        console.log("No subtasks found for task:", id);
+      }
+
+      // Now delete the main task
       const { error } = await supabase.from("quicktasks").delete().eq("id", id);
 
       if (error) {
         console.error("Error deleting task:", error);
         alert("Failed to delete task. Please try again.");
       } else {
-        console.log(
-          "Task deleted successfully (subtasks auto-deleted by CASCADE):",
-          id
-        );
+        console.log("Task deleted successfully:", id);
         // Remove task from state locally instead of refetching all tasks
         setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
       }
