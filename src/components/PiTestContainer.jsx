@@ -10,8 +10,14 @@ const TEST_MODES = {
   CHUNK_TO_DIGITS: "chunk-to-digits",
 };
 
+const TRAINING_MODES = {
+  FINITE: "finite",
+  INFINITE: "infinite",
+};
+
 export default function PiTestContainer() {
   const [testMode, setTestMode] = useState(TEST_MODES.DIGITS_TO_CHUNK);
+  const [trainingMode, setTrainingMode] = useState(TRAINING_MODES.INFINITE);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
@@ -19,6 +25,18 @@ export default function PiTestContainer() {
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [loading, setLoading] = useState(false);
   const [allChunks, setAllChunks] = useState([]);
+
+  // Training mode specific state
+  const [finiteStack, setFiniteStack] = useState([]); // Items to learn in finite mode
+  const [masteredItems, setMasteredItems] = useState(new Set()); // Items mastered in finite mode
+  const [itemCorrectCounts, setItemCorrectCounts] = useState(new Map()); // Track consecutive correct answers
+  const [priorityQueue, setPriorityQueue] = useState([]); // Wrong items for both modes
+  const [itemCounter, setItemCounter] = useState(0); // Count of items shown for priority queue timing
+  const [sessionStats, setSessionStats] = useState({
+    attempted: new Set(),
+    mastered: 0,
+    remaining: 0,
+  });
 
   // Range selection state
   const [rangeMode, setRangeMode] = useState("all"); // "all", "chunks", "digits"
@@ -37,6 +55,127 @@ export default function PiTestContainer() {
   const [tempDigitEnd, setTempDigitEnd] = useState("500");
 
   // Get detailed breakdown for a chunk (person + digit meanings)
+  // Priority queue management for wrong answers
+  const addToPriorityQueue = (chunkId, priority = 1) => {
+    const itemIntervals = [4, 8, 12]; // Show after 4, 8, 12 items
+    const itemsToWait = itemIntervals[priority - 1] || 4;
+    const showAfterItemCount = itemCounter + itemsToWait;
+
+    setPriorityQueue((prev) => {
+      const existing = prev.find((item) => item.chunkId === chunkId);
+      if (existing) {
+        // Update existing item with new item count
+        return prev.map((item) =>
+          item.chunkId === chunkId
+            ? {
+                ...item,
+                showAfterItemCount: showAfterItemCount,
+                priority: Math.min(priority, 3),
+              }
+            : item
+        );
+      } else {
+        // Add new item to queue
+        return [
+          ...prev,
+          {
+            chunkId,
+            showAfterItemCount: showAfterItemCount,
+            priority,
+            attempts: 0,
+          },
+        ];
+      }
+    });
+  };
+
+  // Get next question from priority queue if available
+  const getFromPriorityQueue = () => {
+    const availableItems = priorityQueue.filter(
+      (item) => item.showAfterItemCount <= itemCounter
+    );
+
+    if (availableItems.length > 0) {
+      // Remove the item from queue and return it
+      const item = availableItems[0];
+      setPriorityQueue((prev) =>
+        prev.filter((q) => q.chunkId !== item.chunkId)
+      );
+      return item.chunkId;
+    }
+
+    return null;
+  };
+
+  // Initialize finite mode stack
+  const initializeFiniteMode = () => {
+    const chunksToUse = filteredChunks.length > 0 ? filteredChunks : allChunks;
+    setFiniteStack([...chunksToUse]);
+    setMasteredItems(new Set());
+    setItemCorrectCounts(new Map());
+    setPriorityQueue([]);
+    setItemCounter(0);
+    setSessionStats({
+      attempted: new Set(),
+      mastered: 0,
+      remaining: chunksToUse.length,
+    });
+  };
+
+  // Handle correct answer in finite mode
+  const handleFiniteCorrect = (chunkId) => {
+    // Check if this item has ever been answered incorrectly
+    const hasBeenWrong = itemCorrectCounts.has(chunkId);
+
+    if (!hasBeenWrong) {
+      // First time seeing this item and got it right - remove it permanently
+      console.log(`Chunk ${chunkId} got RIGHT on first attempt - MASTERED!`);
+      setMasteredItems((prev) => new Set(prev.add(chunkId)));
+      setFiniteStack((prev) =>
+        prev.filter((chunk) => chunk.position !== chunkId)
+      );
+      setSessionStats((prev) => ({
+        ...prev,
+        mastered: prev.mastered + 1,
+        remaining: prev.remaining - 1,
+      }));
+    } else {
+      // This item has been wrong before, so we need consecutive correct answers
+      const currentCount = itemCorrectCounts.get(chunkId) || 0;
+      const newCount = currentCount + 1;
+
+      console.log(
+        `Chunk ${chunkId} (previously wrong): ${currentCount} → ${newCount} consecutive correct`
+      );
+
+      setItemCorrectCounts((prev) => new Map(prev.set(chunkId, newCount)));
+
+      if (newCount >= 3) {
+        console.log(`Chunk ${chunkId} MASTERED after 3 consecutive correct!`);
+        // Item mastered - remove from all queues
+        setMasteredItems((prev) => new Set(prev.add(chunkId)));
+        setFiniteStack((prev) =>
+          prev.filter((chunk) => chunk.position !== chunkId)
+        );
+        setPriorityQueue((prev) =>
+          prev.filter((item) => item.chunkId !== chunkId)
+        );
+        setSessionStats((prev) => ({
+          ...prev,
+          mastered: prev.mastered + 1,
+          remaining: prev.remaining - 1,
+        }));
+      }
+    }
+  };
+
+  // Handle wrong answer in finite mode
+  const handleFiniteWrong = (chunkId) => {
+    // Reset consecutive correct count and add to priority queue
+    setItemCorrectCounts((prev) => new Map(prev.set(chunkId, 0)));
+    addToPriorityQueue(chunkId, 1);
+  };
+
   const getChunkBreakdown = async (chunkNumber) => {
     try {
       // Get the chunk data
@@ -197,6 +336,16 @@ export default function PiTestContainer() {
     digitRangeEnd,
   ]);
 
+  // Initialize finite mode when chunks change
+  useEffect(() => {
+    if (
+      trainingMode === TRAINING_MODES.FINITE &&
+      (filteredChunks.length > 0 || allChunks.length > 0)
+    ) {
+      initializeFiniteMode();
+    }
+  }, [filteredChunks, allChunks, trainingMode]);
+
   // Generate a new question based on the current test mode
   const handleShowBreakdown = async () => {
     if (!currentQuestion) return;
@@ -214,30 +363,95 @@ export default function PiTestContainer() {
   };
 
   const generateQuestion = () => {
-    const chunksToUse = filteredChunks.length > 0 ? filteredChunks : allChunks;
-    if (chunksToUse.length === 0) return;
-
     setLoading(true);
     setShowAnswer(false);
     setShowDetailedBreakdown(false);
     setChunkBreakdown(null);
 
-    const randomChunk =
-      chunksToUse[Math.floor(Math.random() * chunksToUse.length)];
+    // Increment item counter for priority queue timing
+    setItemCounter((prev) => prev + 1);
+
+    let selectedChunk = null;
+
+    if (trainingMode === TRAINING_MODES.FINITE) {
+      // Finite mode: prioritize wrong answers, then items from stack
+      const priorityChunkId = getFromPriorityQueue();
+
+      if (priorityChunkId) {
+        // Get chunk from priority queue
+        const chunksToUse =
+          filteredChunks.length > 0 ? filteredChunks : allChunks;
+        selectedChunk = chunksToUse.find(
+          (chunk) => chunk.position === priorityChunkId
+        );
+      } else if (finiteStack.length > 0) {
+        // Get next item from finite stack
+        const availableStack = finiteStack.filter(
+          (chunk) => !masteredItems.has(chunk.position)
+        );
+        if (availableStack.length > 0) {
+          selectedChunk =
+            availableStack[Math.floor(Math.random() * availableStack.length)];
+        }
+      }
+
+      // Check if finite mode is complete
+      if (!selectedChunk) {
+        alert(
+          `Congratulations! You've mastered all ${sessionStats.mastered} items in this range!`
+        );
+        setLoading(false);
+        return;
+      }
+    } else {
+      // Infinite mode: prioritize wrong answers, then random selection
+      const priorityChunkId = getFromPriorityQueue();
+
+      if (priorityChunkId) {
+        const chunksToUse =
+          filteredChunks.length > 0 ? filteredChunks : allChunks;
+        selectedChunk = chunksToUse.find(
+          (chunk) => chunk.position === priorityChunkId
+        );
+      } else {
+        // Random selection from all available chunks
+        const chunksToUse =
+          filteredChunks.length > 0 ? filteredChunks : allChunks;
+        if (chunksToUse.length > 0) {
+          selectedChunk =
+            chunksToUse[Math.floor(Math.random() * chunksToUse.length)];
+        }
+      }
+    }
+
+    if (!selectedChunk) {
+      setLoading(false);
+      return;
+    }
+
+    // Track attempted items in finite mode
+    if (trainingMode === TRAINING_MODES.FINITE) {
+      setSessionStats((prev) => ({
+        ...prev,
+        attempted: new Set(prev.attempted.add(selectedChunk.position)),
+      }));
+    }
 
     if (testMode === TEST_MODES.DIGITS_TO_CHUNK) {
       setCurrentQuestion({
         type: "digits-to-chunk",
-        digits: randomChunk.digits,
-        correctAnswer: randomChunk.position,
+        digits: selectedChunk.digits,
+        correctAnswer: selectedChunk.position,
         question: `Which chunk do these digits belong to?`,
+        chunkId: selectedChunk.position,
       });
     } else if (testMode === TEST_MODES.CHUNK_TO_DIGITS) {
       setCurrentQuestion({
         type: "chunk-to-digits",
-        position: randomChunk.position,
-        correctAnswer: randomChunk.digits,
-        question: `What are the digits for chunk ${randomChunk.position}?`,
+        position: selectedChunk.position,
+        correctAnswer: selectedChunk.digits,
+        question: `What are the digits for chunk ${selectedChunk.position}?`,
+        chunkId: selectedChunk.position,
       });
     }
 
@@ -250,7 +464,7 @@ export default function PiTestContainer() {
     if (chunksToUse.length > 0 && !currentQuestion) {
       generateQuestion();
     }
-  }, [filteredChunks, allChunks, testMode]);
+  }, [filteredChunks, allChunks, testMode, trainingMode]);
 
   const handleRevealAnswer = () => {
     setShowAnswer(true);
@@ -258,11 +472,38 @@ export default function PiTestContainer() {
 
   const handleMarkCorrect = () => {
     setScore((prev) => ({ correct: prev.correct + 1, total: prev.total + 1 }));
+
+    if (currentQuestion && currentQuestion.chunkId) {
+      if (trainingMode === TRAINING_MODES.FINITE) {
+        handleFiniteCorrect(currentQuestion.chunkId);
+      }
+      // For infinite mode, correct answers just remove from priority queue if present
+      setPriorityQueue((prev) =>
+        prev.filter((item) => item.chunkId !== currentQuestion.chunkId)
+      );
+    }
+
     generateQuestion();
   };
 
   const handleMarkIncorrect = () => {
     setScore((prev) => ({ correct: prev.correct, total: prev.total + 1 }));
+
+    if (currentQuestion && currentQuestion.chunkId) {
+      if (trainingMode === TRAINING_MODES.FINITE) {
+        handleFiniteWrong(currentQuestion.chunkId);
+      } else {
+        // Infinite mode: add to priority queue with escalating priority
+        const existingItem = priorityQueue.find(
+          (item) => item.chunkId === currentQuestion.chunkId
+        );
+        const newPriority = existingItem
+          ? Math.min(existingItem.priority + 1, 3)
+          : 1;
+        addToPriorityQueue(currentQuestion.chunkId, newPriority);
+      }
+    }
+
     generateQuestion();
   };
 
@@ -272,12 +513,29 @@ export default function PiTestContainer() {
 
   const resetScore = () => {
     setScore({ correct: 0, total: 0 });
+    setPriorityQueue([]);
+    setItemCounter(0);
+
+    if (trainingMode === TRAINING_MODES.FINITE) {
+      initializeFiniteMode();
+    }
   };
 
   const changeTestMode = (newMode) => {
     setTestMode(newMode);
     setCurrentQuestion(null);
     setShowAnswer(false);
+  };
+
+  const changeTrainingMode = (newMode) => {
+    setTrainingMode(newMode);
+    setCurrentQuestion(null);
+    setShowAnswer(false);
+    resetScore();
+
+    if (newMode === TRAINING_MODES.FINITE) {
+      initializeFiniteMode();
+    }
   };
 
   if (loading) {
@@ -301,16 +559,38 @@ export default function PiTestContainer() {
           </button>
         </div>
 
-        {/* Score display - always visible */}
+        {/* Score/Progress display - always visible */}
         <div className={styles.scoreDisplay}>
-          <span className={styles.scoreText}>
-            Score: {score.correct}/{score.total}
-            {score.total > 0 && (
-              <span className={styles.percentage}>
-                ({Math.round((score.correct / score.total) * 100)}%)
-              </span>
-            )}
-          </span>
+          {trainingMode === TRAINING_MODES.INFINITE ? (
+            // Infinite mode: Show score
+            <span className={styles.scoreText}>
+              Score: {score.correct}/{score.total}
+              {score.total > 0 && (
+                <span className={styles.percentage}>
+                  ({Math.round((score.correct / score.total) * 100)}%)
+                </span>
+              )}
+            </span>
+          ) : (
+            // Finite mode: Show progress
+            <span className={styles.scoreText}>
+              Progress: {sessionStats.mastered}/
+              {sessionStats.mastered + sessionStats.remaining} mastered
+              {priorityQueue.length > 0 && (
+                <span className={styles.percentage}>
+                  • {priorityQueue.length} in review
+                </span>
+              )}
+            </span>
+          )}
+
+          {/* Range info for both modes */}
+          {filteredChunks.length > 0 && rangeMode !== "all" && (
+            <span className={styles.trainingInfo}>
+              {filteredChunks.length} chunks
+            </span>
+          )}
+
           <button onClick={resetScore} className={styles.resetButton}>
             Reset
           </button>
@@ -334,6 +614,22 @@ export default function PiTestContainer() {
                 </option>
                 <option value={TEST_MODES.CHUNK_TO_DIGITS}>
                   Chunk → Digits
+                </option>
+              </select>
+            </div>
+
+            <div className={styles.modeSelector}>
+              <label>Training Mode:</label>
+              <select
+                value={trainingMode}
+                onChange={(e) => changeTrainingMode(e.target.value)}
+                className={styles.modeSelect}
+              >
+                <option value={TRAINING_MODES.INFINITE}>
+                  Infinite (Random Loop)
+                </option>
+                <option value={TRAINING_MODES.FINITE}>
+                  Finite (Master Each Item)
                 </option>
               </select>
             </div>
@@ -416,12 +712,6 @@ export default function PiTestContainer() {
                   {Math.ceil(digitRangeEnd / 5)},{" "}
                   {Math.ceil((digitRangeEnd - digitRangeStart + 1) / 5)} chunks)
                 </div>
-              </div>
-            )}
-
-            {filteredChunks.length > 0 && rangeMode !== "all" && (
-              <div className={styles.activeRange}>
-                Active range: {filteredChunks.length} chunks
               </div>
             )}
           </div>
