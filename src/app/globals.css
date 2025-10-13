@@ -89,6 +89,14 @@ h2 {
     width: 80%;
 }
 
+@media only screen and (max-width: 800px) {
+  .pageContainer {
+    width: 100%;
+    margin: 10px auto;
+    padding: 15px;
+  }
+}
+
 .main {
   display: flex;
   flex-direction: column;

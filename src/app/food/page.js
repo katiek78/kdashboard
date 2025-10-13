@@ -18,9 +18,9 @@ export default function FoodPage() {
           <div className={styles.foodEmojis}>🍔</div>
           <div className={styles.foodEmojis}>🍎</div>
           <div className={styles.foodEmojis}>🥕</div>
-          {/* <div className={styles.foodCard}>
+          <div className={styles.foodCard}>
             <p>Food page content coming soon... 🍽️</p>
-          </div> */}
+          </div>
         </div>
       </main>
     </div>
