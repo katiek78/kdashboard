@@ -93,10 +93,20 @@ const BoardTaskItem = ({ task, onComplete, onClick }) => {
         <div className={styles.dueDate}>
           <FontAwesomeIcon icon={faClock} />
           <span>
-            {new Date(task.next_due).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
+            {(() => {
+              const taskDate = new Date(task.next_due);
+              const currentYear = new Date().getFullYear();
+              const taskYear = taskDate.getFullYear();
+              
+              // Show year if task is due next year or later
+              const formatOptions = {
+                month: "short",
+                day: "numeric",
+                ...(taskYear > currentYear && { year: "numeric" })
+              };
+              
+              return taskDate.toLocaleDateString("en-US", formatOptions);
+            })()}
           </span>
         </div>
       )}

@@ -55,6 +55,53 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
     };
   }, []);
 
+  // Automatically reorder future tasks by date when tasks change
+  useEffect(() => {
+    // Only run if we have tasks and this is not the initial empty state
+    if (tasks && tasks.length > 0) {
+      const checkAndReorderFuture = async () => {
+        try {
+          // Generate 10 days starting from today to determine maxDate
+          const today = new Date();
+          const maxDate = new Date(today.getTime() + 9 * 24 * 60 * 60 * 1000)
+            .toISOString().slice(0, 10);
+          
+          const futureTasks = tasks.filter(task => 
+            task.next_due && task.next_due > maxDate
+          );
+          
+          if (futureTasks.length > 0) {
+            // Check if future tasks are already properly ordered by date
+            const sortedByDate = [...futureTasks].sort((a, b) => {
+              if (a.next_due && b.next_due) {
+                return a.next_due.localeCompare(b.next_due);
+              }
+              return 0;
+            });
+            
+            const sortedByOrder = [...futureTasks].sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            // Check if the date order matches the current order
+            const needsReordering = sortedByDate.some((task, index) => 
+              task.id !== sortedByOrder[index]?.id
+            );
+            
+            if (needsReordering) {
+              console.log("Future tasks need reordering by date");
+              await reorderFutureTasksByDate();
+            }
+          }
+        } catch (error) {
+          console.error("Error checking future task order:", error);
+        }
+      };
+      
+      // Use a timeout to avoid running this too frequently
+      const timeoutId = setTimeout(checkAndReorderFuture, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [tasks]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -470,11 +517,65 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
         .from("quicktasks")
         .update({ next_due: newNextDue })
         .eq("id", taskId);
+      
+      // If moving to future column, reorder all future tasks by date
+      if (targetColumnId === "future") {
+        await reorderFutureTasksByDate();
+      }
+      
       console.log("Task moved successfully");
     } catch (error) {
       console.error("Error moving task:", error);
       // Revert local state on error
       onTaskUpdate(tasks);
+    }
+  };
+
+  // Helper function to reorder all future tasks by their due dates
+  const reorderFutureTasksByDate = async () => {
+    try {
+      // Get all future tasks (tasks with due dates beyond the 10-day view)
+      const today = new Date();
+      const maxDate = new Date(today.getTime() + 9 * 24 * 60 * 60 * 1000)
+        .toISOString().slice(0, 10);
+      
+      const futureTasks = tasks.filter(task => 
+        task.next_due && task.next_due > maxDate
+      );
+      
+      // Sort by date, then by current order
+      const sortedFutureTasks = [...futureTasks].sort((a, b) => {
+        if (a.next_due && b.next_due) {
+          const dateCompare = a.next_due.localeCompare(b.next_due);
+          if (dateCompare !== 0) return dateCompare;
+        } else if (a.next_due && !b.next_due) {
+          return -1;
+        } else if (!a.next_due && b.next_due) {
+          return 1;
+        }
+        return (a.order || 0) - (b.order || 0);
+      });
+      
+      // Update order values based on sorted position
+      const updates = sortedFutureTasks.map((task, index) => ({
+        id: task.id,
+        order: index + 1,
+      }));
+      
+      if (updates.length > 0) {
+        // Update database with new orders
+        await Promise.all(
+          updates.map((update) =>
+            supabase
+              .from("quicktasks")
+              .update({ order: update.order })
+              .eq("id", update.id)
+          )
+        );
+        console.log("Future tasks reordered by date successfully");
+      }
+    } catch (error) {
+      console.error("Error reordering future tasks by date:", error);
     }
   };
 
@@ -648,8 +749,20 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       tasksByColumn[columnDate].sort((a, b) => (a.order || 0) - (b.order || 0));
     });
 
-    // Sort future tasks by their order field as well
-    futureTasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+    // Sort future tasks by date first (earlier dates at top), then by order
+    futureTasks.sort((a, b) => {
+      // First sort by next_due date (nulls last)
+      if (a.next_due && b.next_due) {
+        const dateCompare = a.next_due.localeCompare(b.next_due);
+        if (dateCompare !== 0) return dateCompare;
+      } else if (a.next_due && !b.next_due) {
+        return -1; // tasks with dates come before tasks without dates
+      } else if (!a.next_due && b.next_due) {
+        return 1; // tasks without dates come after tasks with dates
+      }
+      // If dates are equal (or both null), sort by order
+      return (a.order || 0) - (b.order || 0);
+    });
 
     return { tasksByColumn, futureTasks, days };
   };
