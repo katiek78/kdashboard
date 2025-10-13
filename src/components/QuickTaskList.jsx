@@ -618,7 +618,6 @@ const QuickTaskList = () => {
 
     console.log("User confirmed deletion of task:", id);
     setCompletingTaskId(id);
-    setLoading(true);
 
     try {
       // First, delete all subtasks associated with this task
@@ -659,7 +658,6 @@ const QuickTaskList = () => {
       console.error("Error during task deletion:", error);
       alert("Failed to delete task. Please try again.");
     } finally {
-      setLoading(false);
       setCompletingTaskId(null);
     }
   }

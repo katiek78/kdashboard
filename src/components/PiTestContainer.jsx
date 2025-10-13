@@ -773,12 +773,14 @@ export default function PiTestContainer() {
             </span>
           )}
 
-          {/* Range info for both modes */}
-          {filteredChunks.length > 0 && rangeMode !== "all" && (
-            <span className={styles.trainingInfo}>
-              {filteredChunks.length} chunks
-            </span>
-          )}
+          {/* Range info for infinite mode */}
+          {trainingMode === TRAINING_MODES.INFINITE &&
+            filteredChunks.length > 0 &&
+            rangeMode !== "all" && (
+              <span className={styles.trainingInfo}>
+                {filteredChunks.length} chunks
+              </span>
+            )}
 
           <button onClick={resetScore} className={styles.resetButton}>
             Reset
