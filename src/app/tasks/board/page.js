@@ -28,8 +28,26 @@ const BoardPage = () => {
     setLoading(false);
   }
 
-  const handleTaskUpdate = (updatedTasks) => {
-    setTasks(updatedTasks);
+  const handleTaskUpdate = (updatedTasks, scrollToColumn) => {
+    // Only update tasks if we have an actual tasks array
+    if (Array.isArray(updatedTasks)) {
+      setTasks(updatedTasks);
+    }
+    // If updatedTasks is null/undefined, do nothing - let the component that called this handle its own state
+
+    // Scroll to specific column if requested
+    if (scrollToColumn === "future") {
+      setTimeout(() => {
+        // Find the board scroll container using a more reliable method
+        const boardScrollContainer = document.querySelector(
+          '[class*="boardScrollContainer"]'
+        );
+        if (boardScrollContainer) {
+          // Scroll to the right to show the Future column
+          boardScrollContainer.scrollLeft = boardScrollContainer.scrollWidth;
+        }
+      }, 100);
+    }
   };
 
   // Simplified task completion for board view
@@ -45,19 +63,33 @@ const BoardPage = () => {
 
       if (!task.repeat) {
         // Non-repeating: delete when completed
+        console.log("About to show delete confirmation for task:", task.title);
         const confirmDelete = window.confirm(
           `Are you sure you want to delete "${task.title}"?\n\nThis will also delete all subtasks associated with this task. This action cannot be undone.`
         );
 
+        console.log("User confirmed deletion:", confirmDelete);
         if (confirmDelete) {
+          console.log("Attempting to delete task from database:", id);
           const { error } = await supabase
             .from("quicktasks")
             .delete()
             .eq("id", id);
+
+          console.log("Database deletion result - error:", error);
           if (!error) {
-            // Remove from local state
-            setTasks((prevTasks) => prevTasks.filter((t) => t.id !== id));
+            // Remove from local state and force re-render
+            const updatedTasks = tasks.filter((t) => t.id !== id);
+            console.log(
+              "Updating tasks after deletion, new count:",
+              updatedTasks.length
+            );
+            setTasks(updatedTasks);
+          } else {
+            console.error("Failed to delete task from database:", error);
           }
+        } else {
+          console.log("User cancelled deletion");
         }
       } else {
         // Repeating: advance due date and reset subtasks
@@ -221,7 +253,7 @@ const BoardPage = () => {
     <div className={styles.pageContainer}>
       <BoardView
         tasks={tasks}
-        onTaskUpdate={fetchTasks}
+        onTaskUpdate={handleTaskUpdate}
         onTaskComplete={handleTaskComplete}
         router={router}
       />

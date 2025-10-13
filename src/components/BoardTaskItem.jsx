@@ -97,14 +97,14 @@ const BoardTaskItem = ({ task, onComplete, onClick }) => {
               const taskDate = new Date(task.next_due);
               const currentYear = new Date().getFullYear();
               const taskYear = taskDate.getFullYear();
-              
+
               // Show year if task is due next year or later
               const formatOptions = {
                 month: "short",
                 day: "numeric",
-                ...(taskYear > currentYear && { year: "numeric" })
+                ...(taskYear > currentYear && { year: "numeric" }),
               };
-              
+
               return taskDate.toLocaleDateString("en-US", formatOptions);
             })()}
           </span>

@@ -22,6 +22,7 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addingToColumn, setAddingToColumn] = useState(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDate, setNewTaskDate] = useState("");
   const boardContainerRef = useRef(null);
 
   // Prevent browser back navigation on horizontal scroll/swipe
@@ -64,12 +65,13 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
           // Generate 10 days starting from today to determine maxDate
           const today = new Date();
           const maxDate = new Date(today.getTime() + 9 * 24 * 60 * 60 * 1000)
-            .toISOString().slice(0, 10);
-          
-          const futureTasks = tasks.filter(task => 
-            task.next_due && task.next_due > maxDate
+            .toISOString()
+            .slice(0, 10);
+
+          const futureTasks = tasks.filter(
+            (task) => task.next_due && task.next_due > maxDate
           );
-          
+
           if (futureTasks.length > 0) {
             // Check if future tasks are already properly ordered by date
             const sortedByDate = [...futureTasks].sort((a, b) => {
@@ -78,24 +80,29 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
               }
               return 0;
             });
-            
-            const sortedByOrder = [...futureTasks].sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-            // Check if the date order matches the current order
-            const needsReordering = sortedByDate.some((task, index) => 
-              task.id !== sortedByOrder[index]?.id
+
+            const sortedByOrder = [...futureTasks].sort(
+              (a, b) => (a.order || 0) - (b.order || 0)
             );
-            
+
+            // Check if the date order matches the current order
+            const needsReordering = sortedByDate.some(
+              (task, index) => task.id !== sortedByOrder[index]?.id
+            );
+
             if (needsReordering) {
               console.log("Future tasks need reordering by date");
-              await reorderFutureTasksByDate();
+              const reorderedTasks = await reorderFutureTasksByDate();
+              if (onTaskUpdate && reorderedTasks) {
+                onTaskUpdate(reorderedTasks);
+              }
             }
           }
         } catch (error) {
           console.error("Error checking future task order:", error);
         }
       };
-      
+
       // Use a timeout to avoid running this too frequently
       const timeoutId = setTimeout(checkAndReorderFuture, 1000);
       return () => clearTimeout(timeoutId);
@@ -115,13 +122,15 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   };
 
   const handleTaskComplete = async (taskId) => {
-    console.log("BoardView handling task completion:", taskId);
+    console.log("BoardView handleTaskComplete called with taskId:", taskId);
+    console.log("onTaskComplete function exists:", !!onTaskComplete);
     if (onTaskComplete) {
+      console.log("About to call onTaskComplete with taskId:", taskId);
       await onTaskComplete(taskId);
-      // Refresh tasks after completion to ensure board updates
-      if (onTaskUpdate) {
-        onTaskUpdate();
-      }
+      console.log("onTaskComplete completed for taskId:", taskId);
+      // No additional update needed - parent handles state
+    } else {
+      console.log("No onTaskComplete function provided");
     }
   };
 
@@ -283,8 +292,10 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
 
       if (error) throw error;
 
+      // Update local state by removing the deleted task
+      const updatedTasks = tasks.filter((t) => t.id !== taskId);
       if (onTaskUpdate) {
-        onTaskUpdate();
+        onTaskUpdate(updatedTasks);
       }
 
       handleModalClose();
@@ -381,11 +392,23 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   const handleAddTaskToColumn = (columnId) => {
     setAddingToColumn(columnId);
     setNewTaskTitle("");
+
+    // Set default date for future column (first day after the 10-day view)
+    if (columnId === "future") {
+      const today = new Date();
+      const defaultFutureDate = new Date(
+        today.getTime() + 10 * 24 * 60 * 60 * 1000
+      );
+      setNewTaskDate(defaultFutureDate.toISOString().slice(0, 10));
+    } else {
+      setNewTaskDate("");
+    }
   };
 
   const handleCancelAddTask = () => {
     setAddingToColumn(null);
     setNewTaskTitle("");
+    setNewTaskDate("");
   };
 
   const handleCreateTask = async (columnId) => {
@@ -396,32 +419,55 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       let nextDue = null;
       if (columnId !== "future") {
         nextDue = columnId; // columnId is the date string (YYYY-MM-DD)
+      } else if (newTaskDate) {
+        // For future column, use the provided date if available
+        nextDue = newTaskDate;
       }
-      // For future column, nextDue stays null
+      // For future column without date, nextDue stays null
 
       // Find the highest order value for proper task ordering
       const maxOrder =
         tasks.length > 0 ? Math.max(...tasks.map((t) => t.order || 0)) : 0;
       const nextOrder = maxOrder + 1;
 
-      const { error } = await supabase.from("quicktasks").insert({
+      const newTask = {
         title: newTaskTitle.trim(),
         order: nextOrder,
         next_due: nextDue,
         urgent: false,
         blocked: false,
         repeat: null,
-      });
+      };
+
+      const { data, error } = await supabase
+        .from("quicktasks")
+        .insert(newTask)
+        .select();
 
       if (error) throw error;
 
-      // Reset form and refresh tasks
+      // Add the new task to local state immediately (with the ID from database)
+      const createdTask = data[0];
+      const updatedTasks = [...tasks, createdTask];
+
+      // If adding to future column with a date, reorder future tasks by date
+      if (columnId === "future" && newTaskDate) {
+        const reorderedTasks = await reorderFutureTasksByDate(updatedTasks);
+        if (onTaskUpdate) {
+          onTaskUpdate(reorderedTasks, "future");
+        }
+      } else {
+        // For other columns, just update local state directly
+        if (onTaskUpdate) {
+          const scrollToColumn = columnId === "future" ? "future" : null;
+          onTaskUpdate(updatedTasks, scrollToColumn);
+        }
+      }
+
+      // Reset form
       setAddingToColumn(null);
       setNewTaskTitle("");
-
-      if (onTaskUpdate) {
-        onTaskUpdate();
-      }
+      setNewTaskDate("");
     } catch (error) {
       console.error("Error creating task:", error);
       alert("Failed to create task");
@@ -517,12 +563,14 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
         .from("quicktasks")
         .update({ next_due: newNextDue })
         .eq("id", taskId);
-      
+
       // If moving to future column, reorder all future tasks by date
       if (targetColumnId === "future") {
-        await reorderFutureTasksByDate();
+        const reorderedTasks = await reorderFutureTasksByDate(updatedTasks);
+        onTaskUpdate(reorderedTasks);
+        return; // Exit early since we've already updated
       }
-      
+
       console.log("Task moved successfully");
     } catch (error) {
       console.error("Error moving task:", error);
@@ -532,17 +580,18 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   };
 
   // Helper function to reorder all future tasks by their due dates
-  const reorderFutureTasksByDate = async () => {
+  const reorderFutureTasksByDate = async (tasksToReorder = tasks) => {
     try {
       // Get all future tasks (tasks with due dates beyond the 10-day view)
       const today = new Date();
       const maxDate = new Date(today.getTime() + 9 * 24 * 60 * 60 * 1000)
-        .toISOString().slice(0, 10);
-      
-      const futureTasks = tasks.filter(task => 
-        task.next_due && task.next_due > maxDate
+        .toISOString()
+        .slice(0, 10);
+
+      const futureTasks = tasksToReorder.filter(
+        (task) => task.next_due && task.next_due > maxDate
       );
-      
+
       // Sort by date, then by current order
       const sortedFutureTasks = [...futureTasks].sort((a, b) => {
         if (a.next_due && b.next_due) {
@@ -555,13 +604,13 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
         }
         return (a.order || 0) - (b.order || 0);
       });
-      
+
       // Update order values based on sorted position
       const updates = sortedFutureTasks.map((task, index) => ({
         id: task.id,
         order: index + 1,
       }));
-      
+
       if (updates.length > 0) {
         // Update database with new orders
         await Promise.all(
@@ -573,9 +622,18 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
           )
         );
         console.log("Future tasks reordered by date successfully");
+
+        // Return updated tasks array with new order values
+        return tasksToReorder.map((task) => {
+          const update = updates.find((u) => u.id === task.id);
+          return update ? { ...task, order: update.order } : task;
+        });
       }
+
+      return tasksToReorder;
     } catch (error) {
       console.error("Error reordering future tasks by date:", error);
+      return tasksToReorder;
     }
   };
 
@@ -915,6 +973,15 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
                     placeholder="Enter task title..."
                     className={styles.addTaskInput}
                     autoFocus
+                  />
+                  <input
+                    type="date"
+                    value={newTaskDate}
+                    onChange={(e) => setNewTaskDate(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, "future")}
+                    placeholder="Due date (optional)"
+                    className={styles.addTaskInput}
+                    title="Due date (optional)"
                   />
                   <div className={styles.addTaskActions}>
                     <button
