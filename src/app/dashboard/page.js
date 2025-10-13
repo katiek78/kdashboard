@@ -19,6 +19,7 @@ import {
   faCube,
   faLeaf,
   faEarthAmericas,
+  faUtensils,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
@@ -79,6 +80,11 @@ export default function Dashboard() {
             <div className="card segmentCard">
               <Link href="/coding">
                 <FontAwesomeIcon icon={faCode} /> Coding
+              </Link>
+            </div>
+            <div className="card segmentCard">
+              <Link href="/food">
+                <FontAwesomeIcon icon={faUtensils} /> Food
               </Link>
             </div>
             <div className="card segmentCard">
