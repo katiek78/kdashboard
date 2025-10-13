@@ -83,6 +83,11 @@ export default function Dashboard() {
               </Link>
             </div>
             <div className="card segmentCard">
+              <Link href="/calendar-calc">
+                <FontAwesomeIcon icon={faCalendar} /> Calendar Calculation
+              </Link>
+            </div>
+            <div className="card segmentCard">
               <Link href="/food">
                 <FontAwesomeIcon icon={faUtensils} /> Food
               </Link>
