@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   useSensors,
   useSensor,
@@ -41,6 +41,11 @@ const QuickTaskList = () => {
   const [editingId, setEditingId] = useState(null);
   const [editValuesMap, setEditValuesMap] = useState({});
   const [completingTaskId, setCompletingTaskId] = useState(null);
+
+  // Refs for input fields to manually clear them
+  const titleInputRef = useRef(null);
+  const dueInputRef = useRef(null);
+  const repeatInputRef = useRef(null);
 
   // Use onBlur instead of onChange for better performance
   const handleTitleBlur = useCallback((e) => {
@@ -157,9 +162,16 @@ const QuickTaskList = () => {
       console.error("Supabase update error:", error);
     } else {
       console.log("Supabase update result:", data);
+      // Update local state instead of refetching
+      if (data && data[0]) {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task.id === id ? { ...task, ...data[0] } : task
+          )
+        );
+      }
     }
     setEditingId(null);
-    fetchTasks();
   }
 
   // Mark a task as complete: advance next_due if repeat, else delete
@@ -601,12 +613,24 @@ const QuickTaskList = () => {
       repeat: newRepeat || null,
       next_due: insertDue === null ? null : String(insertDue),
     };
-    const { error } = await supabase.from("quicktasks").insert([insertObj]);
-    if (!error) {
+    const { data, error } = await supabase
+      .from("quicktasks")
+      .insert([insertObj])
+      .select();
+    if (!error && data) {
+      // Add the new task to local state instead of refetching
+      const newTask = data[0];
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+
       setNewTitle("");
       setNewDue(new Date().toISOString().slice(0, 10));
       setNewRepeat("");
-      fetchTasks();
+
+      // Clear the input fields manually since we're using defaultValue
+      if (titleInputRef.current) titleInputRef.current.value = "";
+      if (dueInputRef.current)
+        dueInputRef.current.value = new Date().toISOString().slice(0, 10);
+      if (repeatInputRef.current) repeatInputRef.current.value = "";
     }
   }
 
@@ -698,20 +722,31 @@ const QuickTaskList = () => {
 
   async function toggleBlocked(id, blocked) {
     setLoading(true);
-    await supabase.from("quicktasks").update({ blocked }).eq("id", id);
-    fetchTasks();
+    const { error } = await supabase
+      .from("quicktasks")
+      .update({ blocked })
+      .eq("id", id);
+    if (!error) {
+      // Update local state instead of refetching
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => (task.id === id ? { ...task, blocked } : task))
+      );
+    }
+    setLoading(false);
   }
 
   return (
     <div className={styles.taskContainer + " pageContainer"}>
       <div>
         <input
+          ref={titleInputRef}
           type="text"
           placeholder="Task name"
           defaultValue={newTitle}
           onBlur={handleTitleBlur}
         />
         <input
+          ref={dueInputRef}
           type="date"
           name="next_due"
           defaultValue={newDue}
@@ -719,6 +754,7 @@ const QuickTaskList = () => {
           placeholder="Due date"
         />
         <input
+          ref={repeatInputRef}
           type="text"
           name="repeat"
           defaultValue={newRepeat}
