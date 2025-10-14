@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useSensors,
   useSensor,
@@ -31,15 +31,29 @@ const QuickTaskList = () => {
   const [tasks, setTasks] = useState([]);
   const [visibleTasks, setVisibleTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
-  // Default next_due to today (YYYY-MM-DD)
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [newDue, setNewDue] = useState(todayStr);
+  // Default next_due to today (YYYY-MM-DD) - calculated once
+  const [newDue, setNewDue] = useState(() =>
+    new Date().toISOString().slice(0, 10)
+  );
   const [newRepeat, setNewRepeat] = useState("");
   const [loading, setLoading] = useState(false);
   const [randomTaskId, setRandomTaskId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValuesMap, setEditValuesMap] = useState({});
   const [completingTaskId, setCompletingTaskId] = useState(null);
+
+  // Use onBlur instead of onChange for better performance
+  const handleTitleBlur = useCallback((e) => {
+    setNewTitle(e.target.value);
+  }, []);
+
+  const handleDueBlur = useCallback((e) => {
+    setNewDue(e.target.value);
+  }, []);
+
+  const handleRepeatBlur = useCallback((e) => {
+    setNewRepeat(e.target.value);
+  }, []);
 
   // Debug function to reset stuck state
   const resetCompletingState = () => {
@@ -61,7 +75,7 @@ const QuickTaskList = () => {
     }
   }, [completingTaskId]);
 
-  // Update visibleTasks whenever tasks or loading changes
+  // Update visibleTasks whenever tasks changes
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     setVisibleTasks(
@@ -71,7 +85,7 @@ const QuickTaskList = () => {
         return false;
       })
     );
-  }, [tasks, loading]);
+  }, [tasks]);
 
   useEffect(() => {
     fetchTasks();
@@ -206,6 +220,7 @@ const QuickTaskList = () => {
         next_due = getNextDue(today, t.repeat);
       } else {
         // Advance from previous next_due for schedule-based repeats
+        const todayStr = new Date().toISOString().slice(0, 10);
         console.log(
           "Schedule-based repeat, using previous next_due:",
           t.next_due,
@@ -589,7 +604,7 @@ const QuickTaskList = () => {
     const { error } = await supabase.from("quicktasks").insert([insertObj]);
     if (!error) {
       setNewTitle("");
-      setNewDue(todayStr);
+      setNewDue(new Date().toISOString().slice(0, 10));
       setNewRepeat("");
       fetchTasks();
     }
@@ -693,21 +708,21 @@ const QuickTaskList = () => {
         <input
           type="text"
           placeholder="Task name"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
+          defaultValue={newTitle}
+          onBlur={handleTitleBlur}
         />
         <input
           type="date"
           name="next_due"
-          value={newDue}
-          onChange={(e) => setNewDue(e.target.value)}
+          defaultValue={newDue}
+          onBlur={handleDueBlur}
           placeholder="Due date"
         />
         <input
           type="text"
           name="repeat"
-          value={newRepeat}
-          onChange={(e) => setNewRepeat(e.target.value)}
+          defaultValue={newRepeat}
+          onBlur={handleRepeatBlur}
           placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc)"
         />
         <button onClick={addTask}>Add Task</button>
