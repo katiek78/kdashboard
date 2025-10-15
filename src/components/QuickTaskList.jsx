@@ -172,6 +172,7 @@ const QuickTaskList = () => {
       }
     }
     setEditingId(null);
+    setLoading(false);
   }
 
   // Mark a task as complete: advance next_due if repeat, else delete
