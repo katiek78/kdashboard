@@ -219,8 +219,6 @@ const QuickTaskList = () => {
         return;
       }
 
-      setLoading(true);
-
       // For repeating tasks: advance the due date based on repeat type
       const rep = t.repeat.trim().toLowerCase();
       let next_due;
@@ -271,7 +269,6 @@ const QuickTaskList = () => {
       console.error("Error completing task:", error);
       alert("Failed to complete task. Please try again.");
     } finally {
-      setLoading(false);
       setCompletingTaskId(null);
     }
   }
