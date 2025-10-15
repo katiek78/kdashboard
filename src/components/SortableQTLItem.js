@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import styles from "./SortableQTLItem.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -35,6 +35,23 @@ function SortableQTLItem({
 }) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
 
+  // Refs for editing inputs
+  const titleInputRef = useRef(null);
+  const dueDateInputRef = useRef(null);
+  const repeatInputRef = useRef(null);
+
+  // Handle save by getting current values from refs
+  const handleSave = () => {
+    const currentValues = {
+      title: titleInputRef.current?.value || editValues.title,
+      next_due: dueDateInputRef.current?.value || editValues.next_due,
+      repeat: repeatInputRef.current?.value || editValues.repeat,
+    };
+    // Update editValues with current input values before saving
+    setEditValues(() => currentValues);
+    onSaveEdit(id);
+  };
+
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
   const style = {
@@ -61,32 +78,37 @@ function SortableQTLItem({
       {isEditing ? (
         <div className={styles.editRow}>
           <input
+            ref={titleInputRef}
             type="text"
-            value={editValues.title}
-            onChange={(e) =>
+            defaultValue={editValues.title}
+            onBlur={(e) =>
               setEditValues((v) => ({ ...v, title: e.target.value }))
             }
             className={styles.editInput}
           />
           <input
+            ref={dueDateInputRef}
             type="date"
-            value={editValues.next_due || new Date().toISOString().slice(0, 10)}
-            onChange={(e) =>
+            defaultValue={
+              editValues.next_due || new Date().toISOString().slice(0, 10)
+            }
+            onBlur={(e) =>
               setEditValues((v) => ({ ...v, next_due: e.target.value }))
             }
             className={styles.editInput}
           />
           <input
+            ref={repeatInputRef}
             type="text"
-            value={editValues.repeat || ""}
-            onChange={(e) =>
+            defaultValue={editValues.repeat || ""}
+            onBlur={(e) =>
               setEditValues((v) => ({ ...v, repeat: e.target.value }))
             }
             placeholder="Repeat"
             className={styles.editInputRepeat}
           />
           <div className={styles.editBtnBar}>
-            <button onClick={() => onSaveEdit(id)} className={styles.editBtn}>
+            <button onClick={handleSave} className={styles.editBtn}>
               Save
             </button>
             <button onClick={onCancelEdit} className={styles.editBtn}>

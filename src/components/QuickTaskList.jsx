@@ -124,7 +124,6 @@ const QuickTaskList = () => {
   }
 
   async function onSaveEdit(id) {
-    setLoading(true);
     const vals = editValuesMap[id];
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
@@ -172,7 +171,6 @@ const QuickTaskList = () => {
       }
     }
     setEditingId(null);
-    setLoading(false);
   }
 
   // Mark a task as complete: advance next_due if repeat, else delete
