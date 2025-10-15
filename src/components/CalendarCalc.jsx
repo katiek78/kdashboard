@@ -18,6 +18,13 @@ function getWeekday(date) {
   return format(date, "eeee");
 }
 
+function useIsDarkMode() {
+  if (typeof window !== "undefined" && window.matchMedia) {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return false;
+}
+
 export default function CalendarCalc() {
   const [selectedFormat, setSelectedFormat] = useState(DATE_FORMATS[0].format);
   const [date, setDate] = useState(new Date());
@@ -28,6 +35,21 @@ export default function CalendarCalc() {
   const weekdayColor = WEEKDAY_COLORS[weekdayIndex];
   const weekdayTextColor = WEEKDAY_TEXT_COLORS[weekdayIndex];
   const weekdayName = format(date, "eeee");
+  const weekdayAbbr = format(date, "eee");
+
+  // Dark mode detection
+  const isDarkMode = useIsDarkMode();
+
+  // Responsive: use abbreviation for mobile
+  const [isMobile, setIsMobile] = useState(false);
+  React.useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 500);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   // Map weekday name to index (0=Sunday, ... 6=Saturday)
   function getWeekdayIndex(date) {
     return date.getDay();
@@ -72,22 +94,28 @@ export default function CalendarCalc() {
           </button>
         )}
         {showWeekday && (
-          <div style={{ margin: "1.5rem 0" }}>
+          <div style={{ margin: isMobile ? "1rem 0" : "1.5rem 0" }}>
             <span
               style={{
-                fontSize: "2rem",
+                fontSize: isMobile ? "1.2rem" : "2rem",
                 fontWeight: "bold",
                 backgroundColor: weekdayColor,
-                color: weekdayTextColor,
-                padding: "0.5rem 1.5rem",
+                color:
+                  isDarkMode && weekdayTextColor === "#000"
+                    ? "#fff"
+                    : weekdayTextColor,
+                padding: isMobile ? "0.3rem 0.8rem" : "0.5rem 1.5rem",
                 borderRadius: "1rem",
                 display: "inline-block",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                minWidth: "8rem",
+                boxShadow: isDarkMode
+                  ? "0 2px 8px rgba(0,0,0,0.32)"
+                  : "0 2px 8px rgba(0,0,0,0.08)",
+                minWidth: isMobile ? "4rem" : "8rem",
                 textAlign: "center",
+                border: isDarkMode ? "1px solid #222" : "none",
               }}
             >
-              {weekdayName}
+              {isMobile ? weekdayAbbr : weekdayName}
             </span>
           </div>
         )}
