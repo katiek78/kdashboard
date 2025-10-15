@@ -1,6 +1,7 @@
 "use client";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import styles from "./page.module.css";
+import CalendarCalc from "@/components/CalendarCalc";
 
 export default function CalendarCalcPage() {
   const loading = useAuthRedirect();
@@ -15,7 +16,7 @@ export default function CalendarCalcPage() {
         <div className="title">Calendar Calculation</div>
         <div className={`pageContainer ${styles.calendarContainer}`}>
           <div className={styles.calendarCard}>
-            <p>Calendar calculation content coming soon... 📅</p>
+            <CalendarCalc />
           </div>
         </div>
       </main>

@@ -717,18 +717,16 @@ const QuickTaskList = () => {
   }
 
   async function toggleBlocked(id, blocked) {
-    setLoading(true);
     const { error } = await supabase
       .from("quicktasks")
       .update({ blocked })
       .eq("id", id);
     if (!error) {
-      // Update local state instead of refetching
+      // Update local state for smooth UI
       setTasks((prevTasks) =>
         prevTasks.map((task) => (task.id === id ? { ...task, blocked } : task))
       );
     }
-    setLoading(false);
   }
 
   return (
