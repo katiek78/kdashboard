@@ -16,9 +16,9 @@
   right: 0;
   bottom: 0;
   background-image: 
-    linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
-  background-size: 30px 30px;
+    linear-gradient(rgba(71, 85, 105, 0.45) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(71, 85, 105, 0.45) 1px, transparent 1px);
+  background-size: 22px 22px;
   pointer-events: none;
 }
 
