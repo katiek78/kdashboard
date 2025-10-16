@@ -1,6 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
 
 
+@media (prefers-color-scheme: dark) {
+    .numberInput {
+        background: #333 !important;
+        color: #eee !important;
+        border: 1px solid #555 !important;
+        caret-color: #fff !important;
+    }
+    .rangeInput label {
+        color: #222 !important;
+    }
+    .rangeSelector label {
+        color: #222 !important;
+    }
+    .modeSelect {
+        background: #333 !important;
+        color: #eee !important;
+        border: 1px solid #555 !important;
+    }
+    .rangeSelect {
+        background: #333 !important;
+        color: #eee !important;
+        border: 1px solid #555 !important;
+    }
+    .rangeInfo {
+        background: #222 !important;
+        color: #bbb !important;
+    }
+}
+
 /* Back to Pi View button */
 .backButton {
     display: inline-block;
