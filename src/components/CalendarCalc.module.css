@@ -1,24 +1,24 @@
 @media (max-width: 600px) {
-  .calendarCalc-rangeInputs {
-    align-items: stretch;
+  .calendarCalcRangeInputs {
+    align-items: stretch !important;
   }
-  .calendarCalc-rangeInput {
-    max-width: 100%;
-    margin-bottom: 0.5rem;
-    display: block;
+  .calendarCalcRangeInput {
+    max-width: 100% !important;
+    margin-bottom: 0.5rem !important;
+    display: block !important;
   }
-  .calendarCalc-rangeInput label,
-  .calendarCalc-rangeInput input {
-    display: block;
-    width: 100%;
-    text-align: center;
-    margin: 0;
+  .calendarCalcRangeInput label,
+  .calendarCalcRangeInput input {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin: 0 !important;
   }
-  .calendarCalc-rangeInput input {
-    margin-bottom: 1rem;
+  .calendarCalcRangeInput input {
+    margin-bottom: 1rem !important;
   }
 }
-.calendarCalc-rangeInputs {
+.calendarCalcRangeInputs {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,32 +26,40 @@
   margin: 1rem auto;
   text-align: center;
 }
-.calendarCalc-rangeInput {
-  margin-bottom: 1rem;
-  width: 100%;
-  max-width: 250px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.calendarCalcRangeInput {
+  margin-bottom: 1rem !important;
+  width: 100% !important;
+  max-width: 250px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
 }
-.calendarCalc-rangeInput label {
-  margin-bottom: 0.3rem;
-  text-align: center;
+.calendarCalcRangeInput label {
+  display: block !important;
+  margin-bottom: 0.3rem !important;
+  text-align: center !important;
+  width: 100% !important;
 }
-.calendarCalc-rangeInput input {
-  width: 100%;
-  max-width: 200px;
-  box-sizing: border-box;
-  text-align: center;
-  margin: 0 auto;
+.calendarCalcRangeInput input {
+  display: block !important;
+  width: 100% !important;
+  max-width: 200px !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  margin: 0 auto !important;
 }
-.calendarCalc-rangeToggle {
+.calendarCalcRangeToggle {
   font-size: 1rem;
-  background: #eee;
+  background: #1976d2;
+  color: #fff;
   border: none;
   border-radius: 0.5rem;
   padding: 0.4rem 1rem;
   cursor: pointer;
+  transition: background 0.2s;
+}
+.calendarCalcRangeToggle:hover {
+  background: #1565c0;
 }
 
 .calendarCalcContainer {
@@ -59,19 +67,19 @@
   margin-top: 2rem;
 }
 
-.calendarCalc-date {
+.calendarCalcDate {
   font-size: 2.5rem;
   margin: 2rem 0;
   color: var(--calendar-date-color, #222);
 }
 
 @media (max-width: 600px) {
-  .calendarCalc-date {
+  .calendarCalcDate {
     font-size: 1.5rem;
   }
 }
 
-.calendarCalc-badge {
+.calendarCalcBadge {
   font-size: 1.7rem;
   font-weight: bold;
   padding: 0.4rem 1.2rem;
@@ -84,7 +92,7 @@
 }
 
 @media (max-width: 600px) {
-  .calendarCalc-badge {
+  .calendarCalcBadge {
     font-size: 1.2rem;
     min-width: 4rem;
     padding: 0.3rem 0.8rem;

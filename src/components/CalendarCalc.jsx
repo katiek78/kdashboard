@@ -75,7 +75,7 @@ export default function CalendarCalc() {
                 onChange={(e) => setStartYear(Number(e.target.value))}
               />
             </div>
-            <div>
+            <div className={styles.calendarCalcRangeInput}>
               <label htmlFor="calendarCalcEndYear">End Year:</label>
               <input
                 id="calendarCalcEndYear"
@@ -127,12 +127,14 @@ export default function CalendarCalc() {
             </span>
           </div>
         )}
-        <button
-          onClick={handleGenerateNew}
-          style={{ fontSize: "1rem", marginTop: "1rem" }}
-        >
-          Generate New
-        </button>
+        <div>
+          <button
+            onClick={handleGenerateNew}
+            style={{ fontSize: "1rem", marginTop: "1rem" }}
+          >
+            Generate New
+          </button>
+        </div>
       </div>
     </>
   );
