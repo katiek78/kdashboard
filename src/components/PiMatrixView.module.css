@@ -1,5 +1,109 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
+
+.pageBtnText {
+    display: inline;
+}
+.pageBtnIcon {
+    display: none;
+    font-size: 18px;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+.prevButton .pageBtnIcon {
+    margin-right: 0;
+}
+.nextButton .pageBtnIcon {
+    margin-left: 0;
+}
+@media (max-width: 768px) {
+    .pageBtnText {
+        display: none;
+    }
+    .pageBtnIcon {
+        display: inline;
+        font-size: 22px;
+        margin: 0 2px;
+    }
+    .pagination, .bottomPagination {
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 8px;
+        overflow-x: auto;
+    }
+    .pageButton {
+        min-width: 38px;
+        padding: 8px 8px;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* Stats column and box */
+.statsHeader {
+    min-width: 90px;
+    text-align: center;
+}
+.statsCell {
+    text-align: center;
+    vertical-align: middle;
+}
+.statsBox {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
+    margin-top: 2px;
+}
+.statItem {
+    background: #e9ecef;
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: #333;
+    font-weight: 500;
+    font-size: 13px;
+}
+.statsToggle {
+    background: #e9ecef;
+    color: #007bff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: background 0.2s, color 0.2s;
+}
+.statsToggle:hover {
+    background: #d6e4f0;
+    color: #0056b3;
+}
+@media (max-width: 768px) {
+    .statsHeader {
+        min-width: 60px;
+        font-size: 12px;
+    }
+    .statsBox {
+        gap: 6px;
+        font-size: 11px;
+        padding: 2px 4px;
+    }
+    .statItem {
+        padding: 2px 5px;
+        font-size: 11px;
+    }
+    .statsToggle {
+        font-size: 13px;
+        padding: 4px 8px;
+        margin-bottom: 2px;
+    }
+}
 
 .piContainer {
     background-color: #f8f8f8;

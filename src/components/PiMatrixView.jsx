@@ -17,6 +17,17 @@ export default function PiMatrixView() {
   const [tooltipTimeout, setTooltipTimeout] = useState(null);
   const [jumpToPageValue, setJumpToPageValue] = useState("");
   const [duplicateDigits, setDuplicateDigits] = useState(new Set()); // Track duplicate digit sequences
+  const [statsVisible, setStatsVisible] = useState({}); // Track stats visibility per chunk (mobile)
+  const [isMobile, setIsMobile] = useState(false);
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Function to find all duplicate digit sequences
   const findDuplicateDigits = useCallback(async () => {
@@ -174,7 +185,9 @@ export default function PiMatrixView() {
       // First, just fetch the pi chunks quickly
       const { data: chunksData, error: chunksError } = await supabase
         .from("pi_matrix")
-        .select("position, digits")
+        .select(
+          "position, digits, times_tested, times_correct, times_incorrect"
+        )
         .order("position")
         .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
 
@@ -300,22 +313,26 @@ export default function PiMatrixView() {
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={styles.pageButton}
+            className={styles.pageButton + " " + styles.prevButton}
+            aria-label="Previous page"
           >
-            Previous
+            <span className={styles.pageBtnText}>Previous</span>
+            <span className={styles.pageBtnIcon}>←</span>
           </button>
           <span className={styles.pageInfo}>
-            Page {currentPage} of {totalPages} (
-            {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+            Page {currentPage} of {totalPages}
+            {/* ({(currentPage - 1) * ITEMS_PER_PAGE + 1}-
             {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount}{" "}
-            chunks)
+            chunks) */}
           </span>
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={styles.pageButton}
+            className={styles.pageButton + " " + styles.nextButton}
+            aria-label="Next page"
           >
-            Next
+            <span className={styles.pageBtnText}>Next</span>
+            <span className={styles.pageBtnIcon}>→</span>
           </button>
           <div className={styles.jumpToPage}>
             <input
@@ -346,6 +363,7 @@ export default function PiMatrixView() {
               <th>Index</th>
               <th>Person</th>
               <th>Digits</th>
+              <th className={styles.statsHeader}>Stats</th>
             </tr>
           </thead>
           <tbody>
@@ -429,6 +447,50 @@ export default function PiMatrixView() {
                       )}
                     </div>
                   </td>
+                  <td className={styles.statsCell}>
+                    {/* Desktop: show stats by default; Mobile: show toggle button */}
+                    {isMobile ? (
+                      <>
+                        <button
+                          className={styles.statsToggle}
+                          onClick={() =>
+                            setStatsVisible((prev) => ({
+                              ...prev,
+                              [chunk.position]: !prev[chunk.position],
+                            }))
+                          }
+                          aria-label="Show stats"
+                        >
+                          📊 Stats
+                        </button>
+                        {statsVisible[chunk.position] && (
+                          <div className={styles.statsBox}>
+                            <span className={styles.statItem}>
+                              <strong>T:</strong> {chunk.times_tested || 0}
+                            </span>
+                            <span className={styles.statItem}>
+                              <strong>✓</strong> {chunk.times_correct || 0}
+                            </span>
+                            <span className={styles.statItem}>
+                              <strong>✗</strong> {chunk.times_incorrect || 0}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className={styles.statsBox}>
+                        <span className={styles.statItem}>
+                          <strong>T:</strong> {chunk.times_tested || 0}
+                        </span>
+                        <span className={styles.statItem}>
+                          <strong>✓</strong> {chunk.times_correct || 0}
+                        </span>
+                        <span className={styles.statItem}>
+                          <strong>✗</strong> {chunk.times_incorrect || 0}
+                        </span>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -440,9 +502,11 @@ export default function PiMatrixView() {
         <button
           onClick={() => handlePageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={styles.pageButton}
+          className={styles.pageButton + " " + styles.prevButton}
+          aria-label="Previous page"
         >
-          Previous
+          <span className={styles.pageBtnText}>Previous</span>
+          <span className={styles.pageBtnIcon}>←</span>
         </button>
         <span className={styles.pageInfo}>
           Page {currentPage} of {totalPages}
@@ -450,9 +514,11 @@ export default function PiMatrixView() {
         <button
           onClick={() => handlePageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className={styles.pageButton}
+          className={styles.pageButton + " " + styles.nextButton}
+          aria-label="Next page"
         >
-          Next
+          <span className={styles.pageBtnText}>Next</span>
+          <span className={styles.pageBtnIcon}>→</span>
         </button>
         <div className={styles.jumpToPage}>
           <input
