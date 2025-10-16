@@ -1,55 +1,43 @@
 import React, { useState } from "react";
 import { WEEKDAY_COLORS, WEEKDAY_TEXT_COLORS } from "../utils/coloursUtils";
-import { format, addDays } from "date-fns";
+import { format } from "date-fns";
+import styles from "./CalendarCalc.module.css";
 
 // Example date formats
 const DATE_FORMATS = [
   { label: "D MMM YYYY", format: "d MMM yyyy" },
+  { label: "MMMM D, YYYY", format: "MMMM d, yyyy" },
   { label: "YYYY-MM-DD", format: "yyyy-MM-dd" },
   { label: "DD/MM/YYYY", format: "dd/MM/yyyy" },
-  { label: "MMMM D, YYYY", format: "MMMM d, yyyy" },
   { label: "MM-DD-YYYY", format: "MM-dd-yyyy" },
-  { label: "dddd, MMMM D", format: "eeee, MMMM d" },
   // Add more formats as needed
 ];
 
-// Returns full weekday name (e.g. 'Monday')
-function getWeekday(date) {
-  return format(date, "eeee");
-}
-
-function useIsDarkMode() {
-  if (typeof window !== "undefined" && window.matchMedia) {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  }
-  return false;
-}
-
 export default function CalendarCalc() {
+  const [showRange, setShowRange] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState(DATE_FORMATS[0].format);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => {
+    const start = new Date(2000, 0, 1);
+    const end = new Date(2030, 11, 31);
+    const diff = end.getTime() - start.getTime();
+    return new Date(start.getTime() + Math.random() * diff);
+  });
   const [showWeekday, setShowWeekday] = useState(false);
+  const [startYear, setStartYear] = useState(1600);
+  const [endYear, setEndYear] = useState(2099);
+
+  function getRandomDate(startY, endY) {
+    const start = new Date(startY, 0, 1);
+    const end = new Date(endY, 11, 31);
+    const diff = end.getTime() - start.getTime();
+    return new Date(start.getTime() + Math.random() * diff);
+  }
 
   const formattedDate = format(date, selectedFormat);
   const weekdayIndex = getWeekdayIndex(date);
   const weekdayColor = WEEKDAY_COLORS[weekdayIndex];
-  const weekdayTextColor = WEEKDAY_TEXT_COLORS[weekdayIndex];
   const weekdayName = format(date, "eeee");
-  const weekdayAbbr = format(date, "eee");
 
-  // Dark mode detection
-  const isDarkMode = useIsDarkMode();
-
-  // Responsive: use abbreviation for mobile
-  const [isMobile, setIsMobile] = useState(false);
-  React.useEffect(() => {
-    function handleResize() {
-      setIsMobile(window.innerWidth < 500);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
   // Map weekday name to index (0=Sunday, ... 6=Saturday)
   function getWeekdayIndex(date) {
     return date.getDay();
@@ -60,17 +48,47 @@ export default function CalendarCalc() {
   }
 
   function handleGenerateNew() {
-    // Generate a new random date (within reasonable range)
-    const start = new Date(2000, 0, 1);
-    const end = new Date(2030, 11, 31);
-    const diff = end.getTime() - start.getTime();
-    const newDate = new Date(start.getTime() + Math.random() * diff);
+    const newDate = getRandomDate(startYear, endYear);
     setDate(newDate);
     setShowWeekday(false);
   }
 
   return (
     <>
+      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+        <button
+          className={styles.calendarCalcRangeToggle}
+          onClick={() => setShowRange((v) => !v)}
+        >
+          {showRange ? "Hide Range Settings" : "Show Range Settings"}
+        </button>
+        {showRange && (
+          <div className={styles.calendarCalcRangeInputs}>
+            <div className={styles.calendarCalcRangeInput}>
+              <label htmlFor="calendarCalcStartYear">Start Year:</label>
+              <input
+                id="calendarCalcStartYear"
+                type="number"
+                value={startYear}
+                min={1000}
+                max={endYear}
+                onChange={(e) => setStartYear(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label htmlFor="calendarCalcEndYear">End Year:</label>
+              <input
+                id="calendarCalcEndYear"
+                type="number"
+                value={endYear}
+                min={startYear}
+                max={3000}
+                onChange={(e) => setEndYear(Number(e.target.value))}
+              />
+            </div>
+          </div>
+        )}
+      </div>
       <div style={{ textAlign: "center", marginTop: "2rem" }}>
         <select
           value={selectedFormat}
@@ -94,28 +112,18 @@ export default function CalendarCalc() {
           </button>
         )}
         {showWeekday && (
-          <div style={{ margin: isMobile ? "1rem 0" : "1.5rem 0" }}>
+          <div>
             <span
+              className={styles.calendarCalcBadge}
               style={{
-                fontSize: isMobile ? "1.2rem" : "2rem",
-                fontWeight: "bold",
                 backgroundColor: weekdayColor,
                 color:
-                  isDarkMode && weekdayTextColor === "#000"
-                    ? "#fff"
-                    : weekdayTextColor,
-                padding: isMobile ? "0.3rem 0.8rem" : "0.5rem 1.5rem",
-                borderRadius: "1rem",
-                display: "inline-block",
-                boxShadow: isDarkMode
-                  ? "0 2px 8px rgba(0,0,0,0.32)"
-                  : "0 2px 8px rgba(0,0,0,0.08)",
-                minWidth: isMobile ? "4rem" : "8rem",
-                textAlign: "center",
-                border: isDarkMode ? "1px solid #222" : "none",
+                  weekdayIndex === 3
+                    ? "#000"
+                    : WEEKDAY_TEXT_COLORS[weekdayIndex],
               }}
             >
-              {isMobile ? weekdayAbbr : weekdayName}
+              {weekdayName}
             </span>
           </div>
         )}

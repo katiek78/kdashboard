@@ -1,0 +1,92 @@
+@media (max-width: 600px) {
+  .calendarCalc-rangeInputs {
+    align-items: stretch;
+  }
+  .calendarCalc-rangeInput {
+    max-width: 100%;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .calendarCalc-rangeInput label,
+  .calendarCalc-rangeInput input {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin: 0;
+  }
+  .calendarCalc-rangeInput input {
+    margin-bottom: 1rem;
+  }
+}
+.calendarCalc-rangeInputs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem auto;
+  text-align: center;
+}
+.calendarCalc-rangeInput {
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.calendarCalc-rangeInput label {
+  margin-bottom: 0.3rem;
+  text-align: center;
+}
+.calendarCalc-rangeInput input {
+  width: 100%;
+  max-width: 200px;
+  box-sizing: border-box;
+  text-align: center;
+  margin: 0 auto;
+}
+.calendarCalc-rangeToggle {
+  font-size: 1rem;
+  background: #eee;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+}
+
+.calendarCalcContainer {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.calendarCalc-date {
+  font-size: 2.5rem;
+  margin: 2rem 0;
+  color: var(--calendar-date-color, #222);
+}
+
+@media (max-width: 600px) {
+  .calendarCalc-date {
+    font-size: 1.5rem;
+  }
+}
+
+.calendarCalc-badge {
+  font-size: 1.7rem;
+  font-weight: bold;
+  padding: 0.4rem 1.2rem;
+  border-radius: 1rem;
+  display: inline-block;
+  min-width: 6rem;
+  text-align: center;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+@media (max-width: 600px) {
+  .calendarCalc-badge {
+    font-size: 1.2rem;
+    min-width: 4rem;
+    padding: 0.3rem 0.8rem;
+  }
+}
