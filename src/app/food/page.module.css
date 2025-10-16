@@ -23,18 +23,18 @@
     rgba(255, 255, 255, 0.1) 10px,
     rgba(255, 255, 255, 0.1) 20px
   );
-  animation: shimmer 20s linear infinite;
+  /* animation: shimmer 20s linear infinite; */
   pointer-events: none;
 }
 
-@keyframes shimmer {
+/* @keyframes shimmer {
   0% {
     transform: translateX(-100%) translateY(-100%) rotate(45deg);
   }
   100% {
     transform: translateX(100%) translateY(100%) rotate(45deg);
   }
-}
+} */
 
 .foodCard {
   /*background: rgba(255, 255, 255, 0.9);*/
