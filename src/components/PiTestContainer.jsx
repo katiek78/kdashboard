@@ -790,6 +790,9 @@ export default function PiTestContainer() {
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <h1>Pi Test</h1>
+          <a href="/pi" className={styles.backButton}>
+            ← Back to Pi View
+          </a>
           {sessionRestored && (
             <span className={styles.sessionRestored}>↻ Session restored</span>
           )}
