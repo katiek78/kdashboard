@@ -95,18 +95,20 @@ export default function FoodMeals() {
                 ) : (
                   <>
                     <span className={styles.mealName}>{meal.name}</span>
-                    <button
-                      onClick={() => startEdit(meal)}
-                      className={styles.editBtn}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteMeal(meal.id)}
-                      className={styles.deleteBtn}
-                    >
-                      Delete
-                    </button>
+                    <div className={styles.mealActions}>
+                      <button
+                        onClick={() => startEdit(meal)}
+                        className={styles.editBtn}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteMeal(meal.id)}
+                        className={styles.deleteBtn}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

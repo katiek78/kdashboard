@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import supabase from "@/utils/supabaseClient";
 import styles from "./IngredientsList.module.css";
+import Link from "next/link";
 
 export default function IngredientsList() {
   const [ingredients, setIngredients] = useState([]);
@@ -35,6 +36,26 @@ export default function IngredientsList() {
 
   return (
     <div className={styles.ingredientsContainer}>
+      <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+        <Link href="/food">
+          <button
+            style={{
+              background: "#fbbf24",
+              color: "#fff",
+              border: "none",
+              borderRadius: "0.5rem",
+              padding: "0.5rem 1.5rem",
+              fontWeight: "bold",
+              fontSize: "1rem",
+              cursor: "pointer",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+              marginBottom: "1rem",
+            }}
+          >
+            Back to Meals Page
+          </button>
+        </Link>
+      </div>
       <h2 className={styles.title}>Add Ingredient</h2>
       <form onSubmit={addIngredient} className={styles.addForm}>
         <input
@@ -55,7 +76,7 @@ export default function IngredientsList() {
           Add
         </button>
       </form>
-      <h2 className={styles.title}>Ingredients List</h2>
+      {/* <h2 className={styles.title}>Ingredients List</h2> */}
       {loading ? (
         <div>Loading ingredients...</div>
       ) : (

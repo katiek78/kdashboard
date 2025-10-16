@@ -1,4 +1,5 @@
 import IngredientsList from "@/components/IngredientsList";
+import Link from "next/link";
 
 export default function IngredientsPage() {
   return (
