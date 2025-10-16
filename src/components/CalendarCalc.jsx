@@ -54,42 +54,40 @@ export default function CalendarCalc() {
   }
 
   return (
-    <>
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <button
-          className={styles.calendarCalcRangeToggle}
-          onClick={() => setShowRange((v) => !v)}
-        >
-          {showRange ? "Hide Range Settings" : "Show Range Settings"}
-        </button>
-        {showRange && (
-          <div className={styles.calendarCalcRangeInputs}>
-            <div className={styles.calendarCalcRangeInput}>
-              <label htmlFor="calendarCalcStartYear">Start Year:</label>
-              <input
-                id="calendarCalcStartYear"
-                type="number"
-                value={startYear}
-                min={1000}
-                max={endYear}
-                onChange={(e) => setStartYear(Number(e.target.value))}
-              />
-            </div>
-            <div className={styles.calendarCalcRangeInput}>
-              <label htmlFor="calendarCalcEndYear">End Year:</label>
-              <input
-                id="calendarCalcEndYear"
-                type="number"
-                value={endYear}
-                min={startYear}
-                max={3000}
-                onChange={(e) => setEndYear(Number(e.target.value))}
-              />
-            </div>
+    <div className={styles.calendarCalcContainer}>
+      <button
+        className={styles.calendarCalcRangeToggle}
+        onClick={() => setShowRange((v) => !v)}
+      >
+        {showRange ? "Hide Range Settings" : "Show Range Settings"}
+      </button>
+      {showRange && (
+        <div className={styles.calendarCalcRangeInputs}>
+          <div className={styles.calendarCalcRangeInput}>
+            <label htmlFor="calendarCalcStartYear">Start Year:</label>
+            <input
+              id="calendarCalcStartYear"
+              type="number"
+              value={startYear}
+              min={1000}
+              max={endYear}
+              onChange={(e) => setStartYear(Number(e.target.value))}
+            />
           </div>
-        )}
-      </div>
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+          <div className={styles.calendarCalcRangeInput}>
+            <label htmlFor="calendarCalcEndYear">End Year:</label>
+            <input
+              id="calendarCalcEndYear"
+              type="number"
+              value={endYear}
+              min={startYear}
+              max={3000}
+              onChange={(e) => setEndYear(Number(e.target.value))}
+            />
+          </div>
+        </div>
+      )}
+      <div style={{ marginTop: "2rem" }}>
         <select
           value={selectedFormat}
           onChange={(e) => setSelectedFormat(e.target.value)}
@@ -100,9 +98,7 @@ export default function CalendarCalc() {
             </option>
           ))}
         </select>
-        <div style={{ fontSize: "3rem", margin: "2rem 0" }}>
-          {formattedDate}
-        </div>
+        <div className={styles.calendarCalcDate}>{formattedDate}</div>
         {!showWeekday && (
           <button
             onClick={handleShow}
@@ -136,6 +132,6 @@ export default function CalendarCalc() {
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

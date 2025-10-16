@@ -65,17 +65,30 @@
 .calendarCalcContainer {
   text-align: center;
   margin-top: 2rem;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .calendarCalcDate {
   font-size: 2.5rem;
   margin: 2rem 0;
-  color: var(--calendar-date-color, #222);
+  color: #222;
 }
 
 @media (max-width: 600px) {
   .calendarCalcDate {
     font-size: 1.5rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .calendarCalcContainer {
+    background: #222;
+  }
+  .calendarCalcDate {
+    color: #d3d3d3;
   }
 }
 
