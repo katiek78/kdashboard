@@ -1,5 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Karla:wght@300;400;500;600;700&display=swap');
 
+
+/* Stats row for chunk breakdown */
+.statsRow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+
+.statItem {
+    background: #e9ecef;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .statsRow {
+        gap: 6px;
+        font-size: 11px;
+        margin-top: 6px;
+    }
+    .statItem {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+}
+
 .container {
     background-color: #f8f8f8;
     border-radius: 8px;

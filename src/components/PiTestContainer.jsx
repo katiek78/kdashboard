@@ -256,18 +256,22 @@ export default function PiTestContainer() {
     }
   };
 
+  // Get detailed breakdown for a chunk (person + digit meanings + stats)
   const getChunkBreakdown = async (chunkNumber) => {
     try {
-      // Get the chunk data
+      // Get the chunk data including stats
       const { data: chunkData, error: chunkError } = await supabase
         .from("pi_matrix")
-        .select("digits")
+        .select("digits, times_tested, times_correct, times_incorrect")
         .eq("position", chunkNumber)
         .single();
 
       if (chunkError) throw chunkError;
 
       const digits = chunkData.digits;
+      const times_tested = chunkData.times_tested || 0;
+      const times_correct = chunkData.times_correct || 0;
+      const times_incorrect = chunkData.times_incorrect || 0;
 
       // Get person data using same logic as PiMatrixView
       const lookupKey =
@@ -295,6 +299,9 @@ export default function PiTestContainer() {
         chunkNumber,
         digits,
         person,
+        times_tested,
+        times_correct,
+        times_incorrect,
         breakdown: {
           firstTwo: {
             digits: firstTwo,
@@ -648,37 +655,83 @@ export default function PiTestContainer() {
     setShowAnswer(true);
   };
 
-  const handleMarkCorrect = () => {
+  const handleMarkCorrect = async () => {
     setScore((prev) => ({ correct: prev.correct + 1, total: prev.total + 1 }));
 
     if (currentQuestion && currentQuestion.chunkId) {
+      // Update stats in Supabase (fetch current, then increment)
+      const chunkId = currentQuestion.chunkId;
+      try {
+        const { data, error } = await supabase
+          .from("pi_matrix")
+          .select("times_tested, times_correct")
+          .eq("position", chunkId)
+          .single();
+        if (error) console.error("Fetch error:", error);
+        if (data) {
+          const { error: updateError } = await supabase
+            .from("pi_matrix")
+            .update({
+              times_tested: (data.times_tested || 0) + 1,
+              times_correct: (data.times_correct || 0) + 1,
+            })
+            .eq("position", chunkId);
+          if (updateError) console.error("Update error:", updateError);
+        }
+      } catch (err) {
+        console.error("Async error:", err);
+      }
+
       if (trainingMode === TRAINING_MODES.FINITE) {
-        handleFiniteCorrect(currentQuestion.chunkId);
+        handleFiniteCorrect(chunkId);
       }
       // For infinite mode, correct answers just remove from priority queue if present
       setPriorityQueue((prev) =>
-        prev.filter((item) => item.chunkId !== currentQuestion.chunkId)
+        prev.filter((item) => item.chunkId !== chunkId)
       );
     }
 
     generateQuestion();
   };
 
-  const handleMarkIncorrect = () => {
+  const handleMarkIncorrect = async () => {
     setScore((prev) => ({ correct: prev.correct, total: prev.total + 1 }));
 
     if (currentQuestion && currentQuestion.chunkId) {
+      // Update stats in Supabase (fetch current, then increment)
+      const chunkId = currentQuestion.chunkId;
+      try {
+        const { data, error } = await supabase
+          .from("pi_matrix")
+          .select("times_tested, times_incorrect")
+          .eq("position", chunkId)
+          .single();
+        if (error) console.error("Fetch error:", error);
+        if (data) {
+          const { error: updateError } = await supabase
+            .from("pi_matrix")
+            .update({
+              times_tested: (data.times_tested || 0) + 1,
+              times_incorrect: (data.times_incorrect || 0) + 1,
+            })
+            .eq("position", chunkId);
+          if (updateError) console.error("Update error:", updateError);
+        }
+      } catch (err) {
+        console.error("Async error:", err);
+      }
+
       if (trainingMode === TRAINING_MODES.FINITE) {
-        handleFiniteWrong(currentQuestion.chunkId);
+        handleFiniteWrong(chunkId);
       } else {
         // Infinite mode: add to priority queue with escalating priority
         const existingItem = priorityQueue.find(
-          (item) => item.chunkId === currentQuestion.chunkId
+          (item) => item.chunkId === chunkId
         );
         const newPriority = existingItem
           ? Math.min(existingItem.priority + 1, 3)
           : 1;
-        addToPriorityQueue(currentQuestion.chunkId, newPriority);
+        addToPriorityQueue(chunkId, newPriority);
       }
     }
 
@@ -995,6 +1048,7 @@ export default function PiTestContainer() {
                 </div>
 
                 {/* Button to show detailed breakdown */}
+
                 {!showDetailedBreakdown ? (
                   <button
                     onClick={handleShowBreakdown}
@@ -1038,6 +1092,21 @@ export default function PiTestContainer() {
                         >
                           {chunkBreakdown.breakdown.lastThree.meaning}
                         </a>
+                      </div>
+                      {/* Stats row, mobile-friendly */}
+                      <div className={styles.statsRow}>
+                        <span className={styles.statItem}>
+                          <strong>Attempts:</strong>{" "}
+                          {chunkBreakdown.times_tested}
+                        </span>
+                        <span className={styles.statItem}>
+                          <strong>Correct:</strong>{" "}
+                          {chunkBreakdown.times_correct}
+                        </span>
+                        <span className={styles.statItem}>
+                          <strong>Incorrect:</strong>{" "}
+                          {chunkBreakdown.times_incorrect}
+                        </span>
                       </div>
                     </div>
                   )
