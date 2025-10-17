@@ -755,7 +755,7 @@ const QuickTaskList = () => {
           onBlur={handleRepeatBlur}
           placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc)"
         />
-        <button onClick={addTask}>Add Task</button>
+  <button className={styles.qtlButton} onClick={addTask}>Add Task</button>
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
         Total tasks for today: {visibleTasks?.length}
@@ -771,7 +771,7 @@ const QuickTaskList = () => {
           </span>
         )} */}
       </div>
-      <button onClick={pickRandomTask}>Pick Random Task</button>
+  <button className={styles.qtlButton} onClick={pickRandomTask}>Pick Random Task</button>
 
       {loading ? (
         <div>Loading...</div>

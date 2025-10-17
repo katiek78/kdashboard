@@ -1,3 +1,4 @@
+
 /* Root container for the sortable item */
 .qtlRoot {
   display: flex;
@@ -129,6 +130,27 @@
     margin: 2px !important;
     padding: 4px 10px !important;
     font-size: 18px !important;
+  }
+  .qtlTileBtnMobile.urgent {
+    background: #d00 !important;
+    color: #fff !important;
+    border-color: #d00 !important;
+  }
+  .qtlTileBtnMobile.blocked {
+    color: #c00 !important;
+    border-color: #c00 !important;
+  }
+  .qtlTileBtnMobile.delete {
+    color: #c00 !important;
+    border-color: #c00 !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .qtlTileBtnMobile {
+    background: #222 !important;
+    color: #f3f3f3 !important;
+    border: 1.5px solid #444 !important;
   }
   .qtlTileBtnMobile.urgent {
     background: #d00 !important;

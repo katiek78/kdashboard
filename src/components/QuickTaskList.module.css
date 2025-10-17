@@ -1,3 +1,18 @@
+  .qtlButton {
+    background: #fafce8;
+    color: #222;
+    border: 1px solid #ccc;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .qtlButton:hover {
+    background: #fbdcdc;
+    color: #222;
+    border: 1px solid #888;
+  }
 .taskContainer {
     background: repeating-linear-gradient(
         to bottom,
@@ -18,6 +33,16 @@
   }
 
   @media (prefers-color-scheme: dark) {
+  .qtlButton {
+    background: #222 !important;
+    color: #f3f3f3 !important;
+    border: 1px solid #444 !important;
+  }
+  .qtlButton:hover {
+    background: #333 !important;
+    color: #fff !important;
+    border: 1px solid #666 !important;
+  }
   .taskContainer,
   .taskContainer * {
     color: #f3f3f3 !important;
@@ -30,5 +55,6 @@
     #333 12px 23px
       );
   }
+
 
 }
