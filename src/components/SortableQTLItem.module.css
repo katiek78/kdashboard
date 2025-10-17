@@ -47,6 +47,7 @@
 
 .qtlTitleText {
   overflow-wrap: anywhere;
+  font-size: 1.2rem;
   flex: 1;
   display: flex;
   align-items: center;
@@ -80,14 +81,18 @@
   background: #f5f5f5;
   border: 1px solid #ccc;
   border-radius: 6px;
-  min-width: 32px;
-  min-height: 32px;
+  min-width: 25px;
+  min-height: 25px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 15px;
   cursor: pointer;
   transition: border 0.2s, box-shadow 0.2s;
+}
+
+.qtlTileBtnMobile[type="checkbox"] {
+  margin-top: 10px;
 }
 
 @media (max-width: 600px) {
