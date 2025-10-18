@@ -2,22 +2,82 @@ import { useState, useEffect } from "react";
 import supabase from "@/utils/supabaseClient";
 import styles from "./FoodMeals.module.css";
 
+// Helper to get ingredient name by id
+function getIngredientName(ingredients, id) {
+  const found = ingredients.find((ing) => ing.id === id);
+  return found ? found.name : "";
+}
+
 export default function FoodMeals() {
   const [meals, setMeals] = useState([]);
   const [newMeal, setNewMeal] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
+  const [ingredientEditId, setIngredientEditId] = useState(null); // meal id for ingredient editing
+  const [selectedIngredient, setSelectedIngredient] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ingredients, setIngredients] = useState([]);
+  const [mealIngredients, setMealIngredients] = useState({}); // { mealId: [ingredientId, ...] }
+  const [ingredientLoading, setIngredientLoading] = useState(false);
+  const [expandedIngredients, setExpandedIngredients] = useState({}); // { mealId: true/false }
 
   useEffect(() => {
     fetchMeals();
+    fetchIngredients();
   }, []);
+
+  useEffect(() => {
+    if (meals.length > 0) {
+      fetchMealIngredients();
+    }
+  }, [meals]);
 
   async function fetchMeals() {
     setLoading(true);
     const { data, error } = await supabase.from("meals").select();
     if (!error) setMeals(data);
     setLoading(false);
+  }
+
+  async function fetchIngredients() {
+    setIngredientLoading(true);
+    const { data, error } = await supabase.from("ingredients").select();
+    if (!error) setIngredients(data);
+    setIngredientLoading(false);
+  }
+
+  async function fetchMealIngredients() {
+    // Get all meal_ingredients for all meals
+    const { data, error } = await supabase.from("meal_ingredients").select();
+    if (!error && data) {
+      // Group by meal_id
+      const grouped = {};
+      data.forEach((row) => {
+        if (!grouped[row.meal_id]) grouped[row.meal_id] = [];
+        grouped[row.meal_id].push(row.ingredient_id);
+      });
+      setMealIngredients(grouped);
+    }
+  }
+
+  // Add ingredient to a meal
+  async function handleAddIngredient(mealId) {
+    if (!selectedIngredient) return;
+    await supabase
+      .from("meal_ingredients")
+      .insert({ meal_id: mealId, ingredient_id: selectedIngredient });
+    setSelectedIngredient("");
+    fetchMealIngredients();
+  }
+
+  // Remove ingredient from a meal
+  async function handleRemoveIngredient(mealId, ingredientId) {
+    await supabase
+      .from("meal_ingredients")
+      .delete()
+      .eq("meal_id", mealId)
+      .eq("ingredient_id", ingredientId);
+    fetchMealIngredients();
   }
 
   async function addMeal(e) {
@@ -108,7 +168,85 @@ export default function FoodMeals() {
                       >
                         Delete
                       </button>
+                      <button
+                        onClick={() =>
+                          setExpandedIngredients((prev) => ({
+                            ...prev,
+                            [meal.id]: !prev[meal.id],
+                          }))
+                        }
+                        className={styles.editBtn}
+                        style={{ marginLeft: "0.5rem" }}
+                      >
+                        {expandedIngredients[meal.id]
+                          ? "Hide Ingredients"
+                          : "Show Ingredients"}
+                      </button>
                     </div>
+                    {expandedIngredients[meal.id] && (
+                      <div className={styles.ingredientSection}>
+                        <div className={styles.ingredientTitle}>
+                          Ingredients:
+                        </div>
+                        {mealIngredients[meal.id] &&
+                        mealIngredients[meal.id].length > 0 ? (
+                          <div className={styles.assignedIngredients}>
+                            {mealIngredients[meal.id].map((id) => (
+                              <div key={id} className={styles.ingredientCard}>
+                                <span>
+                                  {getIngredientName(ingredients, id)}
+                                </span>
+                                <button
+                                  className={styles.removeBtn}
+                                  onClick={() =>
+                                    handleRemoveIngredient(meal.id, id)
+                                  }
+                                  title="Remove ingredient"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className={styles.assignedIngredients}>
+                            <em>No ingredients assigned</em>
+                          </div>
+                        )}
+                        <div className={styles.ingredientEditRow}>
+                          <select
+                            value={selectedIngredient}
+                            onChange={(e) =>
+                              setSelectedIngredient(e.target.value)
+                            }
+                            className={styles.input}
+                          >
+                            <option value="">Select ingredient...</option>
+                            {ingredients
+                              .filter(
+                                (ing) =>
+                                  !mealIngredients[meal.id]?.includes(ing.id)
+                              )
+                              .map((ingredient) => (
+                                <option
+                                  key={ingredient.id}
+                                  value={ingredient.id}
+                                >
+                                  {ingredient.name}
+                                </option>
+                              ))}
+                          </select>
+                          <button
+                            className={styles.addBtn}
+                            style={{ marginLeft: 8 }}
+                            onClick={() => handleAddIngredient(meal.id)}
+                            disabled={!selectedIngredient}
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
