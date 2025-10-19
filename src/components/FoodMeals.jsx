@@ -15,6 +15,8 @@ export default function FoodMeals() {
   const [editingName, setEditingName] = useState("");
   const [ingredientEditId, setIngredientEditId] = useState(null); // meal id for ingredient editing
   const [selectedIngredient, setSelectedIngredient] = useState("");
+  const [addingNewIngredient, setAddingNewIngredient] = useState(false);
+  const [newIngredientName, setNewIngredientName] = useState("");
   const [loading, setLoading] = useState(false);
   const [ingredients, setIngredients] = useState([]);
   const [mealIngredients, setMealIngredients] = useState({}); // { mealId: [ingredientId, ...] }
@@ -63,6 +65,27 @@ export default function FoodMeals() {
   // Add ingredient to a meal
   async function handleAddIngredient(mealId) {
     if (!selectedIngredient) return;
+    // If adding new ingredient, handle separately
+    if (selectedIngredient === "__new__") {
+      if (!newIngredientName.trim()) return;
+      // Add new ingredient
+      const { data, error } = await supabase
+        .from("ingredients")
+        .insert({ name: newIngredientName })
+        .select();
+      if (!error && data && data[0]) {
+        // Assign new ingredient to meal
+        await supabase
+          .from("meal_ingredients")
+          .insert({ meal_id: mealId, ingredient_id: data[0].id });
+        setNewIngredientName("");
+        setAddingNewIngredient(false);
+        setSelectedIngredient("");
+        fetchIngredients();
+        fetchMealIngredients();
+      }
+      return;
+    }
     await supabase
       .from("meal_ingredients")
       .insert({ meal_id: mealId, ingredient_id: selectedIngredient });
@@ -216,25 +239,44 @@ export default function FoodMeals() {
                     <div className={styles.ingredientEditRow}>
                       <select
                         value={selectedIngredient}
-                        onChange={(e) => setSelectedIngredient(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedIngredient(e.target.value);
+                          setAddingNewIngredient(e.target.value === "__new__");
+                        }}
                         className={styles.input}
                       >
                         <option value="">Select ingredient...</option>
+                        <option value="__new__">Add new...</option>
                         {ingredients
                           .filter(
                             (ing) => !mealIngredients[meal.id]?.includes(ing.id)
                           )
+                          .sort((a, b) => a.name.localeCompare(b.name))
                           .map((ingredient) => (
                             <option key={ingredient.id} value={ingredient.id}>
                               {ingredient.name}
                             </option>
                           ))}
                       </select>
+                      {addingNewIngredient && (
+                        <input
+                          type="text"
+                          value={newIngredientName}
+                          onChange={(e) => setNewIngredientName(e.target.value)}
+                          placeholder="New ingredient name"
+                          className={styles.input}
+                          style={{ marginLeft: 8, width: 140 }}
+                        />
+                      )}
                       <button
                         className={styles.addBtn}
                         style={{ marginLeft: 8 }}
                         onClick={() => handleAddIngredient(meal.id)}
-                        disabled={!selectedIngredient}
+                        disabled={
+                          !selectedIngredient ||
+                          (selectedIngredient === "__new__" &&
+                            !newIngredientName.trim())
+                        }
                       >
                         Add
                       </button>
