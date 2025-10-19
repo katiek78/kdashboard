@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import supabase from "@/utils/supabaseClient";
 import styles from "./FoodMeals.module.css";
+import MealPlanning from "./MealPlanning"; // Import MealPlanning component
 
 // Helper to get ingredient name by id
 function getIngredientName(ingredients, id) {
@@ -22,6 +23,7 @@ export default function FoodMeals() {
   const [mealIngredients, setMealIngredients] = useState({}); // { mealId: [ingredientId, ...] }
   const [ingredientLoading, setIngredientLoading] = useState(false);
   const [expandedIngredients, setExpandedIngredients] = useState({}); // { mealId: true/false }
+  const [showMealPlanning, setShowMealPlanning] = useState(false); // State to control MealPlanning component visibility
 
   useEffect(() => {
     fetchMeals();
@@ -146,6 +148,13 @@ export default function FoodMeals() {
           Add
         </button>
       </form>
+      <button
+        className={styles.addBtn}
+        style={{ marginBottom: 16 }}
+        onClick={() => setShowMealPlanning((v) => !v)}
+      >
+        {showMealPlanning ? "Hide Meal Planning" : "Meal Planning"}
+      </button>
       {loading ? (
         <div>Loading meals...</div>
       ) : (
@@ -287,6 +296,7 @@ export default function FoodMeals() {
             ))}
         </div>
       )}
+      {showMealPlanning && <MealPlanning />}
     </div>
   );
 }
