@@ -131,123 +131,115 @@ export default function FoodMeals() {
             .sort((a, b) => a.name.localeCompare(b.name))
             .map((meal) => (
               <div key={meal.id} className={styles.mealCard}>
-                {editingId === meal.id ? (
-                  <>
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      className={styles.input}
-                    />
-                    <button
-                      onClick={() => saveEdit(meal.id)}
-                      className={styles.saveBtn}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className={styles.cancelBtn}
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className={styles.mealName}>{meal.name}</span>
-                    <div className={styles.mealActions}>
+                <div className={styles.mealHeader}>
+                  {editingId === meal.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className={styles.input}
+                      />
                       <button
-                        onClick={() => startEdit(meal)}
-                        className={styles.editBtn}
+                        onClick={() => saveEdit(meal.id)}
+                        className={styles.saveBtn}
                       >
-                        Edit
+                        Save
                       </button>
                       <button
-                        onClick={() => deleteMeal(meal.id)}
-                        className={styles.deleteBtn}
+                        onClick={() => setEditingId(null)}
+                        className={styles.cancelBtn}
                       >
-                        Delete
+                        Cancel
                       </button>
-                      <button
-                        onClick={() =>
-                          setExpandedIngredients((prev) => ({
-                            ...prev,
-                            [meal.id]: !prev[meal.id],
-                          }))
-                        }
-                        className={styles.editBtn}
-                        style={{ marginLeft: "0.5rem" }}
-                      >
-                        {expandedIngredients[meal.id]
-                          ? "Hide Ingredients"
-                          : "Show Ingredients"}
-                      </button>
-                    </div>
-                    {expandedIngredients[meal.id] && (
-                      <div className={styles.ingredientSection}>
-                        <div className={styles.ingredientTitle}>
-                          Ingredients:
-                        </div>
-                        {mealIngredients[meal.id] &&
-                        mealIngredients[meal.id].length > 0 ? (
-                          <div className={styles.assignedIngredients}>
-                            {mealIngredients[meal.id].map((id) => (
-                              <div key={id} className={styles.ingredientCard}>
-                                <span>
-                                  {getIngredientName(ingredients, id)}
-                                </span>
-                                <button
-                                  className={styles.removeBtn}
-                                  onClick={() =>
-                                    handleRemoveIngredient(meal.id, id)
-                                  }
-                                  title="Remove ingredient"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.mealName}>{meal.name}</span>
+                      <div className={styles.mealActions}>
+                        <button
+                          onClick={() => startEdit(meal)}
+                          className={styles.editBtn}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteMeal(meal.id)}
+                          className={styles.deleteBtn}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() =>
+                            setExpandedIngredients((prev) => ({
+                              ...prev,
+                              [meal.id]: !prev[meal.id],
+                            }))
+                          }
+                          className={styles.editBtn}
+                          style={{ marginLeft: "0.5rem" }}
+                        >
+                          {expandedIngredients[meal.id]
+                            ? "Hide Ingredients"
+                            : "Show Ingredients"}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* Expanded ingredients section below mealHeader, inside mealCard */}
+                {expandedIngredients[meal.id] && (
+                  <div className={styles.ingredientSection}>
+                    {mealIngredients[meal.id] &&
+                    mealIngredients[meal.id].length > 0 ? (
+                      <div className={styles.assignedIngredients}>
+                        {mealIngredients[meal.id].map((id) => (
+                          <div key={id} className={styles.ingredientCard}>
+                            <span>{getIngredientName(ingredients, id)}</span>
+                            <button
+                              className={styles.removeBtn}
+                              onClick={() =>
+                                handleRemoveIngredient(meal.id, id)
+                              }
+                              title="Remove ingredient"
+                            >
+                              ×
+                            </button>
                           </div>
-                        ) : (
-                          <div className={styles.assignedIngredients}>
-                            <em>No ingredients assigned</em>
-                          </div>
-                        )}
-                        <div className={styles.ingredientEditRow}>
-                          <select
-                            value={selectedIngredient}
-                            onChange={(e) =>
-                              setSelectedIngredient(e.target.value)
-                            }
-                            className={styles.input}
-                          >
-                            <option value="">Select ingredient...</option>
-                            {ingredients
-                              .filter(
-                                (ing) =>
-                                  !mealIngredients[meal.id]?.includes(ing.id)
-                              )
-                              .map((ingredient) => (
-                                <option
-                                  key={ingredient.id}
-                                  value={ingredient.id}
-                                >
-                                  {ingredient.name}
-                                </option>
-                              ))}
-                          </select>
-                          <button
-                            className={styles.addBtn}
-                            style={{ marginLeft: 8 }}
-                            onClick={() => handleAddIngredient(meal.id)}
-                            disabled={!selectedIngredient}
-                          >
-                            Add
-                          </button>
-                        </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={styles.assignedIngredients}>
+                        <em>No ingredients assigned</em>
                       </div>
                     )}
-                  </>
+                    <div className={styles.ingredientEditRow}>
+                      <select
+                        value={selectedIngredient}
+                        onChange={(e) => setSelectedIngredient(e.target.value)}
+                        className={styles.input}
+                      >
+                        <option value="">Select ingredient...</option>
+                        {ingredients
+                          .filter(
+                            (ing) => !mealIngredients[meal.id]?.includes(ing.id)
+                          )
+                          .map((ingredient) => (
+                            <option key={ingredient.id} value={ingredient.id}>
+                              {ingredient.name}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        className={styles.addBtn}
+                        style={{ marginLeft: 8 }}
+                        onClick={() => handleAddIngredient(meal.id)}
+                        disabled={!selectedIngredient}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ))}
