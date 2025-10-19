@@ -182,15 +182,10 @@ export default function FoodMeals() {
                     </>
                   ) : (
                     <>
-                      <span className={styles.mealName}>{meal.name}</span>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          marginTop: 4,
-                        }}
-                      >
+                      <div className={styles.mealHeaderMain}>
+                        <span className={styles.mealName}>{meal.name}</span>
+                      </div>
+                      <div className={styles.mealHeaderLastEaten}>
                         <span style={{ fontSize: "0.95em", color: "#666" }}>
                           Last eaten:{" "}
                         </span>
