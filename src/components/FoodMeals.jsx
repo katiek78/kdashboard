@@ -10,6 +10,8 @@ function getIngredientName(ingredients, id) {
 }
 
 export default function FoodMeals() {
+  const [editingLastEaten, setEditingLastEaten] = useState({}); // { mealId: true/false }
+  const [lastEatenInput, setLastEatenInput] = useState({}); // { mealId: date string }
   const [meals, setMeals] = useState([]);
   const [newMeal, setNewMeal] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -181,6 +183,100 @@ export default function FoodMeals() {
                   ) : (
                     <>
                       <span className={styles.mealName}>{meal.name}</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          marginTop: 4,
+                        }}
+                      >
+                        <span style={{ fontSize: "0.95em", color: "#666" }}>
+                          Last eaten:{" "}
+                        </span>
+                        {!editingLastEaten[meal.id] ? (
+                          <>
+                            {meal.last_eaten ? meal.last_eaten : <em>never</em>}
+                            <button
+                              className={styles.editBtn}
+                              style={{
+                                marginLeft: 8,
+                                fontSize: "0.9em",
+                                padding: "0.2em 0.7em",
+                              }}
+                              onClick={() => {
+                                setEditingLastEaten((prev) => ({
+                                  ...prev,
+                                  [meal.id]: true,
+                                }));
+                                setLastEatenInput((prev) => ({
+                                  ...prev,
+                                  [meal.id]: meal.last_eaten || "",
+                                }));
+                              }}
+                            >
+                              Edit
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="date"
+                              value={lastEatenInput[meal.id] || ""}
+                              onChange={(e) =>
+                                setLastEatenInput((prev) => ({
+                                  ...prev,
+                                  [meal.id]: e.target.value,
+                                }))
+                              }
+                              style={{
+                                fontSize: "1em",
+                                padding: "0.2em 0.5em",
+                              }}
+                            />
+                            <button
+                              className={styles.saveBtn}
+                              style={{
+                                marginLeft: 6,
+                                fontSize: "0.9em",
+                                padding: "0.2em 0.7em",
+                              }}
+                              onClick={async () => {
+                                await supabase
+                                  .from("meals")
+                                  .update({
+                                    last_eaten: lastEatenInput[meal.id] || null,
+                                  })
+                                  .eq("id", meal.id);
+                                setEditingLastEaten((prev) => ({
+                                  ...prev,
+                                  [meal.id]: false,
+                                }));
+                                fetchMeals();
+                              }}
+                              disabled={!lastEatenInput[meal.id]}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className={styles.cancelBtn}
+                              style={{
+                                marginLeft: 4,
+                                fontSize: "0.9em",
+                                padding: "0.2em 0.7em",
+                              }}
+                              onClick={() =>
+                                setEditingLastEaten((prev) => ({
+                                  ...prev,
+                                  [meal.id]: false,
+                                }))
+                              }
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
                       <div className={styles.mealActions}>
                         <button
                           onClick={() => startEdit(meal)}
