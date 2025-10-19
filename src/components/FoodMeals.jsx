@@ -148,13 +148,6 @@ export default function FoodMeals() {
           Add
         </button>
       </form>
-      <button
-        className={styles.addBtn}
-        style={{ marginBottom: 16 }}
-        onClick={() => setShowMealPlanning((v) => !v)}
-      >
-        {showMealPlanning ? "Hide Meal Planning" : "Meal Planning"}
-      </button>
       {loading ? (
         <div>Loading meals...</div>
       ) : (
@@ -296,7 +289,6 @@ export default function FoodMeals() {
             ))}
         </div>
       )}
-      {showMealPlanning && <MealPlanning />}
     </div>
   );
 }

@@ -2,8 +2,11 @@
 import { useState, useEffect } from "react";
 import supabase from "@/utils/supabaseClient";
 import styles from "./FoodMeals.module.css";
+import Link from "next/link";
 
 export default function MealPlanning() {
+  const [addingNewMeal, setAddingNewMeal] = useState({}); // { dateIso: true/false }
+  const [newMealName, setNewMealName] = useState("");
   const [meals, setMeals] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,17 +45,35 @@ export default function MealPlanning() {
 
   async function handleAssignMeal(date, mealId) {
     setSaving(true);
-    // Remove any existing plan for this date
     const existing = mealPlans.find((mp) => mp.planned_date === date);
     if (existing) {
-      await supabase.from("meal_plans").delete().eq("id", existing.id);
+      // Update the existing plan
+      await supabase
+        .from("meal_plans")
+        .update({ meal_id: mealId })
+        .eq("id", existing.id);
+    } else {
+      // Add new plan
+      await supabase
+        .from("meal_plans")
+        .insert({ meal_id: mealId, planned_date: date });
     }
-    // Add new plan
-    await supabase
-      .from("meal_plans")
-      .insert({ meal_id: mealId, planned_date: date });
     fetchMealPlans();
     setSaving(false);
+  }
+
+  async function handleAddNewMeal(date) {
+    if (!newMealName.trim()) return;
+    const { data, error } = await supabase
+      .from("meals")
+      .insert({ name: newMealName })
+      .select();
+    if (!error && data && data[0]) {
+      await handleAssignMeal(date, data[0].id);
+      setNewMealName("");
+      setAddingNewMeal((prev) => ({ ...prev, [date]: false }));
+      fetchMeals();
+    }
   }
 
   function getMealName(mealId) {
@@ -62,6 +83,19 @@ export default function MealPlanning() {
 
   return (
     <div className={styles.mealsContainer}>
+      <div style={{ marginBottom: 16 }}>
+        <Link
+          href="/food"
+          style={{
+            color: "#fbbf24",
+            textDecoration: "underline",
+            fontWeight: "bold",
+            fontSize: "1.1rem",
+          }}
+        >
+          ← Back to Food Page
+        </Link>
+      </div>
       <h2 className={styles.title}>Meal Planning</h2>
       {loading ? (
         <div>Loading...</div>
@@ -76,24 +110,66 @@ export default function MealPlanning() {
                   <div className={styles.mealActions}>
                     <select
                       value={plan?.meal_id || ""}
-                      onChange={(e) =>
-                        handleAssignMeal(date.iso, e.target.value)
-                      }
+                      onChange={(e) => {
+                        if (e.target.value === "__new__") {
+                          setAddingNewMeal((prev) => ({
+                            ...prev,
+                            [date.iso]: true,
+                          }));
+                        } else {
+                          setAddingNewMeal((prev) => ({
+                            ...prev,
+                            [date.iso]: false,
+                          }));
+                          handleAssignMeal(date.iso, e.target.value);
+                        }
+                      }}
                       className={styles.input}
                       disabled={saving}
                     >
                       <option value="">Select meal...</option>
+                      <option value="__new__">Add new...</option>
                       {meals.map((meal) => (
                         <option key={meal.id} value={meal.id}>
                           {meal.name}
                         </option>
                       ))}
                     </select>
+                    {addingNewMeal[date.iso] && (
+                      <div style={{ display: "inline-block", marginLeft: 8 }}>
+                        <input
+                          type="text"
+                          value={newMealName}
+                          onChange={(e) => setNewMealName(e.target.value)}
+                          placeholder="New meal name"
+                          className={styles.input}
+                          style={{ width: 140 }}
+                        />
+                        <button
+                          className={styles.addBtn}
+                          style={{ marginLeft: 8 }}
+                          onClick={() => handleAddNewMeal(date.iso)}
+                          disabled={!newMealName.trim()}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {plan && (
                   <div style={{ marginTop: "0.5rem" }}>
-                    <strong>Planned meal:</strong> {getMealName(plan.meal_id)}
+                    <strong>Planned meal:</strong>{" "}
+                    <Link
+                      href={`/food?mealId=${plan.meal_id}`}
+                      style={{
+                        color: "#fbbf24",
+                        textDecoration: "underline",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {getMealName(plan.meal_id)}
+                    </Link>
                   </div>
                 )}
               </div>
