@@ -1,0 +1,61 @@
+.tagsContainer {
+  background: #23272f;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.title {
+  color: #fbbf24;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+.addTagForm {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.input {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #181a20;
+  color: #fff;
+  font-size: 1rem;
+}
+.colorInput {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.addBtn {
+  background: #fbbf24;
+  color: #23272f;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.addBtn:disabled {
+  background: #888;
+  color: #ccc;
+  cursor: not-allowed;
+}
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 16px;
+  color: #23272f;
+  font-weight: 500;
+  background: #fbbf24;
+  font-size: 1rem;
+}
