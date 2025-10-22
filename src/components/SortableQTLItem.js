@@ -7,6 +7,7 @@ import {
   faBan,
   faPen,
   faStar,
+  faArrowCircleRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -27,6 +28,7 @@ function SortableQTLItem({
   rowIndex = 0,
   onEdit,
   isEditing,
+  onPostpone,
   editValues,
   setEditValues,
   onSaveEdit,
@@ -186,6 +188,14 @@ function SortableQTLItem({
               style={{ color: "#333" }}
             >
               <FontAwesomeIcon icon={faPen} />
+            </button>
+            <button
+              title="Postpone 1 week"
+              onClick={() => onPostpone(id, 7)}
+              className={styles.qtlTileBtnMobile}
+              style={{ color: "#333" }}
+            >
+              <FontAwesomeIcon icon={faArrowCircleRight} />
             </button>
             <button
               title={blocked ? "Unblock task" : "Block task"}

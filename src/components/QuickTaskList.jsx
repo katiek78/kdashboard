@@ -697,6 +697,28 @@ const QuickTaskList = () => {
     }
   }
 
+  async function handlePostpone(id, days) {
+    console.log("Postponing task", id, "by", days, "days");
+    const t = tasks.find((task) => task.id === id);
+    if (!t) return;
+    const newDue = new Date(t.next_due);
+    //set to days from today
+    newDue.setDate(new Date().getDate() + days);
+    await supabase
+      .from("quicktasks")
+      .update({ next_due: newDue.toISOString().slice(0, 10) })
+      .eq("id", id);
+
+    // Update task state locally instead of refetching all tasks
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === id
+          ? { ...task, next_due: newDue.toISOString().slice(0, 10) }
+          : task
+      )
+    );
+  }
+
   function pickRandomTask() {
     // Only pick from visible tasks that are not blocked
     const unblocked = visibleTasks.filter((t) => !t.blocked);
@@ -755,7 +777,9 @@ const QuickTaskList = () => {
           onBlur={handleRepeatBlur}
           placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc)"
         />
-  <button className={styles.qtlButton} onClick={addTask}>Add Task</button>
+        <button className={styles.qtlButton} onClick={addTask}>
+          Add Task
+        </button>
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
         Total tasks for today: {visibleTasks?.length}
@@ -771,7 +795,9 @@ const QuickTaskList = () => {
           </span>
         )} */}
       </div>
-  <button className={styles.qtlButton} onClick={pickRandomTask}>Pick Random Task</button>
+      <button className={styles.qtlButton} onClick={pickRandomTask}>
+        Pick Random Task
+      </button>
 
       {loading ? (
         <div>Loading...</div>
@@ -808,6 +834,7 @@ const QuickTaskList = () => {
                   onPlay={playTask}
                   onToggleBlocked={toggleBlocked}
                   onToggleUrgent={toggleUrgent}
+                  onPostpone={handlePostpone}
                   highlight={task.id === randomTaskId}
                   onEdit={onEdit}
                   isEditing={editingId === task.id}
