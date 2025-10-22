@@ -18,19 +18,15 @@
   
   .workButton {
     background: #fbbf24;
-    color: black;
+    color: #000;
   }
-.taskContainer {
+  .taskContainer {
     background: repeating-linear-gradient(
-        to bottom,
-        /* #f3f7d4 0 10px,
-        #eea4a4 10px 12px,
-        #f3f7d4 12px 23px
-         */
-         #fafce8 0 10px,
-    #fbdcdc 10px 12px,
-    #fafce8 12px 23px
-      );
+      to bottom,
+      #fafce8 0 10px,
+      #fbdcdc 10px 12px,
+      #fafce8 12px 23px
+    );
   }
 
   .quickTaskList {
@@ -40,28 +36,21 @@
   }
 
   @media (prefers-color-scheme: dark) {
-  .qtlButton {
-    background: #222 !important;
-    color: #f3f3f3 !important;
-    border: 1px solid #444 !important;
+    .qtlButton:hover {
+      background: #333 !important;
+      color: #fff !important;
+      border: 1px solid #666 !important;
+    }
+    .taskContainer {
+      background: repeating-linear-gradient(
+        to bottom,
+        #222 0 10px,
+        #292649 10px 12px,
+        #222 12px 23px
+      ) !important;
+      color: #f3f3f3;
+    }
+    .quickTaskList {
+      background: none !important;
+    }
   }
-  .qtlButton:hover {
-    background: #333 !important;
-    color: #fff !important;
-    border: 1px solid #666 !important;
-  }
-  .taskContainer,
-  .taskContainer * {
-    color: #f3f3f3 !important;
-  }
-  .quickTaskList {
-    background: repeating-linear-gradient(
-        to bottom,       
-         #333 0 10px,
-    #8888dd 10px 12px,
-    #333 12px 23px
-      );
-  }
-
-
-}

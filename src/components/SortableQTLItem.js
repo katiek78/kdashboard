@@ -261,12 +261,9 @@ function SortableQTLItem({
                 onPlay(id);
               }}
               className={styles.qtlTileBtnMobile}
+              style={{ color: "#333" }}
             >
-              <FontAwesomeIcon
-                icon={faPlay}
-                size="lg"
-                style={{ color: "black" }}
-              />
+              <FontAwesomeIcon icon={faPlay} size="lg" />
             </button>
             <button
               title="Delete"
