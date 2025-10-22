@@ -8,10 +8,17 @@
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
   }
+
   .qtlButton:hover {
     background: #fbdcdc;
     color: #222;
     border: 1px solid #888;
+  }
+
+  
+  .workButton {
+    background: #fbbf24;
+    color: black;
   }
 .taskContainer {
     background: repeating-linear-gradient(

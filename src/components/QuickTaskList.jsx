@@ -229,6 +229,21 @@ const QuickTaskList = () => {
         // but clear our state first to prevent conflicts
         setCompletingTaskId(null);
         await deleteTask(id);
+
+        // Delete any tag relations for this task
+        const { error: tagRelError } = await supabase
+          .from("quicktasks_task_tags")
+          .delete()
+          .eq("quicktask_id", id);
+        if (tagRelError) {
+          console.error(
+            "Error deleting tag relations for task:",
+            id,
+            tagRelError
+          );
+          // Not fatal, continue
+        }
+
         return;
       }
 
@@ -722,6 +737,20 @@ const QuickTaskList = () => {
         console.log("No subtasks found for task:", id);
       }
 
+      // Delete any tag relations for this task
+      const { error: tagRelError } = await supabase
+        .from("quicktasks_task_tags")
+        .delete()
+        .eq("quicktask_id", id);
+      if (tagRelError) {
+        console.error(
+          "Error deleting tag relations for task:",
+          id,
+          tagRelError
+        );
+        // Not fatal, continue
+      }
+
       // Now delete the main task
       const { error } = await supabase.from("quicktasks").delete().eq("id", id);
 
@@ -763,10 +792,42 @@ const QuickTaskList = () => {
     );
   }
 
-  function pickRandomTask() {
+  async function pickRandomTask(tag = "") {
     // Only pick from visible tasks that are not blocked
     const unblocked = visibleTasks.filter((t) => !t.blocked);
     if (unblocked.length === 0) return;
+
+    if (tag) {
+      // If tag is a string (name), resolve to tag_id
+      let tagId = tag;
+      if (typeof tag === "string" && isNaN(Number(tag))) {
+        const foundTag = tags.find((t) => t.name === tag);
+        if (!foundTag) {
+          console.warn("Tag name not found:", tag);
+          return;
+        }
+        tagId = foundTag.id;
+      }
+      // Fetch quicktasks_task_tags for these tasks
+      const ids = unblocked.map((t) => t.id);
+      const { data: tagLinks, error } = await supabase
+        .from("quicktasks_task_tags")
+        .select("quicktask_id, tag_id")
+        .in("quicktask_id", ids)
+        .eq("tag_id", tagId);
+      if (error) {
+        console.error("Error fetching tag links:", error);
+        return;
+      }
+      const taggedIds = tagLinks.map((l) => l.quicktask_id);
+      const taggedTasks = unblocked.filter((t) => taggedIds.includes(t.id));
+      console.log("taggedTasks:", taggedTasks);
+      if (taggedTasks.length === 0) return;
+      const randomIdx = Math.floor(Math.random() * taggedTasks.length);
+      setRandomTaskId(taggedTasks[randomIdx].id);
+      return;
+    }
+
     const urgent = unblocked.filter((t) => t.urgent);
     const nonUrgent = unblocked.filter((t) => !t.urgent);
     let pool = unblocked;
@@ -854,6 +915,12 @@ const QuickTaskList = () => {
       </div>
       <button className={styles.qtlButton} onClick={pickRandomTask}>
         Pick Random Task
+      </button>
+      <button
+        className={styles.qtlButton + " " + styles.workButton}
+        onClick={() => pickRandomTask("Work")}
+      >
+        Pick Random Work Task
       </button>
 
       {loading ? (
