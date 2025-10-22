@@ -138,6 +138,7 @@ const QuickTaskList = () => {
 
   async function onSaveEdit(id) {
     const vals = editValuesMap[id];
+    const tagId = editTagIdMap[id] || "";
     const today = new Date();
     const todayStr = today.toISOString().slice(0, 10);
     let repeat = typeof vals.repeat === "string" ? vals.repeat.trim() : null;
@@ -181,6 +182,25 @@ const QuickTaskList = () => {
             task.id === id ? { ...task, ...data[0] } : task
           )
         );
+      }
+    }
+
+    // --- Persist tag relation ---
+    // Remove any existing tag relation for this task
+    const { error: delTagError } = await supabase
+      .from("quicktasks_task_tags")
+      .delete()
+      .eq("quicktask_id", id);
+    if (delTagError) {
+      console.error("Error deleting old tag relation:", delTagError);
+    }
+    // Insert new tag relation if a tag is selected
+    if (tagId) {
+      const { error: insTagError } = await supabase
+        .from("quicktasks_task_tags")
+        .insert({ quicktask_id: id, tag_id: tagId });
+      if (insTagError) {
+        console.error("Error inserting new tag relation:", insTagError);
       }
     }
     setEditingId(null);
