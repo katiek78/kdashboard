@@ -817,7 +817,7 @@ const QuickTaskList = () => {
     const unblocked = visibleTasks.filter((t) => !t.blocked);
     if (unblocked.length === 0) return;
 
-    if (tag) {
+    if (tag.length > 0) {
       // If tag is a string (name), resolve to tag_id
       let tagId = tag;
       if (typeof tag === "string" && isNaN(Number(tag))) {
@@ -935,6 +935,12 @@ const QuickTaskList = () => {
       </div>
       <button className={styles.qtlButton} onClick={pickRandomTask}>
         Pick Random Task
+      </button>
+      <button
+        className={styles.qtlButton + " " + styles.memoryButton}
+        onClick={() => pickRandomTask("Memory")}
+      >
+        Pick Random Memory Task
       </button>
       <button
         className={styles.qtlButton + " " + styles.workButton}

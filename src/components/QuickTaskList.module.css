@@ -20,6 +20,11 @@
     background: #fbbf24;
     color: #000;
   }
+
+   .memoryButton {
+    background: #1bdedb;
+    color: #000;
+  }
   .taskContainer {
     background: repeating-linear-gradient(
       to bottom,
