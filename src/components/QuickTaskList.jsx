@@ -37,6 +37,10 @@ const QuickTaskList = () => {
   );
   const [newRepeat, setNewRepeat] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [newTagId, setNewTagId] = useState("");
+  const [editTagIdMap, setEditTagIdMap] = useState({});
+
   const [randomTaskId, setRandomTaskId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editValuesMap, setEditValuesMap] = useState({});
@@ -46,6 +50,15 @@ const QuickTaskList = () => {
   const titleInputRef = useRef(null);
   const dueInputRef = useRef(null);
   const repeatInputRef = useRef(null);
+
+  // Fetch tags for tag selection
+  useEffect(() => {
+    async function fetchTags() {
+      const { data, error } = await supabase.from("task_tags").select();
+      if (!error) setTags(data || []);
+    }
+    fetchTags();
+  }, []);
 
   // Use onBlur instead of onChange for better performance
   const handleTitleBlur = useCallback((e) => {
@@ -579,12 +592,35 @@ const QuickTaskList = () => {
 
   async function fetchTasks() {
     setLoading(true);
-    const { data, error, count } = await supabase
+    // Fetch tasks
+    const { data, error } = await supabase
       .from("quicktasks")
       .select("*", { count: "exact" })
       .order("order", { ascending: true });
-    if (!error) {
-      setTasks(data);
+    if (!error && data) {
+      // Fetch tag relations for all tasks
+      const ids = data.map((t) => t.id);
+      let tagMap = {};
+      if (ids.length > 0) {
+        const { data: tagLinks } = await supabase
+          .from("quicktasks_task_tags")
+          .select("quicktask_id, tag_id");
+        if (tagLinks) {
+          tagLinks.forEach((link) => {
+            tagMap[link.quicktask_id] = link.tag_id;
+          });
+        }
+      }
+      // Attach tagId to each task
+      setTasks(data.map((t) => ({ ...t, tagId: tagMap[t.id] || "" })));
+      // Set editTagIdMap for editing
+      setEditTagIdMap((prev) => {
+        const newMap = { ...prev };
+        data.forEach((t) => {
+          newMap[t.id] = tagMap[t.id] || "";
+        });
+        return newMap;
+      });
     }
     setLoading(false);
   }
@@ -618,9 +654,17 @@ const QuickTaskList = () => {
       const newTask = data[0];
       setTasks((prevTasks) => [...prevTasks, newTask]);
 
+      // Save tag relation if tag selected
+      if (newTagId) {
+        await supabase
+          .from("quicktasks_task_tags")
+          .insert({ quicktask_id: newTask.id, tag_id: newTagId });
+      }
+
       setNewTitle("");
       setNewDue(new Date().toISOString().slice(0, 10));
       setNewRepeat("");
+      setNewTagId("");
 
       // Clear the input fields manually since we're using defaultValue
       if (titleInputRef.current) titleInputRef.current.value = "";
@@ -777,6 +821,19 @@ const QuickTaskList = () => {
           onBlur={handleRepeatBlur}
           placeholder="Repeat (e.g. daily, weekly, 2w, 1m, Mon, 1st, 07/10, etc)"
         />
+        <select
+          value={newTagId}
+          onChange={(e) => setNewTagId(e.target.value)}
+          className={styles.input}
+          style={{ marginLeft: 8 }}
+        >
+          <option value="">No tag</option>
+          {tags.map((tag) => (
+            <option key={tag.id} value={tag.id}>
+              {tag.name}
+            </option>
+          ))}
+        </select>
         <button className={styles.qtlButton} onClick={addTask}>
           Add Task
         </button>
@@ -859,6 +916,11 @@ const QuickTaskList = () => {
                   }
                   onSaveEdit={onSaveEdit}
                   onCancelEdit={onCancelEdit}
+                  tags={tags}
+                  editTagId={editTagIdMap[task.id] || ""}
+                  setEditTagId={(tagId) =>
+                    setEditTagIdMap((prev) => ({ ...prev, [task.id]: tagId }))
+                  }
                   onComplete={completeTask}
                   rowIndex={idx}
                 />

@@ -34,6 +34,9 @@ function SortableQTLItem({
   onSaveEdit,
   onCancelEdit,
   onComplete,
+  tags = [],
+  editTagId = "",
+  setEditTagId = () => {},
 }) {
   const [subtasksExpanded, setSubtasksExpanded] = useState(false);
 
@@ -69,6 +72,11 @@ function SortableQTLItem({
   };
 
   // All static styles are now in the CSS module
+
+  // Find tag for this task
+  const tag =
+    tags.find((t) => t.id == editTagId) ||
+    tags.find((t) => t.id == (typeof id === "number" ? id.tagId : undefined));
 
   return (
     <div
@@ -109,6 +117,19 @@ function SortableQTLItem({
             placeholder="Repeat"
             className={styles.editInputRepeat}
           />
+          <select
+            value={editTagId}
+            onChange={(e) => setEditTagId(e.target.value)}
+            className={styles.editInput}
+            style={{ marginLeft: 8 }}
+          >
+            <option value="">No tag</option>
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.id}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
           <div className={styles.editBtnBar}>
             <button onClick={handleSave} className={styles.editBtn}>
               Save
@@ -127,6 +148,28 @@ function SortableQTLItem({
                 style={{ color: "#d00", fontSize: 20, marginRight: 2 }}
                 title="High priority"
               />
+            )}
+            {/* Tag badge (view mode) */}
+            {!isEditing && tag && tag.name && (
+              <span
+                style={{
+                  display: "inline-block",
+                  background: tag.colour,
+                  color: "#23272f",
+                  borderRadius: 6,
+                  border: "3px solid #111",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  width: 24,
+                  height: 24,
+                  textAlign: "center",
+                  lineHeight: "24px",
+                  marginRight: 8,
+                }}
+                title={tag.name}
+              >
+                {tag.name[0]}
+              </span>
             )}
             <span className={styles.qtlTitleText}>
               {title}
