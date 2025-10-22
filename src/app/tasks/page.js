@@ -30,6 +30,21 @@ export default function TasksPage() {
           >
             Board View
           </Link>
+          <Link
+            href="/tasks/tags"
+            style={{
+              marginLeft: "12px",
+              padding: "8px 16px",
+              background: "#fbbf24",
+              color: "#23272f",
+              textDecoration: "none",
+              borderRadius: "4px",
+              fontSize: "14px",
+              fontWeight: "normal",
+            }}
+          >
+            Task Tags
+          </Link>
         </div>
         <QuickTaskList />
       </main>
