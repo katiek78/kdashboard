@@ -138,3 +138,32 @@
 .musicContainer::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(to bottom, #9370db, #da70d6);
 }
+
+/* Navigation section */
+.navigationSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.chartLink {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.chartLink:hover {
+  transform: translateY(-4px);
+}
+
+.chartLink .card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(186, 85, 211, 0.4);
+}
+
+.chartLink:hover .card {
+  border-color: rgba(186, 85, 211, 0.8);
+  box-shadow: 0 12px 40px rgba(186, 85, 211, 0.3);
+}
