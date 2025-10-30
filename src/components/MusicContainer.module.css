@@ -1,0 +1,140 @@
+.musicContainer {
+  background: linear-gradient(135deg, #2d1537 0%, #5b2c6f 50%, #2d1537 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle disco grid background */
+.musicContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(186, 85, 211, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(186, 85, 211, 0.15) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Neon glow accents */
+.musicContainer::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: -10%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(186, 85, 211, 0.4) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: subtleFloat 8s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* Content wrapper to ensure it's above background effects */
+.musicContainer > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Subtle floating animation */
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  33% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  66% {
+    transform: translateY(10px) translateX(-5px);
+  }
+}
+
+/* Text styles for disco theme */
+.musicContainer h1,
+.musicContainer h2,
+.musicContainer h3 {
+  color: #e879f9;
+  text-shadow: 0 0 10px rgba(232, 121, 249, 0.5);
+  font-family: 'Arial', sans-serif;
+  font-weight: bold;
+}
+
+.musicContainer p,
+.musicContainer span {
+  color: #c4b5fd;
+}
+
+/* Button styles for the theme */
+.musicContainer button {
+  background: linear-gradient(45deg, #8b5a9f, #ba55d3);
+  border: 2px solid #da70d6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(186, 85, 211, 0.4);
+}
+
+.musicContainer button:hover {
+  background: linear-gradient(45deg, #9370db, #da70d6);
+  box-shadow: 0 6px 20px rgba(186, 85, 211, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Card/panel styles */
+.musicContainer .card {
+  background: rgba(45, 21, 55, 0.8);
+  border: 1px solid rgba(186, 85, 211, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Input styles */
+.musicContainer input,
+.musicContainer select,
+.musicContainer textarea {
+  background: rgba(45, 21, 55, 0.9);
+  border: 2px solid rgba(186, 85, 211, 0.4);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #e879f9;
+  font-size: 1rem;
+}
+
+.musicContainer input:focus,
+.musicContainer select:focus,
+.musicContainer textarea:focus {
+  outline: none;
+  border-color: #ba55d3;
+  box-shadow: 0 0 0 3px rgba(186, 85, 211, 0.2);
+}
+
+/* Scrollbar styling */
+.musicContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.musicContainer::-webkit-scrollbar-track {
+  background: rgba(45, 21, 55, 0.5);
+  border-radius: 4px;
+}
+
+.musicContainer::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5a9f, #ba55d3);
+  border-radius: 4px;
+}
+
+.musicContainer::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #9370db, #da70d6);
+}
