@@ -1,9 +1,15 @@
 import styles from "./ChartsView.module.css";
+import Link from "next/link";
 
 export default function ChartsView() {
   return (
     <div className={styles.chartsContainer}>
-      <h1>Charts</h1>
+      <div className={styles.header}>
+        <Link href="/music" className={styles.backLink}>
+          ← Back to Music
+        </Link>
+        <h1>Charts</h1>
+      </div>
 
       <div className={styles.chartsGrid}>
         <div className={styles.chartCard}>
