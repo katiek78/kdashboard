@@ -30,7 +30,7 @@
   background: white;
   border: 2px solid #e8f5e8;
   border-radius: 8px;
-  padding: 1rem 0.75rem;
+  padding: 0.75rem 0.5rem;
   text-align: center;
   font-size: 0.9rem;
   color: #1b5e20;
@@ -39,6 +39,31 @@
   font-weight: 500;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.monthName {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.colourStripe {
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 2rem;
 }
 
 .item::before {
