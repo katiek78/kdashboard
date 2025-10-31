@@ -73,11 +73,11 @@ export default function CalendarMonths() {
   const handleSaveColour = async (updatedMonth) => {
     try {
       await upsertMonthColour(updatedMonth);
-      
+
       // Update the local state
-      setMonthsData(prevData => 
-        prevData.map(month => 
-          month.month_number === updatedMonth.month_number 
+      setMonthsData((prevData) =>
+        prevData.map((month) =>
+          month.month_number === updatedMonth.month_number
             ? { ...month, ...updatedMonth }
             : month
         )
@@ -105,8 +105,8 @@ export default function CalendarMonths() {
         <h3 className={styles.sectionTitle}>Months</h3>
         <div className={styles.grid}>
           {monthsData.map((month) => (
-            <div 
-              key={month.month_number} 
+            <div
+              key={month.month_number}
               className={styles.item}
               onClick={() => handleMonthClick(month)}
             >
@@ -122,7 +122,7 @@ export default function CalendarMonths() {
           ))}
         </div>
       </div>
-      
+
       <MonthColourModal
         isOpen={modalOpen}
         onClose={handleModalClose}

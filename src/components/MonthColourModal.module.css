@@ -9,7 +9,9 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 2rem; /* Increased padding to reduce accidental clicks */
+  overscroll-behavior: none; /* Prevent navigation gestures */
+  overscroll-behavior-x: none; /* Specifically prevent horizontal navigation */
 }
 
 .modal {
@@ -20,6 +22,9 @@
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  position: relative;
+  margin: 1rem; /* Add margin to create buffer zone */
+  overscroll-behavior: contain; /* Contain scrolling within modal */
 }
 
 .header {
@@ -116,6 +121,7 @@
   border-radius: 6px;
   font-size: 0.9rem;
   transition: border-color 0.2s ease;
+  user-select: text; /* Ensure text selection works */
 }
 
 .input:focus {
