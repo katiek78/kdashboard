@@ -8,11 +8,16 @@
 
 .sectionTitle {
   font-size: 1.3rem;
-  font-weight: 400;
-  color: #34495e;
+  font-weight: 600;
+  color: #ef6c00;
   margin: 0 0 1.5rem 0;
   text-align: center;
   letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #ef6c00;
+  box-shadow: 0 2px 8px rgba(239, 108, 0, 0.1);
 }
 
 .grid {
@@ -22,13 +27,13 @@
 }
 
 .item {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 1px solid #dee2e6;
+  background: white;
+  border: 2px solid #fff3e0;
   border-radius: 8px;
   padding: 0.75rem 0.5rem;
   text-align: center;
   font-size: 0.9rem;
-  color: #495057;
+  color: #e65100;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
@@ -36,6 +41,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ef6c00, #ff9800);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.item:hover::before {
+  transform: scaleX(1);
 }
 
 .item:hover {
