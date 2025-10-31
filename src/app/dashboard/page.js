@@ -20,6 +20,8 @@ import {
   faLeaf,
   faEarthAmericas,
   faUtensils,
+  faCalendarDay,
+  faNoteSticky,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
@@ -36,7 +38,7 @@ export default function Dashboard() {
           <div className="cardParent">
             <div className="card segmentCard">
               <Link href="/tasks">
-                <FontAwesomeIcon icon={faCalendar} /> Tasks
+                <FontAwesomeIcon icon={faNoteSticky} /> Tasks
               </Link>
             </div>
             <div className="card segmentCard">
@@ -56,6 +58,11 @@ export default function Dashboard() {
             <div className="card segmentCard">
               <Link href="/number-locations">
                 <FontAwesomeIcon icon={faListOl} /> Number locations
+              </Link>
+            </div>
+            <div className="card segmentCard">
+              <Link href="/calendar-locations">
+                <FontAwesomeIcon icon={faCalendar} /> Calendar locations
               </Link>
             </div>
             <div className="card segmentCard">
@@ -84,7 +91,7 @@ export default function Dashboard() {
             </div>
             <div className="card segmentCard">
               <Link href="/calendar-calc">
-                <FontAwesomeIcon icon={faCalendar} /> Calendar Calculation
+                <FontAwesomeIcon icon={faCalendarDay} /> Calendar calculation
               </Link>
             </div>
             <div className="card segmentCard">
