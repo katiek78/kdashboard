@@ -1,0 +1,190 @@
+.chartListContainer {
+  background: linear-gradient(135deg, #2d1537 0%, #5b2c6f 50%, #2d1537 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Inherit the disco grid background */
+.chartListContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(186, 85, 211, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(186, 85, 211, 0.15) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chartListContainer > * {
+  position: relative;
+  z-index: 2;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.backLink {
+  justify-self: start;
+  color: #e879f9;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: 2px solid rgba(186, 85, 211, 0.4);
+  border-radius: 8px;
+  background: rgba(45, 21, 55, 0.6);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.backLink:hover {
+  background: rgba(45, 21, 55, 0.8);
+  border-color: rgba(186, 85, 211, 0.8);
+  box-shadow: 0 4px 15px rgba(186, 85, 211, 0.3);
+  transform: translateY(-2px);
+}
+
+.chartListContainer h1 {
+  color: #e879f9;
+  text-shadow: 0 0 10px rgba(232, 121, 249, 0.5);
+  font-family: 'Arial', sans-serif;
+  font-weight: bold;
+  text-align: center;
+  margin: 0;
+  font-size: 2.5rem;
+  justify-self: center;
+}
+
+.loading {
+  text-align: center;
+  color: #c4b5fd;
+  font-size: 1.2rem;
+  margin: 2rem 0;
+}
+
+.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.chartTable {
+  background: rgba(45, 21, 55, 0.8);
+  border: 2px solid rgba(186, 85, 211, 0.4);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.tableHeader {
+  display: grid;
+  grid-template-columns: 150px 1fr 1fr;
+  background: rgba(186, 85, 211, 0.2);
+  border-bottom: 2px solid rgba(186, 85, 211, 0.4);
+}
+
+.headerCell {
+  padding: 1rem;
+  color: #e879f9;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-shadow: 0 0 5px rgba(232, 121, 249, 0.3);
+}
+
+.tableBody {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 150px 1fr 1fr;
+  border-bottom: 1px solid rgba(186, 85, 211, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+.tableRow:hover {
+  background: rgba(186, 85, 211, 0.1);
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.tableCell {
+  padding: 0.75rem 1rem;
+  color: #c4b5fd;
+  border-right: 1px solid rgba(186, 85, 211, 0.1);
+}
+
+.tableCell:last-child {
+  border-right: none;
+}
+
+.noEntries {
+  padding: 2rem;
+  text-align: center;
+  color: #c4b5fd;
+  font-size: 1.1rem;
+}
+
+/* Scrollbar styling for table body */
+.tableBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tableBody::-webkit-scrollbar-track {
+  background: rgba(45, 21, 55, 0.5);
+  border-radius: 4px;
+}
+
+.tableBody::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5a9f, #ba55d3);
+  border-radius: 4px;
+}
+
+.tableBody::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #9370db, #da70d6);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .chartListContainer {
+    padding: 1rem;
+  }
+  
+  .chartListContainer h1 {
+    font-size: 2rem;
+  }
+  
+  .tableHeader,
+  .tableRow {
+    grid-template-columns: 100px 1fr 1fr;
+  }
+  
+  .headerCell,
+  .tableCell {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .tableBody {
+    max-height: 60vh;
+  }
+}

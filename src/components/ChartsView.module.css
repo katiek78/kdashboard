@@ -126,3 +126,94 @@
     font-size: 2rem;
   }
 }
+
+/* Chart link styles */
+.chartLink {
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.chartLink:hover {
+  transform: translateY(-4px);
+}
+
+.chartLink .chartCard {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.chartLink:hover .chartCard {
+  border-color: rgba(186, 85, 211, 0.8);
+  box-shadow: 0 12px 40px rgba(186, 85, 211, 0.3);
+}
+
+/* Import functionality styles */
+.importTextarea {
+  width: 100%;
+  min-height: 150px;
+  background: rgba(45, 21, 55, 0.9);
+  border: 2px solid rgba(186, 85, 211, 0.4);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #e879f9;
+  font-size: 0.9rem;
+  font-family: monospace;
+  resize: vertical;
+  margin: 1rem 0;
+}
+
+.importTextarea:focus {
+  outline: none;
+  border-color: #ba55d3;
+  box-shadow: 0 0 0 3px rgba(186, 85, 211, 0.2);
+}
+
+.importTextarea::placeholder {
+  color: rgba(196, 181, 253, 0.6);
+}
+
+.importButton {
+  background: linear-gradient(45deg, #8b5a9f, #ba55d3);
+  border: 2px solid #da70d6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(186, 85, 211, 0.4);
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.importButton:hover:not(:disabled) {
+  background: linear-gradient(45deg, #9370db, #da70d6);
+  box-shadow: 0 6px 20px rgba(186, 85, 211, 0.6);
+  transform: translateY(-2px);
+}
+
+.importButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.importResult {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.importResult.success {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.importResult.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
