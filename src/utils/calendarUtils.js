@@ -41,3 +41,45 @@ export async function upsertMonthColour(monthData) {
     throw error;
   }
 }
+
+// Fetch all month days
+export async function fetchMonthDays() {
+  try {
+    const { data, error } = await supabase
+      .from("calendar_month_days")
+      .select("*")
+      .order("day_number");
+
+    if (error) {
+      console.error("Error fetching month days:", error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching month days:", error);
+    return null;
+  }
+}
+
+// Upsert a month day object
+export async function upsertMonthDay(dayData) {
+  try {
+    const { data, error } = await supabase
+      .from("calendar_month_days")
+      .upsert(dayData, {
+        onConflict: "day_number",
+        returning: "minimal",
+      });
+
+    if (error) {
+      console.error("Error upserting month day:", error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error upserting month day:", error);
+    throw error;
+  }
+}
