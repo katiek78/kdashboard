@@ -26,7 +26,7 @@ export default function CalendarMonthDays() {
   };
 
   const handleDayClick = (dayNumber) => {
-    console.log('Day clicked:', dayNumber);
+    console.log("Day clicked:", dayNumber);
     setSelectedDay(dayNumber);
     setIsModalOpen(true);
   };
@@ -34,18 +34,18 @@ export default function CalendarMonthDays() {
   const handleSaveDay = async (dayNumber, objectText) => {
     const dayData = {
       day_number: dayNumber,
-      object_text: objectText
+      object_text: objectText,
     };
 
     try {
       await upsertMonthDay(dayData);
-      setMonthDays(prev => ({
+      setMonthDays((prev) => ({
         ...prev,
-        [dayNumber]: objectText
+        [dayNumber]: objectText,
       }));
       setIsModalOpen(false);
     } catch (error) {
-      console.error('Error saving month day:', error);
+      console.error("Error saving month day:", error);
     }
   };
 
@@ -83,13 +83,18 @@ export default function CalendarMonthDays() {
           isOpen={isModalOpen}
           dayData={{
             day_number: selectedDay,
-            object_text: monthDays[selectedDay] || ''
+            object_text: monthDays[selectedDay] || "",
           }}
           onSave={handleModalSave}
           onClose={() => setIsModalOpen(false)}
         />
       )}
-      {console.log('Modal state - isModalOpen:', isModalOpen, 'selectedDay:', selectedDay)}
+      {console.log(
+        "Modal state - isModalOpen:",
+        isModalOpen,
+        "selectedDay:",
+        selectedDay
+      )}
     </div>
   );
 }
