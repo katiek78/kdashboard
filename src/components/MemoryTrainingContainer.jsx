@@ -38,87 +38,157 @@ export default function MemoryTrainingContainer() {
       setCompImportStatus("No valid rows found.");
       return;
     }
+
+    const total = rows.length;
     let success = 0,
       fail = 0,
       skipped = 0;
-    const total = rows.length;
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const currentIndex = i + 1;
+    try {
+      // Step 1: Batch fetch all existing data we need (in chunks to avoid query limits)
+      setCompImportStatus("Fetching existing data...");
+      const numStrings = rows.map((r) => r.num_string);
 
-      // Update progress status
-      setCompImportStatus(`Processing ${currentIndex} of ${total} items...`);
-      // Ensure numberstring exists
-      const { data: nsData } = await supabase
-        .from("numberstrings")
-        .select("num_string")
-        .eq("num_string", row.num_string)
-        .maybeSingle();
-      if (!nsData) {
-        const { error: nsInsertErr } = await supabase
+      const existingNs = new Set();
+      const existingComp = new Map();
+      const trickyFlags = new Map();
+
+      // Process in chunks of 1000 to avoid database query limits
+      const chunkSize = 1000;
+      for (let i = 0; i < numStrings.length; i += chunkSize) {
+        const chunk = numStrings.slice(i, i + chunkSize);
+        const progress = Math.min(i + chunkSize, numStrings.length);
+        setCompImportStatus(
+          `Fetching existing data... ${progress}/${numStrings.length}`
+        );
+
+        const [existingNsResult, existingCompResult, trickyResult] =
+          await Promise.all([
+            supabase
+              .from("numberstrings")
+              .select("num_string")
+              .in("num_string", chunk),
+            supabase
+              .from("comp_images")
+              .select("num_string, comp_image")
+              .in("num_string", chunk),
+            supabase
+              .from("numberstrings")
+              .select("num_string, four_digit_ben_tricky")
+              .in("num_string", chunk),
+          ]);
+
+        // Add to our sets/maps
+        (existingNsResult.data || []).forEach((r) =>
+          existingNs.add(r.num_string)
+        );
+        (existingCompResult.data || []).forEach((r) =>
+          existingComp.set(r.num_string, r.comp_image)
+        );
+        (trickyResult.data || []).forEach((r) =>
+          trickyFlags.set(r.num_string, !!r.four_digit_ben_tricky)
+        );
+      }
+
+      // Step 2: Batch insert missing numberstrings
+      const missingNs = rows.filter((r) => !existingNs.has(r.num_string));
+      if (missingNs.length > 0) {
+        setCompImportStatus(
+          `Creating ${missingNs.length} missing numberstrings...`
+        );
+        const { error: nsError } = await supabase
           .from("numberstrings")
-          .insert([{ num_string: row.num_string }]);
-        if (nsInsertErr) {
-          fail++;
-          continue;
+          .insert(missingNs.map((r) => ({ num_string: r.num_string })));
+        if (nsError) {
+          console.error("Error batch inserting numberstrings:", nsError);
         }
-      }
-      // Check for existing comp_image and tricky flag
-      const { data: compData } = await supabase
-        .from("comp_images")
-        .select("comp_image")
-        .eq("num_string", row.num_string)
-        .maybeSingle();
-      const { data: trickyData } = await supabase
-        .from("numberstrings")
-        .select("four_digit_ben_tricky")
-        .eq("num_string", row.num_string)
-        .maybeSingle();
-      const isTricky = !!(trickyData && trickyData.four_digit_ben_tricky);
-      if (compOverwriteMode === "no-overwrite") {
-        if (!compData) {
-          // Insert new
-          const { error } = await supabase
-            .from("comp_images")
-            .insert([
-              { num_string: row.num_string, comp_image: row.comp_image },
-            ]);
-          if (error) fail++;
-          else success++;
-        } else {
-          skipped++;
-        }
-      } else if (compOverwriteMode === "overwrite-non-tricky") {
-        if (!isTricky) {
-          // Upsert (insert or update)
-          const { error } = await supabase
-            .from("comp_images")
-            .upsert(
-              [{ num_string: row.num_string, comp_image: row.comp_image }],
-              { onConflict: ["num_string"] }
-            );
-          if (error) fail++;
-          else success++;
-        } else {
-          skipped++;
-        }
-      } else if (compOverwriteMode === "overwrite-all") {
-        // Upsert (insert or update)
-        const { error } = await supabase
-          .from("comp_images")
-          .upsert(
-            [{ num_string: row.num_string, comp_image: row.comp_image }],
-            { onConflict: ["num_string"] }
-          );
-        if (error) fail++;
-        else success++;
       }
 
-      // Small delay to allow UI to update
-      if (currentIndex % 10 === 0 || currentIndex === total) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+      // Step 3: Process in batches of 50 for comp_images
+      const batchSize = 50;
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const progress = Math.min(i + batchSize, rows.length);
+        setCompImportStatus(`Processing batch ${progress}/${total}...`);
+
+        const toProcess = [];
+
+        for (const row of batch) {
+          const hasExisting = existingComp.has(row.num_string);
+          const isTricky = trickyFlags.get(row.num_string) || false;
+
+          if (compOverwriteMode === "no-overwrite") {
+            if (!hasExisting) {
+              toProcess.push(row);
+            } else {
+              skipped++;
+            }
+          } else if (compOverwriteMode === "overwrite-non-tricky") {
+            if (!isTricky) {
+              toProcess.push(row);
+            } else {
+              skipped++;
+            }
+          } else if (compOverwriteMode === "overwrite-all") {
+            toProcess.push(row);
+          }
+        }
+
+        // Process inserts and updates separately
+        if (toProcess.length > 0) {
+          const toInsert = [];
+          const toUpdate = [];
+
+          for (const row of toProcess) {
+            if (existingComp.has(row.num_string)) {
+              toUpdate.push(row);
+            } else {
+              toInsert.push(row);
+            }
+          }
+
+          // Batch insert new records
+          if (toInsert.length > 0) {
+            const { error: insertError } = await supabase
+              .from("comp_images")
+              .insert(
+                toInsert.map((r) => ({
+                  num_string: r.num_string,
+                  comp_image: r.comp_image,
+                }))
+              );
+
+            if (insertError) {
+              console.error("Batch insert error:", insertError);
+              fail += toInsert.length;
+            } else {
+              success += toInsert.length;
+            }
+          }
+
+          // Update existing records one by one (since bulk update by num_string is complex)
+          for (const row of toUpdate) {
+            const { error: updateError } = await supabase
+              .from("comp_images")
+              .update({ comp_image: row.comp_image })
+              .eq("num_string", row.num_string);
+
+            if (updateError) {
+              console.error("Update error for", row.num_string, updateError);
+              fail++;
+            } else {
+              success++;
+            }
+          }
+        }
+
+        // Small delay to allow UI updates
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
+    } catch (error) {
+      console.error("Import error:", error);
+      setCompImportStatus(`Error: ${error.message}`);
+      return;
     }
     setCompImportStatus(
       `Complete! Imported: ${success}, Skipped: ${skipped}, Failed: ${fail} (${total} total)`
@@ -219,73 +289,135 @@ export default function MemoryTrainingContainer() {
       setImportStatus("No valid rows found.");
       return;
     }
+
+    const total = rows.length;
     let success = 0,
       fail = 0;
-    const total = rows.length;
 
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const currentIndex = i + 1;
+    try {
+      // Step 1: Batch fetch existing data (in chunks to avoid query limits)
+      setImportStatus("Fetching existing data...");
+      const numStrings = rows.map((r) => r.num_string);
 
-      // Update progress status
-      setImportStatus(`Processing ${currentIndex} of ${total} items...`);
-      // Ensure numberstring exists
-      const { data: nsData, error: nsError } = await supabase
-        .from("numberstrings")
-        .select("num_string")
-        .eq("num_string", row.num_string)
-        .maybeSingle();
-      if (!nsData) {
-        // Insert minimal numberstring row
-        const { error: nsInsertErr } = await supabase
-          .from("numberstrings")
-          .insert([{ num_string: row.num_string }]);
-        if (nsInsertErr) {
-          fail++;
-          continue;
-        }
-      }
-      if (overwrite) {
-        // Upsert (insert or update)
-        const { error } = await supabase.from("category_images").upsert(
-          [
-            {
-              num_string: row.num_string,
-              category_image: row.category_image,
-            },
-          ],
-          { onConflict: ["num_string"] }
+      const existingNs = new Set();
+      const existingCat = new Set();
+
+      // Process in chunks of 1000 to avoid database query limits
+      const chunkSize = 1000;
+      for (let i = 0; i < numStrings.length; i += chunkSize) {
+        const chunk = numStrings.slice(i, i + chunkSize);
+        const progress = Math.min(i + chunkSize, numStrings.length);
+        setImportStatus(
+          `Fetching existing data... ${progress}/${numStrings.length}`
         );
-        if (error) fail++;
-        else success++;
-      } else {
-        // Insert only if not exists
-        const { data, error } = await supabase
-          .from("category_images")
-          .select("num_string")
-          .eq("num_string", row.num_string)
-          .maybeSingle();
-        if (!data) {
-          const { error: insErr } = await supabase
+
+        const [existingNsResult, existingCatResult] = await Promise.all([
+          supabase
+            .from("numberstrings")
+            .select("num_string")
+            .in("num_string", chunk),
+          supabase
             .from("category_images")
-            .insert([
-              {
-                num_string: row.num_string,
-                category_image: row.category_image,
-              },
-            ]);
-          if (insErr) fail++;
-          else success++;
-        } else {
-          // Already exists, skip
-          continue;
+            .select("num_string")
+            .in("num_string", chunk),
+        ]);
+
+        // Add to our sets
+        (existingNsResult.data || []).forEach((r) =>
+          existingNs.add(r.num_string)
+        );
+        (existingCatResult.data || []).forEach((r) =>
+          existingCat.add(r.num_string)
+        );
+      }
+
+      // Step 2: Batch insert missing numberstrings
+      const missingNs = rows.filter((r) => !existingNs.has(r.num_string));
+      if (missingNs.length > 0) {
+        setImportStatus(
+          `Creating ${missingNs.length} missing numberstrings...`
+        );
+        const { error: nsError } = await supabase
+          .from("numberstrings")
+          .insert(missingNs.map((r) => ({ num_string: r.num_string })));
+        if (nsError) {
+          console.error("Error batch inserting numberstrings:", nsError);
         }
       }
 
-      // Small delay to allow UI to update
-      if (currentIndex % 10 === 0 || currentIndex === total) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
+      // Step 3: Process category images in batches
+      const batchSize = 50;
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const progress = Math.min(i + batchSize, rows.length);
+        setImportStatus(`Processing batch ${progress}/${total}...`);
+
+        const toProcess = [];
+
+        for (const row of batch) {
+          const hasExisting = existingCat.has(row.num_string);
+
+          if (overwrite || !hasExisting) {
+            toProcess.push(row);
+          }
+          // If not overwriting and already exists, we skip (no increment needed)
+        }
+
+        // Process inserts and updates separately
+        if (toProcess.length > 0) {
+          const toInsert = [];
+          const toUpdate = [];
+
+          for (const row of toProcess) {
+            if (existingCat.has(row.num_string)) {
+              toUpdate.push(row);
+            } else {
+              toInsert.push(row);
+            }
+          }
+
+          // Batch insert new records
+          if (toInsert.length > 0) {
+            const { error: insertError } = await supabase
+              .from("category_images")
+              .insert(
+                toInsert.map((r) => ({
+                  num_string: r.num_string,
+                  category_image: r.category_image,
+                }))
+              );
+
+            if (insertError) {
+              console.error("Batch insert error:", insertError);
+              fail += toInsert.length;
+            } else {
+              success += toInsert.length;
+            }
+          }
+
+          // Update existing records one by one (since bulk update by num_string is complex)
+          for (const row of toUpdate) {
+            const { error: updateError } = await supabase
+              .from("category_images")
+              .update({ category_image: row.category_image })
+              .eq("num_string", row.num_string);
+
+            if (updateError) {
+              console.error("Update error for", row.num_string, updateError);
+              fail++;
+            } else {
+              success++;
+            }
+          }
+        }
+
+        // Small delay to allow UI updates
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
+    } catch (error) {
+      console.error("Import error:", error);
+      setImportStatus(`Error: ${error.message}`);
+      return;
     }
     setImportStatus(
       `Complete! Imported: ${success}, Failed: ${fail} (${total} total)`
