@@ -19,8 +19,9 @@ export default function MemoryTrainingContainer() {
   const [showPiImport, setShowPiImport] = useState(false);
   const [piDigitsText, setPiDigitsText] = useState("");
   const [piImportStatus, setPiImportStatus] = useState("");
+
   async function handleCompImport() {
-    setCompImportStatus("Importing...");
+    setCompImportStatus("Preparing import...");
     const lines = compImportText.split(/\r?\n/).filter(Boolean);
     const rows = lines
       .map((line) => {
@@ -40,7 +41,14 @@ export default function MemoryTrainingContainer() {
     let success = 0,
       fail = 0,
       skipped = 0;
-    for (const row of rows) {
+    const total = rows.length;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const currentIndex = i + 1;
+
+      // Update progress status
+      setCompImportStatus(`Processing ${currentIndex} of ${total} items...`);
       // Ensure numberstring exists
       const { data: nsData } = await supabase
         .from("numberstrings")
@@ -106,9 +114,14 @@ export default function MemoryTrainingContainer() {
         if (error) fail++;
         else success++;
       }
+
+      // Small delay to allow UI to update
+      if (currentIndex % 10 === 0 || currentIndex === total) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
     }
     setCompImportStatus(
-      `Imported: ${success}, Skipped: ${skipped}, Failed: ${fail}`
+      `Complete! Imported: ${success}, Skipped: ${skipped}, Failed: ${fail} (${total} total)`
     );
     setRefreshGrid((r) => r + 1);
   }
@@ -188,7 +201,7 @@ export default function MemoryTrainingContainer() {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   async function handleImport() {
-    setImportStatus("Importing...");
+    setImportStatus("Preparing import...");
     // Parse input: expect lines of numstring<tab or comma>category_image
     const lines = importText.split(/\r?\n/).filter(Boolean);
     const rows = lines
@@ -208,7 +221,14 @@ export default function MemoryTrainingContainer() {
     }
     let success = 0,
       fail = 0;
-    for (const row of rows) {
+    const total = rows.length;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const currentIndex = i + 1;
+
+      // Update progress status
+      setImportStatus(`Processing ${currentIndex} of ${total} items...`);
       // Ensure numberstring exists
       const { data: nsData, error: nsError } = await supabase
         .from("numberstrings")
@@ -261,8 +281,15 @@ export default function MemoryTrainingContainer() {
           continue;
         }
       }
+
+      // Small delay to allow UI to update
+      if (currentIndex % 10 === 0 || currentIndex === total) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
     }
-    setImportStatus(`Imported: ${success}, Failed: ${fail}`);
+    setImportStatus(
+      `Complete! Imported: ${success}, Failed: ${fail} (${total} total)`
+    );
     setRefreshGrid((r) => r + 1);
   }
 
