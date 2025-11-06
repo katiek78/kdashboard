@@ -357,29 +357,51 @@ export default function MemoryTrainingContainer() {
   }
 
   async function openEditModal(numString, currentImage) {
-    setEditingEntry({ numString, currentImage });
-    setEditImageValue(currentImage);
     setMarkAsTricky(false);
 
-    // If we're editing comp images, fetch the category image for potential tricky marking
-    if (duplicateType === "comp") {
-      try {
-        const { data, error } = await supabase
-          .from("category_images")
-          .select("category_image")
-          .eq("num_string", numString)
-          .single();
+    try {
+      const tableName =
+        duplicateType === "comp" ? "comp_images" : "category_images";
+      const imageColumn =
+        duplicateType === "comp" ? "comp_image" : "category_image";
 
-        if (!error && data) {
-          setEditingEntry({
-            numString,
-            currentImage,
-            categoryImage: data.category_image,
-          });
+      // Fetch the current image value from database
+      const { data, error } = await supabase
+        .from(tableName)
+        .select(imageColumn)
+        .eq("num_string", numString)
+        .single();
+
+      const actualCurrentImage = data?.[imageColumn] || currentImage;
+
+      setEditingEntry({ numString, currentImage: actualCurrentImage });
+      setEditImageValue(actualCurrentImage);
+
+      // If we're editing comp images, also fetch the category image for potential tricky marking
+      if (duplicateType === "comp") {
+        try {
+          const { data: categoryData, error: categoryError } = await supabase
+            .from("category_images")
+            .select("category_image")
+            .eq("num_string", numString)
+            .single();
+
+          if (!categoryError && categoryData) {
+            setEditingEntry({
+              numString,
+              currentImage: actualCurrentImage,
+              categoryImage: categoryData.category_image,
+            });
+          }
+        } catch (error) {
+          console.log("No category image found for", numString);
         }
-      } catch (error) {
-        console.log("No category image found for", numString);
       }
+    } catch (error) {
+      console.error("Error fetching current image:", error);
+      // Fallback to the passed currentImage
+      setEditingEntry({ numString, currentImage });
+      setEditImageValue(currentImage);
     }
 
     setShowEditModal(true);
