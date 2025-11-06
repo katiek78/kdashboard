@@ -32,6 +32,7 @@ const NumberLocationPage = () => {
   const [location, setLocation] = useState("");
   const [person, setPerson] = useState("");
   const [compImage, setCompImage] = useState("");
+  const [categoryImage, setCategoryImage] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -56,12 +57,14 @@ const NumberLocationPage = () => {
           setLocation(data.location || "");
           setPerson(data.person || "");
           setCompImage(data.comp_image || "");
+          setCategoryImage(data.category_image || "");
           setLocationView(data.location_view || "");
           setCompImagePic(data.comp_image_pic || "");
         } else if (!ignore) {
           setLocation("");
           setPerson("");
           setCompImage("");
+          setCategoryImage("");
           setLocationView("");
           setCompImagePic("");
         }
@@ -136,6 +139,7 @@ const NumberLocationPage = () => {
         location,
         person,
         comp_image: compImage,
+        category_image: categoryImage,
         location_view: normalizedLocationView,
         comp_image_pic: compImagePic,
       });
@@ -562,6 +566,44 @@ const NumberLocationPage = () => {
                 </div>
               )}
             </div>
+            <div style={{ marginBottom: 32 }}>
+              <label
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 28,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Category Image:
+              </label>
+              {editMode ? (
+                <input
+                  type="text"
+                  value={categoryImage}
+                  onChange={(e) => setCategoryImage(e.target.value)}
+                  style={{
+                    width: "100%",
+                    fontSize: 40,
+                    marginTop: 4,
+                    padding: "12px 16px",
+                    borderRadius: 8,
+                    border: "1px solid #ccc",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    fontSize: 48,
+                    minHeight: 56,
+                    fontWeight: 500,
+                    color: categoryImage ? "#004d4d" : "#aaa",
+                  }}
+                >
+                  {categoryImage || <span>(none)</span>}
+                </div>
+              )}
+            </div>
             {editMode && (
               <div style={{ marginBottom: 32 }}>
                 <label
@@ -590,6 +632,7 @@ const NumberLocationPage = () => {
                 />
               </div>
             )}
+
             <div style={{ marginTop: 24 }}>
               <label
                 style={{

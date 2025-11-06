@@ -27,10 +27,23 @@ export async function fetchNumLoc(numString) {
     if (compData.comp_image_pic) compImagePic = compData.comp_image_pic;
   }
 
+  // Fetch category_image from category_images table
+  let categoryImage = "";
+  const { data: categoryData, error: categoryError } = await supabase
+    .from("category_images")
+    .select("category_image")
+    .eq("num_string", numString)
+    .maybeSingle();
+  if (!categoryError && categoryData) {
+    if (categoryData.category_image)
+      categoryImage = categoryData.category_image;
+  }
+
   return {
     ...numData,
     comp_image: compImage,
     comp_image_pic: compImagePic,
+    category_image: categoryImage,
   };
 }
 
@@ -41,6 +54,7 @@ export async function upsertNumLoc({
   comp_image,
   comp_image_pic,
   location_view,
+  category_image,
 }) {
   // Upsert numberstrings row
   const { data, error } = await supabase
@@ -59,6 +73,16 @@ export async function upsertNumLoc({
       onConflict: ["num_string"],
     });
   if (compError) throw compError;
+
+  // Upsert category_images row (category_image)
+  if (category_image !== undefined) {
+    const { error: categoryError } = await supabase
+      .from("category_images")
+      .upsert([{ num_string, category_image }], {
+        onConflict: ["num_string"],
+      });
+    if (categoryError) throw categoryError;
+  }
 
   return data;
 }
