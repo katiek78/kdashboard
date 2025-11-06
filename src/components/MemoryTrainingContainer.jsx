@@ -2,6 +2,7 @@ import styles from "./MemoryTrainingContainer.module.css";
 import FourDigitGrid from "./FourDigitGrid";
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { getNumberPhonetics } from "../utils/memTrainingUtils";
 
 export default function MemoryTrainingContainer() {
   const [refreshGrid, setRefreshGrid] = useState(0);
@@ -19,6 +20,18 @@ export default function MemoryTrainingContainer() {
   const [showPiImport, setShowPiImport] = useState(false);
   const [piDigitsText, setPiDigitsText] = useState("");
   const [piImportStatus, setPiImportStatus] = useState("");
+
+  // Duplicate detection state
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicateType, setDuplicateType] = useState("comp"); // "comp" or "category"
+  const [duplicatesData, setDuplicatesData] = useState([]);
+  const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editImageValue, setEditImageValue] = useState("");
+  const [markAsTricky, setMarkAsTricky] = useState(false);
 
   async function handleCompImport() {
     setCompImportStatus("Preparing import...");
@@ -269,6 +282,175 @@ export default function MemoryTrainingContainer() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  async function findDuplicates() {
+    setLoadingDuplicates(true);
+    try {
+      const tableName =
+        duplicateType === "comp" ? "comp_images" : "category_images";
+      const imageColumn =
+        duplicateType === "comp" ? "comp_image" : "category_image";
+
+      // Fetch ALL records by pagination to avoid row limits
+      let allData = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select(`num_string, ${imageColumn}`)
+          .not(imageColumn, "is", null)
+          .not(imageColumn, "eq", "")
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+
+        allData = allData.concat(data);
+        hasMore = data.length === pageSize;
+        page++;
+
+        // Update loading status to show progress
+        if (hasMore) {
+          setLoadingDuplicates(`Scanning records... ${allData.length} loaded`);
+        }
+      }
+
+      // Reset loading to true for processing phase
+      setLoadingDuplicates(true);
+
+      // Group by image and find duplicates
+      const imageGroups = {};
+      allData.forEach((row) => {
+        const image = row[imageColumn];
+        if (!imageGroups[image]) {
+          imageGroups[image] = [];
+        }
+        imageGroups[image].push(row.num_string);
+      });
+
+      // Filter to include: 1) duplicates (2+ occurrences) OR 2) items with 'duplicate' in name
+      const duplicates = Object.entries(imageGroups)
+        .filter(
+          ([image, numStrings]) =>
+            numStrings.length > 1 || image.toLowerCase().includes("duplicate")
+        )
+        .map(([image, numStrings]) => ({
+          image,
+          numStrings: numStrings.sort(),
+          count: numStrings.length,
+          hasAutoDetectedDuplicate: image.toLowerCase().includes("duplicate"),
+          isDuplicateByName:
+            image.toLowerCase().includes("duplicate") &&
+            numStrings.length === 1,
+        }))
+        .sort((a, b) => {
+          // Sort auto-detected duplicates first, then by image name
+          if (a.hasAutoDetectedDuplicate && !b.hasAutoDetectedDuplicate)
+            return -1;
+          if (!a.hasAutoDetectedDuplicate && b.hasAutoDetectedDuplicate)
+            return 1;
+          return a.image.localeCompare(b.image);
+        });
+
+      setDuplicatesData(duplicates);
+    } catch (error) {
+      console.error("Error finding duplicates:", error);
+    }
+    setLoadingDuplicates(false);
+  }
+
+  async function openEditModal(numString, currentImage) {
+    setEditingEntry({ numString, currentImage });
+    setEditImageValue(currentImage);
+    setMarkAsTricky(false);
+
+    // If we're editing comp images, fetch the category image for potential tricky marking
+    if (duplicateType === "comp") {
+      try {
+        const { data, error } = await supabase
+          .from("category_images")
+          .select("category_image")
+          .eq("num_string", numString)
+          .single();
+
+        if (!error && data) {
+          setEditingEntry({
+            numString,
+            currentImage,
+            categoryImage: data.category_image,
+          });
+        }
+      } catch (error) {
+        console.log("No category image found for", numString);
+      }
+    }
+
+    setShowEditModal(true);
+  }
+
+  async function saveImageEdit() {
+    if (!editingEntry) return;
+
+    try {
+      let finalImageValue = editImageValue;
+
+      // If marking as tricky and we're editing comp images, use category image
+      if (
+        markAsTricky &&
+        duplicateType === "comp" &&
+        editingEntry.categoryImage
+      ) {
+        finalImageValue = editingEntry.categoryImage;
+      }
+
+      const tableName =
+        duplicateType === "comp" ? "comp_images" : "category_images";
+      const imageColumn =
+        duplicateType === "comp" ? "comp_image" : "category_image";
+
+      // Update the image
+      const { error: imageError } = await supabase
+        .from(tableName)
+        .update({ [imageColumn]: finalImageValue })
+        .eq("num_string", editingEntry.numString);
+
+      if (imageError) throw imageError;
+
+      // If marking as tricky, update the numberstrings table
+      if (markAsTricky) {
+        const { error: trickyError } = await supabase
+          .from("numberstrings")
+          .update({ four_digit_ben_tricky: true })
+          .eq("num_string", editingEntry.numString);
+
+        if (trickyError) throw trickyError;
+      }
+
+      // Close modal and refresh grid only (no rescan)
+      setShowEditModal(false);
+      setEditingEntry(null);
+      setEditImageValue("");
+      setMarkAsTricky(false);
+      setRefreshGrid((r) => r + 1);
+    } catch (error) {
+      console.error("Error updating image:", error);
+    }
+  }
+
+  function cancelEdit() {
+    setShowEditModal(false);
+    setEditingEntry(null);
+    setEditImageValue("");
+    setMarkAsTricky(false);
+  }
+
+  function removeDuplicateFromList(imageToRemove) {
+    setDuplicatesData((prev) =>
+      prev.filter((dup) => dup.image !== imageToRemove)
+    );
+  }
 
   async function handleImport() {
     setImportStatus("Preparing import...");
@@ -577,10 +759,314 @@ Or paste from a reliable source like:
         </div>
       )}
 
+      <button
+        onClick={() => setShowDuplicates((v) => !v)}
+        style={{ margin: "16px 0 0 16px" }}
+      >
+        {showDuplicates ? "Hide Duplicates" : "Find Duplicates"}
+      </button>
+
+      {showDuplicates && (
+        <div
+          style={{
+            margin: "16px 0",
+            padding: 16,
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            backgroundColor: "#f8f9fa",
+          }}
+        >
+          <h3>Find & Resolve Duplicates</h3>
+
+          <div style={{ margin: "8px 0" }}>
+            <label>Search in: </label>
+            <select
+              value={duplicateType}
+              onChange={(e) => setDuplicateType(e.target.value)}
+            >
+              <option value="comp">Comp Images</option>
+              <option value="category">Category Images</option>
+            </select>
+            <button
+              onClick={findDuplicates}
+              style={{ marginLeft: 8 }}
+              disabled={loadingDuplicates}
+            >
+              {loadingDuplicates
+                ? typeof loadingDuplicates === "string"
+                  ? loadingDuplicates
+                  : "Searching..."
+                : "Find Duplicates"}
+            </button>
+          </div>
+
+          {duplicatesData.length > 0 && (
+            <div>
+              <p>
+                <strong>
+                  {duplicatesData.length} issues found (
+                  {duplicatesData.filter((d) => d.count > 1).length} true
+                  duplicates,{" "}
+                  {duplicatesData.filter((d) => d.isDuplicateByName).length}{" "}
+                  flagged entries)
+                </strong>
+                <br />
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#666",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Click × to remove entries from this list after editing. Re-run
+                  "Find Duplicates" to refresh the full list.
+                </span>
+              </p>
+              {duplicatesData.map((dup, index) => (
+                <div
+                  key={index}
+                  style={{
+                    margin: "12px 0",
+                    padding: 12,
+                    border: "1px solid #ddd",
+                    borderRadius: 4,
+                    backgroundColor: dup.hasAutoDetectedDuplicate
+                      ? "#fff3cd"
+                      : "white",
+                  }}
+                >
+                  <div
+                    style={{
+                      marginBottom: 8,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div>
+                      <strong
+                        style={{
+                          color: dup.hasAutoDetectedDuplicate
+                            ? "#856404"
+                            : "black",
+                        }}
+                      >
+                        {dup.image}
+                      </strong>
+                      {dup.hasAutoDetectedDuplicate && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: "12px",
+                            color: "#856404",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          (AUTO-DETECTED)
+                        </span>
+                      )}
+                      {dup.isDuplicateByName && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            fontSize: "12px",
+                            color: "#856404",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          (FLAGGED FOR REVIEW)
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          fontSize: "14px",
+                          color: "#666",
+                        }}
+                      >
+                        ({dup.count} occurrence{dup.count > 1 ? "s" : ""})
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeDuplicateFromList(dup.image)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: "18px",
+                        color: "#dc3545",
+                        cursor: "pointer",
+                        padding: "0 4px",
+                        lineHeight: "1",
+                      }}
+                      title="Remove from list"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ fontSize: "14px", marginBottom: 8 }}>
+                    <strong>Number strings:</strong>{" "}
+                    {dup.numStrings.map((numString, idx) => (
+                      <span key={numString}>
+                        {idx > 0 && ", "}
+                        {numString}
+                        <span style={{ color: "#666", fontStyle: "italic" }}>
+                          ({getNumberPhonetics(numString) || "no phonetics"})
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  <div>
+                    {dup.numStrings.map((numString) => (
+                      <button
+                        key={numString}
+                        onClick={() => openEditModal(numString, dup.image)}
+                        style={{
+                          margin: "2px 4px",
+                          padding: "4px 8px",
+                          fontSize: "12px",
+                          backgroundColor: "#007bff",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 3,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit {numString}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {duplicatesData.length === 0 && !loadingDuplicates && (
+            <p style={{ color: "#666", fontStyle: "italic" }}>
+              No duplicates found. Click "Find Duplicates" to search.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "24px",
+              borderRadius: "8px",
+              minWidth: "400px",
+              maxWidth: "500px",
+            }}
+          >
+            <h3>Edit {duplicateType === "comp" ? "Comp" : "Category"} Image</h3>
+            <div style={{ margin: "16px 0" }}>
+              <label style={{ display: "block", marginBottom: "8px" }}>
+                Number String: <strong>{editingEntry?.numString}</strong>
+              </label>
+              <label style={{ display: "block", marginBottom: "8px" }}>
+                Current Image: <strong>{editingEntry?.currentImage}</strong>
+              </label>
+              <label style={{ display: "block", marginBottom: "8px" }}>
+                New Image:
+              </label>
+              <input
+                type="text"
+                value={editImageValue}
+                onChange={(e) => setEditImageValue(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+                placeholder="Enter new image name..."
+              />
+
+              {duplicateType === "comp" && editingEntry?.categoryImage && (
+                <div style={{ marginTop: "12px" }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={markAsTricky}
+                      onChange={(e) => {
+                        setMarkAsTricky(e.target.checked);
+                        if (e.target.checked) {
+                          setEditImageValue(editingEntry.categoryImage);
+                        }
+                      }}
+                    />
+                    <span style={{ fontSize: "14px" }}>
+                      Mark as tricky (use category image:{" "}
+                      <strong>{editingEntry.categoryImage}</strong>)
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={cancelEdit}
+                style={{
+                  padding: "8px 16px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: "white",
+                  color: "#333",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveImageEdit}
+                style={{
+                  padding: "8px 16px",
+                  border: "none",
+                  borderRadius: "4px",
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h3>To-dos</h3>
       <ul>
         <li>Show tricky only</li>
-        <li>Show duplicates</li>
+        <li>✅ Show duplicates</li>
       </ul>
     </div>
   );
