@@ -26,6 +26,7 @@ export default function MemoryTrainingContainer() {
   const [duplicateType, setDuplicateType] = useState("comp"); // "comp" or "category"
   const [duplicatesData, setDuplicatesData] = useState([]);
   const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+  const [includeCrossLength, setIncludeCrossLength] = useState(false);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -327,10 +328,27 @@ export default function MemoryTrainingContainer() {
 
       // Filter to include: 1) duplicates (2+ occurrences) OR 2) items with 'duplicate' in name
       const duplicates = Object.entries(imageGroups)
-        .filter(
-          ([image, numStrings]) =>
-            numStrings.length > 1 || image.toLowerCase().includes("duplicate")
-        )
+        .filter(([image, numStrings]) => {
+          const hasMultiple = numStrings.length > 1;
+          const hasAutoDetected = image.toLowerCase().includes("duplicate");
+
+          // Always include single entries with 'duplicate' in name
+          if (!hasMultiple && hasAutoDetected) {
+            return true;
+          }
+
+          // For multiple entries, check cross-length setting
+          if (hasMultiple) {
+            if (!includeCrossLength) {
+              // Only include if all number strings have the same length
+              const lengths = new Set(numStrings.map((ns) => ns.length));
+              return lengths.size === 1;
+            }
+            return true;
+          }
+
+          return false;
+        })
         .map(([image, numStrings]) => ({
           image,
           numStrings: numStrings.sort(),
@@ -796,19 +814,37 @@ Or paste from a reliable source like:
           <h3>Find & Resolve Duplicates</h3>
 
           <div style={{ margin: "8px 0" }}>
-            <label>Search in: </label>
-            <select
-              value={duplicateType}
-              onChange={(e) => setDuplicateType(e.target.value)}
-            >
-              <option value="comp">Comp Images</option>
-              <option value="category">Category Images</option>
-            </select>
-            <button
-              onClick={findDuplicates}
-              style={{ marginLeft: 8 }}
-              disabled={loadingDuplicates}
-            >
+            <div style={{ marginBottom: "8px" }}>
+              <label>Search in: </label>
+              <select
+                value={duplicateType}
+                onChange={(e) => setDuplicateType(e.target.value)}
+              >
+                <option value="comp">Comp Images</option>
+                <option value="category">Category Images</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "8px" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "14px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={includeCrossLength}
+                  onChange={(e) => setIncludeCrossLength(e.target.checked)}
+                />
+                Include cross-length duplicates (e.g., 615 and 6615 with same
+                image)
+              </label>
+            </div>
+
+            <button onClick={findDuplicates} disabled={loadingDuplicates}>
               {loadingDuplicates
                 ? typeof loadingDuplicates === "string"
                   ? loadingDuplicates
@@ -1083,7 +1119,6 @@ Or paste from a reliable source like:
       <h3>To-dos</h3>
       <ul>
         <li>Show tricky only</li>
-        <li>✅ Show duplicates</li>
       </ul>
     </div>
   );
