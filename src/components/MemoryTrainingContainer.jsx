@@ -1,6 +1,8 @@
+import React from "react";
 import styles from "./MemoryTrainingContainer.module.css";
 import FourDigitGrid from "./FourDigitGrid";
-import { useState } from "react";
+import EditImageModal from "./EditImageModal";
+import { useState, useMemo } from "react";
 import { getNumberPhonetics } from "../utils/memTrainingUtils";
 import supabase from "../utils/supabaseClient";
 
@@ -31,8 +33,106 @@ export default function MemoryTrainingContainer() {
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
-  const [editImageValue, setEditImageValue] = useState("");
-  const [markAsTricky, setMarkAsTricky] = useState(false);
+
+  // Callback to update a single entry in the grid without full refresh
+  const [gridUpdateCallback, setGridUpdateCallback] = useState(null);
+
+  // Memoize phonetics calculations to avoid expensive recalculations on every render
+  const memoizedPhonetics = useMemo(() => {
+    const phoneticCache = new Map();
+    duplicatesData.forEach((dup) => {
+      dup.numStrings.forEach((numString) => {
+        if (!phoneticCache.has(numString)) {
+          phoneticCache.set(
+            numString,
+            getNumberPhonetics(numString) || "no phonetics"
+          );
+        }
+      });
+    });
+    return phoneticCache;
+  }, [duplicatesData]);
+
+  // Memoize the duplicates list to prevent re-rendering when modal is open
+  const duplicatesList = useMemo(() => {
+    if (!showDuplicates || duplicatesData.length === 0) return null;
+
+    return duplicatesData.map((dup, index) => (
+      <div
+        key={dup.image}
+        style={{
+          border: "1px solid #ddd",
+          padding: 12,
+          marginBottom: 8,
+          borderRadius: 4,
+          backgroundColor: "#f9f9f9",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <div>
+            <strong style={{ fontSize: "16px" }}>
+              {dup.image || "(empty)"}
+            </strong>
+            <span style={{ marginLeft: 8, color: "#666" }}>
+              ({dup.numStrings.length} occurrences)
+            </span>
+          </div>
+          <button
+            onClick={() => removeDuplicate(dup.image)}
+            style={{
+              background: "#dc3545",
+              color: "white",
+              border: "none",
+              borderRadius: 3,
+              padding: "4px 8px",
+              cursor: "pointer",
+              fontSize: "12px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div style={{ fontSize: "14px", marginBottom: 8 }}>
+          <strong>Number strings:</strong>{" "}
+          {dup.numStrings.map((numString, idx) => (
+            <span key={numString}>
+              {idx > 0 && ", "}
+              {numString}
+              <span style={{ color: "#666", fontStyle: "italic" }}>
+                ({memoizedPhonetics.get(numString)})
+              </span>
+            </span>
+          ))}
+        </div>
+        <div>
+          {dup.numStrings.map((numString) => (
+            <button
+              key={numString}
+              onClick={() => openEditModal(numString, dup.image)}
+              style={{
+                margin: "2px 4px",
+                padding: "4px 8px",
+                fontSize: "12px",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: 3,
+                cursor: "pointer",
+              }}
+            >
+              Edit {numString}
+            </button>
+          ))}
+        </div>
+      </div>
+    ));
+  }, [duplicatesData, memoizedPhonetics, showDuplicates]);
 
   async function handleCompImport() {
     setCompImportStatus("Preparing import...");
@@ -375,8 +475,6 @@ export default function MemoryTrainingContainer() {
   }
 
   async function openEditModal(numString, currentImage) {
-    setMarkAsTricky(false);
-
     try {
       const tableName =
         duplicateType === "comp" ? "comp_images" : "category_images";
@@ -393,7 +491,6 @@ export default function MemoryTrainingContainer() {
       const actualCurrentImage = data?.[imageColumn] || currentImage;
 
       setEditingEntry({ numString, currentImage: actualCurrentImage });
-      setEditImageValue(actualCurrentImage);
 
       // If we're editing comp images, also fetch the category image for potential tricky marking
       if (duplicateType === "comp") {
@@ -419,13 +516,12 @@ export default function MemoryTrainingContainer() {
       console.error("Error fetching current image:", error);
       // Fallback to the passed currentImage
       setEditingEntry({ numString, currentImage });
-      setEditImageValue(currentImage);
     }
 
     setShowEditModal(true);
   }
 
-  async function saveImageEdit() {
+  async function saveImageEdit(editImageValue, markAsTricky) {
     if (!editingEntry) return;
 
     try {
@@ -463,12 +559,18 @@ export default function MemoryTrainingContainer() {
         if (trickyError) throw trickyError;
       }
 
-      // Close modal and refresh grid only (no rescan)
+      // Update the grid directly instead of triggering full refresh
+      if (gridUpdateCallback) {
+        gridUpdateCallback(
+          editingEntry.numString,
+          duplicateType,
+          finalImageValue
+        );
+      }
+
+      // Close modal
       setShowEditModal(false);
       setEditingEntry(null);
-      setEditImageValue("");
-      setMarkAsTricky(false);
-      setRefreshGrid((r) => r + 1);
     } catch (error) {
       console.error("Error updating image:", error);
     }
@@ -477,8 +579,6 @@ export default function MemoryTrainingContainer() {
   function cancelEdit() {
     setShowEditModal(false);
     setEditingEntry(null);
-    setEditImageValue("");
-    setMarkAsTricky(false);
   }
 
   function removeDuplicateFromList(imageToRemove) {
@@ -646,7 +746,10 @@ export default function MemoryTrainingContainer() {
     <div className={styles.memoryContainer + " pageContainer"}>
       <h1>Image systems</h1>
       <h2>4-digit Ben System</h2>
-      <FourDigitGrid refresh={refreshGrid} />
+      <FourDigitGrid
+        refresh={refreshGrid}
+        onUpdateCallback={setGridUpdateCallback}
+      />
 
       <button
         onClick={() => setShowImport((v) => !v)}
@@ -963,7 +1066,7 @@ Or paste from a reliable source like:
                         {idx > 0 && ", "}
                         {numString}
                         <span style={{ color: "#666", fontStyle: "italic" }}>
-                          ({getNumberPhonetics(numString) || "no phonetics"})
+                          ({memoizedPhonetics.get(numString)})
                         </span>
                       </span>
                     ))}
@@ -1002,119 +1105,13 @@ Or paste from a reliable source like:
       )}
 
       {/* Edit Modal */}
-      {showEditModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: "24px",
-              borderRadius: "8px",
-              minWidth: "400px",
-              maxWidth: "500px",
-            }}
-          >
-            <h3>Edit {duplicateType === "comp" ? "Comp" : "Category"} Image</h3>
-            <div style={{ margin: "16px 0" }}>
-              <label style={{ display: "block", marginBottom: "8px" }}>
-                Number String: <strong>{editingEntry?.numString}</strong>
-              </label>
-              <label style={{ display: "block", marginBottom: "8px" }}>
-                Current Image: <strong>{editingEntry?.currentImage}</strong>
-              </label>
-              <label style={{ display: "block", marginBottom: "8px" }}>
-                New Image:
-              </label>
-              <input
-                type="text"
-                value={editImageValue}
-                onChange={(e) => setEditImageValue(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                }}
-                placeholder="Enter new image name..."
-              />
-
-              {duplicateType === "comp" && editingEntry?.categoryImage && (
-                <div style={{ marginTop: "12px" }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={markAsTricky}
-                      onChange={(e) => {
-                        setMarkAsTricky(e.target.checked);
-                        if (e.target.checked) {
-                          setEditImageValue(editingEntry.categoryImage);
-                        }
-                      }}
-                    />
-                    <span style={{ fontSize: "14px" }}>
-                      Mark as tricky (use category image:{" "}
-                      <strong>{editingEntry.categoryImage}</strong>)
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                justifyContent: "flex-end",
-              }}
-            >
-              <button
-                onClick={cancelEdit}
-                style={{
-                  padding: "8px 16px",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  backgroundColor: "white",
-                  color: "#333",
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveImageEdit}
-                style={{
-                  padding: "8px 16px",
-                  border: "none",
-                  borderRadius: "4px",
-                  backgroundColor: "#28a745",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EditImageModal
+        isOpen={showEditModal}
+        onClose={cancelEdit}
+        onSave={saveImageEdit}
+        editingEntry={editingEntry}
+        duplicateType={duplicateType}
+      />
 
       <h3>To-dos</h3>
       <ul>

@@ -1,11 +1,37 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import supabase from "../utils/supabaseClient";
 
-export default function FourDigitGrid({ refresh }) {
+const FourDigitGrid = React.memo(function FourDigitGrid({
+  refresh,
+  onUpdateCallback,
+}) {
   const [categoryImages, setCategoryImages] = useState({});
   const [compImages, setCompImages] = useState({});
   const [loading, setLoading] = useState(true);
   const [prefix, setPrefix] = useState("00"); // first two digits
+
+  // Callback to update individual entries without full refresh
+  const updateSingleEntry = useCallback((numString, type, newValue) => {
+    if (type === "comp") {
+      setCompImages((prev) => ({
+        ...prev,
+        [numString]: {
+          ...prev[numString],
+          num_string: numString,
+          comp_image: newValue,
+        },
+      }));
+    } else {
+      setCategoryImages((prev) => ({
+        ...prev,
+        [numString]: {
+          ...prev[numString],
+          num_string: numString,
+          category_image: newValue,
+        },
+      }));
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchImages() {
@@ -40,6 +66,13 @@ export default function FourDigitGrid({ refresh }) {
     }
     fetchImages();
   }, [refresh, prefix]);
+
+  // Register the update callback with parent component
+  useEffect(() => {
+    if (onUpdateCallback) {
+      onUpdateCallback(() => updateSingleEntry);
+    }
+  }, [onUpdateCallback, updateSingleEntry]);
 
   // Show only the 100 numbers for the selected prefix
   const numbers = Array.from(
@@ -144,4 +177,6 @@ export default function FourDigitGrid({ refresh }) {
       </table>
     </div>
   );
-}
+});
+
+export default FourDigitGrid;
