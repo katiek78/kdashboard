@@ -1,8 +1,8 @@
 import styles from "./MemoryTrainingContainer.module.css";
 import FourDigitGrid from "./FourDigitGrid";
 import { useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { getNumberPhonetics } from "../utils/memTrainingUtils";
+import supabase from "../utils/supabaseClient";
 
 export default function MemoryTrainingContainer() {
   const [refreshGrid, setRefreshGrid] = useState(0);
@@ -277,11 +277,6 @@ export default function MemoryTrainingContainer() {
     );
     setRefreshGrid((r) => r + 1);
   }
-
-  // Supabase client (reuse env vars)
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const supabase = createClient(supabaseUrl, supabaseKey);
 
   async function findDuplicates() {
     setLoadingDuplicates(true);
