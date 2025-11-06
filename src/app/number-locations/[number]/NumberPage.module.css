@@ -59,7 +59,7 @@
 .responsiveWhiteSection {
   min-width: 400px;
   width: 90%;
-  margin: 40px auto;
+  margin: 0 auto;
   background: rgba(255,255,255,0.85);
   border-radius: 16px;
   padding: 32px;

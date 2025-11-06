@@ -346,13 +346,13 @@ const NumberLocationPage = () => {
                 </>
               ) : (
                 <>
-                  <div
+                  {/* <div
                     className={`${styles.streetViewValue} ${
                       !locationView ? styles.streetViewValueEmpty : ""
                     }`}
                   >
                     {!locationView && <span>(none)</span>}
-                  </div>
+                  </div> */}
                   {/* Show Street View with comp_image_pic overlay if possible */}
                   {locationView &&
                     (() => {
