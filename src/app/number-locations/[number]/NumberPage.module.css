@@ -19,7 +19,7 @@
   }
 }
 .numberHeader {
-  font-size: 64px;
+  font-size: 56px;
   color: #004d4d;
   text-align: center;
   margin: 0;
@@ -86,4 +86,249 @@
   margin-top: 16px;
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* Location name styling */
+.locationName {
+  font-size: 28px;
+  font-weight: 600;
+  color: #004d4d;
+  text-align: center;
+  margin-bottom: 24px;
+  min-height: 36px;
+}
+
+.locationNameEmpty {
+  color: #aaa;
+}
+
+.locationNameInput {
+  width: 100%;
+  font-size: 26px;
+  font-weight: 600;
+  color: #004d4d;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0;
+  background: #fff;
+}
+
+/* Field labels */
+.fieldLabel {
+  font-weight: bold;
+  font-size: 20px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* Field values - display mode */
+.fieldValue {
+  font-size: 28px;
+  min-height: 36px;
+  font-weight: 500;
+  color: #004d4d;
+}
+
+.fieldValueEmpty {
+  color: #aaa;
+}
+
+/* Field inputs - edit mode */
+.fieldInput {
+  width: 100%;
+  font-size: 24px;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.fieldInputLarge {
+  padding: 12px 16px;
+  font-size: 28px;
+}
+
+/* Street View field styling */
+.streetViewLabel {
+  font-weight: bold;
+  font-size: 20px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.streetViewValue {
+  font-size: 20px;
+  min-height: 28px;
+  color: #004d4d;
+}
+
+.streetViewValueEmpty {
+  color: #aaa;
+}
+
+.streetViewInput {
+  width: 100%;
+  font-size: 18px;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+/* Phonetics styling */
+.phoneticsLabel {
+  font-weight: bold;
+  font-size: 18px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.phoneticsValue {
+  font-size: 18px;
+  min-height: 24px;
+  color: #004d4d;
+}
+
+.phoneticsValueEmpty {
+  color: #aaa;
+  font-style: italic;
+}
+
+/* Button containers and styling */
+.headerContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 8px;
+}
+
+.navigationContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.navButtonRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.navButtonRowCenter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.navButtonRowBottom {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.backButton {
+  font-size: 18px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  color: #333;
+  cursor: pointer;
+}
+
+.randomButton {
+  font-size: 18px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #008080;
+  color: #fff;
+  cursor: pointer;
+}
+
+.navButton {
+  font-size: 18px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  color: #333;
+  cursor: pointer;
+}
+
+.navButtonDisabled {
+  cursor: not-allowed;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.saveButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #008080;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.cancelButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #eee;
+  color: #333;
+  border: none;
+  cursor: pointer;
+}
+
+.editButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #eee;
+  color: #333;
+  border: none;
+  cursor: pointer;
+}
+
+.message {
+  margin-top: 16px;
+}
+
+.messageSuccess {
+  color: green;
+}
+
+.messageError {
+  color: red;
+}
+
+.fieldContainer {
+  margin-bottom: 32px;
+}
+
+.streetViewContainer {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.streetViewIframe {
+  border: 0;
+  border-radius: 12px;
+  display: block;
+  width: 100%;
 }

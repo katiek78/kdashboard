@@ -41,6 +41,9 @@ const NumberLocationPage = () => {
   const [compImagePic, setCompImagePic] = useState("");
   const [phonetics, setPhonetics] = useState("");
 
+  // Track original values to detect changes
+  const [originalValues, setOriginalValues] = useState({});
+
   useEffect(() => {
     let ignore = false;
 
@@ -54,19 +57,39 @@ const NumberLocationPage = () => {
       try {
         const data = await fetchNumLoc(number.toString());
         if (!ignore && data) {
-          setLocation(data.location || "");
-          setPerson(data.person || "");
-          setCompImage(data.comp_image || "");
-          setCategoryImage(data.category_image || "");
-          setLocationView(data.location_view || "");
-          setCompImagePic(data.comp_image_pic || "");
+          const values = {
+            location: data.location || "",
+            person: data.person || "",
+            comp_image: data.comp_image || "",
+            category_image: data.category_image || "",
+            location_view: data.location_view || "",
+            comp_image_pic: data.comp_image_pic || "",
+          };
+          setLocation(values.location);
+          setPerson(values.person);
+          setCompImage(values.comp_image);
+          setCategoryImage(values.category_image);
+          setLocationView(values.location_view);
+          setCompImagePic(values.comp_image_pic);
+          setOriginalValues(values);
+          console.log("Setting original values:", values);
         } else if (!ignore) {
+          const emptyValues = {
+            location: "",
+            person: "",
+            comp_image: "",
+            category_image: "",
+            location_view: "",
+            comp_image_pic: "",
+          };
           setLocation("");
           setPerson("");
           setCompImage("");
           setCategoryImage("");
           setLocationView("");
           setCompImagePic("");
+          setOriginalValues(emptyValues);
+          console.log("Setting empty original values:", emptyValues);
         }
       } catch {
         if (!ignore) setMessage("Error loading data");
@@ -132,22 +155,67 @@ const NumberLocationPage = () => {
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
+
+    // Prevent saving if original values haven't been loaded yet
+    if (!originalValues || Object.keys(originalValues).length === 0) {
+      setMessage("Please wait for data to load before saving");
+      setSaving(false);
+      return;
+    }
+
     try {
       const normalizedLocationView = normalizeLocationView(locationView);
-      await upsertNumLoc({
+      const payload = {
         num_string: number.toString(),
-        location,
-        person,
-        comp_image: compImage,
-        category_image: categoryImage,
-        location_view: normalizedLocationView,
-        comp_image_pic: compImagePic,
-      });
+      };
+
+      // Only include fields that have actually changed
+      if (location.trim() !== originalValues.location) {
+        payload.location = location.trim();
+      }
+      if (person.trim() !== originalValues.person) {
+        payload.person = person.trim();
+      }
+      if (compImage.trim() !== originalValues.comp_image) {
+        payload.comp_image = compImage.trim();
+      }
+      if (normalizedLocationView.trim() !== originalValues.location_view) {
+        payload.location_view = normalizedLocationView.trim();
+      }
+      if (compImagePic.trim() !== originalValues.comp_image_pic) {
+        payload.comp_image_pic = compImagePic.trim();
+      }
+
+      // Only include category_image for 4-digit numbers and only if it has changed
+      if (
+        number.length === 4 &&
+        categoryImage.trim() !== originalValues.category_image
+      ) {
+        payload.category_image = categoryImage.trim();
+      }
+
+      console.log("Payload being sent:", payload);
+      console.log("Original values:", originalValues);
+      console.log("Current categoryImage:", categoryImage.trim());
+      console.log("Original categoryImage:", originalValues.category_image);
+
+      await upsertNumLoc(payload);
       setMessage("Saved!");
       setEditMode(false);
       setLocationView(normalizedLocationView); // update input to normalized after save
-    } catch {
-      setMessage("Error saving data");
+
+      // Update original values after successful save
+      setOriginalValues({
+        location: location.trim(),
+        person: person.trim(),
+        comp_image: compImage.trim(),
+        category_image: categoryImage.trim(),
+        location_view: normalizedLocationView.trim(),
+        comp_image_pic: compImagePic.trim(),
+      });
+    } catch (error) {
+      console.error("Save error:", error);
+      setMessage(`Error saving data: ${error.message || error}`);
     }
     setSaving(false);
   };
@@ -202,150 +270,55 @@ const NumberLocationPage = () => {
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
       <div
-        className={styles.numberHeaderContainer}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 24,
-          gap: 8,
-          flexWrap: "wrap",
-          padding: "0 8px",
-        }}
+        className={`${styles.numberHeaderContainer} ${styles.headerContainer}`}
       >
-        <button
-          onClick={handleBackToGroup}
-          style={{
-            fontSize: 18,
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: "none",
-            background: "#eee",
-            color: "#333",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleBackToGroup} className={styles.backButton}>
           Back to level
         </button>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            flex: 1,
-          }}
-        >
-          <div style={{ display: "flex", gap: 8, marginBottom: 4 }}>
+        <div className={styles.navigationContainer}>
+          <div className={styles.navButtonRow}>
             <button
               onClick={handleUp}
-              style={{
-                fontSize: 18,
-                padding: "4px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "#eee",
-                color: "#333",
-                cursor: number.length === 1 ? "not-allowed" : "pointer",
-              }}
+              className={`${styles.navButton} ${
+                number.length === 1 ? styles.navButtonDisabled : ""
+              }`}
               disabled={number.length === 1}
             >
               ↑
             </button>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              onClick={handlePrev}
-              style={{
-                fontSize: 18,
-                padding: "4px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "#eee",
-                color: "#333",
-                cursor: "pointer",
-              }}
-            >
+          <div className={styles.navButtonRowCenter}>
+            <button onClick={handlePrev} className={styles.navButton}>
               ←
             </button>
-            <h1 className={styles.numberHeader} style={{ margin: 0 }}>
-              {number}
-            </h1>
-            <button
-              onClick={handleNext}
-              style={{
-                fontSize: 18,
-                padding: "4px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "#eee",
-                color: "#333",
-                cursor: "pointer",
-              }}
-            >
+            <h1 className={styles.numberHeader}>{number}</h1>
+            <button onClick={handleNext} className={styles.navButton}>
               →
             </button>
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button
-              onClick={handleDown}
-              style={{
-                fontSize: 18,
-                padding: "4px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: "#eee",
-                color: "#333",
-                cursor: "pointer",
-              }}
-            >
+          <div className={styles.navButtonRowBottom}>
+            <button onClick={handleDown} className={styles.navButton}>
               ↓
             </button>
           </div>
         </div>
-        <button
-          onClick={handleRandomNumber}
-          style={{
-            fontSize: 18,
-            padding: "8px 16px",
-            borderRadius: 8,
-            border: "none",
-            background: "#008080",
-            color: "#fff",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleRandomNumber} className={styles.randomButton}>
           Random Number
         </button>
       </div>
       <div className={styles.responsiveWhiteSection}>
         {/* Location name at the top */}
         <div
-          style={{
-            fontSize: 36,
-            fontWeight: 600,
-            color: location ? "#004d4d" : "#aaa",
-            textAlign: "center",
-            marginBottom: 24,
-            minHeight: 44,
-          }}
+          className={`${styles.locationName} ${
+            !location && !editMode ? styles.locationNameEmpty : ""
+          }`}
         >
           {editMode ? (
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              style={{
-                width: "100%",
-                fontSize: 32,
-                fontWeight: 600,
-                color: "#004d4d",
-                textAlign: "center",
-                border: "1px solid #ccc",
-                borderRadius: 8,
-                padding: "8px 12px",
-                margin: 0,
-                background: "#fff",
-              }}
+              className={styles.locationNameInput}
               placeholder="(no location name)"
               autoFocus
             />
@@ -357,42 +330,26 @@ const NumberLocationPage = () => {
           <div>Loading...</div>
         ) : (
           <>
-            <div style={{ marginBottom: 32 }}>
+            <div className={styles.fieldContainer}>
               {editMode ? (
                 <>
-                  <label
-                    style={{
-                      fontWeight: "bold",
-                      fontSize: 28,
-                      display: "block",
-                      marginBottom: 8,
-                    }}
-                  >
+                  <label className={styles.streetViewLabel}>
                     Street View (Paste coordinates, full URL, or embed URL):
                   </label>
                   <input
                     type="text"
                     value={locationView}
                     onChange={(e) => setLocationView(e.target.value)}
-                    style={{
-                      width: "100%",
-                      fontSize: 24,
-                      marginTop: 4,
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #ccc",
-                    }}
+                    className={styles.streetViewInput}
                     placeholder="e.g. 51.5074,-0.1278 or https://www.google.com/maps/embed?... or https://www.google.com/maps/@?..."
                   />
                 </>
               ) : (
                 <>
                   <div
-                    style={{
-                      fontSize: 28,
-                      minHeight: 36,
-                      color: locationView ? "#004d4d" : "#aaa",
-                    }}
+                    className={`${styles.streetViewValue} ${
+                      !locationView ? styles.streetViewValueEmpty : ""
+                    }`}
                   >
                     {!locationView && <span>(none)</span>}
                   </div>
@@ -409,25 +366,12 @@ const NumberLocationPage = () => {
                       }
                       // Helper to render the iframe with overlay if compImagePic exists
                       const renderIframeWithOverlay = (iframeSrc) => (
-                        <div
-                          style={{
-                            marginTop: 16,
-                            borderRadius: 12,
-                            overflow: "hidden",
-                            position: "relative",
-                            width: "100%",
-                          }}
-                        >
+                        <div className={styles.streetViewContainer}>
                           <iframe
                             src={iframeSrc}
                             width="100%"
                             height="320"
-                            style={{
-                              border: 0,
-                              borderRadius: 12,
-                              display: "block",
-                              width: "100%",
-                            }}
+                            className={styles.streetViewIframe}
                             allowFullScreen
                             loading="lazy"
                             referrerPolicy="no-referrer-when-downgrade"
@@ -490,199 +434,104 @@ const NumberLocationPage = () => {
                 </>
               )}
             </div>
-            <div style={{ marginBottom: 32 }}>
-              <label
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 28,
-                  display: "block",
-                  marginBottom: 8,
-                }}
-              >
-                Person:
-              </label>
+            <div className={styles.fieldContainer}>
+              <label className={styles.fieldLabel}>Person:</label>
               {editMode ? (
                 <input
                   type="text"
                   value={person}
                   onChange={(e) => setPerson(e.target.value)}
-                  style={{
-                    width: "100%",
-                    fontSize: 40,
-                    marginTop: 4,
-                    padding: "12px 16px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                  }}
+                  className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
                 />
               ) : (
                 <div
-                  style={{
-                    fontSize: 48,
-                    minHeight: 56,
-                    fontWeight: 500,
-                    color: person ? "#004d4d" : "#aaa",
-                  }}
+                  className={`${styles.fieldValue} ${
+                    !person ? styles.fieldValueEmpty : ""
+                  }`}
                 >
                   {person || <span>(none)</span>}
                 </div>
               )}
             </div>
-            <div style={{ marginBottom: 32 }}>
-              <label
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 28,
-                  display: "block",
-                  marginBottom: 8,
-                }}
-              >
-                Comp Image:
-              </label>
+            <div className={styles.fieldContainer}>
+              <label className={styles.fieldLabel}>Comp Image:</label>
               {editMode ? (
                 <input
                   type="text"
                   value={compImage}
                   onChange={(e) => setCompImage(e.target.value)}
-                  style={{
-                    width: "100%",
-                    fontSize: 40,
-                    marginTop: 4,
-                    padding: "12px 16px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                  }}
+                  className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
                 />
               ) : (
                 <div
-                  style={{
-                    fontSize: 48,
-                    minHeight: 56,
-                    fontWeight: 500,
-                    color: compImage ? "#004d4d" : "#aaa",
-                  }}
+                  className={`${styles.fieldValue} ${
+                    !compImage ? styles.fieldValueEmpty : ""
+                  }`}
                 >
                   {compImage || <span>(none)</span>}
                 </div>
               )}
             </div>
-            <div style={{ marginBottom: 32 }}>
-              <label
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 28,
-                  display: "block",
-                  marginBottom: 8,
-                }}
-              >
-                Category Image:
-              </label>
-              {editMode ? (
-                <input
-                  type="text"
-                  value={categoryImage}
-                  onChange={(e) => setCategoryImage(e.target.value)}
-                  style={{
-                    width: "100%",
-                    fontSize: 40,
-                    marginTop: 4,
-                    padding: "12px 16px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    fontSize: 48,
-                    minHeight: 56,
-                    fontWeight: 500,
-                    color: categoryImage ? "#004d4d" : "#aaa",
-                  }}
-                >
-                  {categoryImage || <span>(none)</span>}
-                </div>
-              )}
-            </div>
+            {number.length === 4 && (
+              <div className={styles.fieldContainer}>
+                <label className={styles.fieldLabel}>Category Image:</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={categoryImage}
+                    onChange={(e) => setCategoryImage(e.target.value)}
+                    className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
+                  />
+                ) : (
+                  <div
+                    className={`${styles.fieldValue} ${
+                      !categoryImage ? styles.fieldValueEmpty : ""
+                    }`}
+                  >
+                    {categoryImage || <span>(none)</span>}
+                  </div>
+                )}
+              </div>
+            )}
             {editMode && (
-              <div style={{ marginBottom: 32 }}>
-                <label
-                  style={{
-                    fontWeight: "bold",
-                    fontSize: 28,
-                    display: "block",
-                    marginBottom: 8,
-                  }}
-                >
+              <div className={styles.fieldContainer}>
+                <label className={styles.fieldLabel}>
                   Comp Image Pic (URL):
                 </label>
                 <input
                   type="text"
                   value={compImagePic}
                   onChange={(e) => setCompImagePic(e.target.value)}
-                  style={{
-                    width: "100%",
-                    fontSize: 24,
-                    marginTop: 4,
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                  }}
+                  className={styles.fieldInput}
                   placeholder="https://... (image URL)"
                 />
               </div>
             )}
 
             <div style={{ marginTop: 24 }}>
-              <label
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 22,
-                  display: "block",
-                  marginBottom: 6,
-                }}
-              >
-                Phonetics:
-              </label>
+              <label className={styles.phoneticsLabel}>Phonetics:</label>
               <div
-                style={{
-                  fontSize: 22,
-                  minHeight: 28,
-                  color: phonetics ? "#004d4d" : "#aaa",
-                  fontStyle: phonetics ? "normal" : "italic",
-                }}
+                className={`${styles.phoneticsValue} ${
+                  !phonetics ? styles.phoneticsValueEmpty : ""
+                }`}
               >
                 {phonetics || <span>(none)</span>}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+            <div className={styles.actionButtons}>
               {editMode ? (
                 <>
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    style={{
-                      fontSize: 16,
-                      padding: "8px 20px",
-                      borderRadius: 8,
-                      background: "#008080",
-                      color: "#fff",
-                      border: "none",
-                    }}
+                    className={styles.saveButton}
                   >
                     Save
                   </button>
                   <button
                     onClick={() => setEditMode(false)}
                     disabled={saving}
-                    style={{
-                      fontSize: 16,
-                      padding: "8px 20px",
-                      borderRadius: 8,
-                      background: "#eee",
-                      color: "#333",
-                      border: "none",
-                    }}
+                    className={styles.cancelButton}
                   >
                     Cancel
                   </button>
@@ -690,14 +539,7 @@ const NumberLocationPage = () => {
               ) : (
                 <button
                   onClick={() => setEditMode(true)}
-                  style={{
-                    fontSize: 16,
-                    padding: "8px 20px",
-                    borderRadius: 8,
-                    background: "#eee",
-                    color: "#333",
-                    border: "none",
-                  }}
+                  className={styles.editButton}
                 >
                   Edit
                 </button>
@@ -706,10 +548,11 @@ const NumberLocationPage = () => {
 
             {message && (
               <div
-                style={{
-                  marginTop: 16,
-                  color: message === "Saved!" ? "green" : "red",
-                }}
+                className={`${styles.message} ${
+                  message === "Saved!"
+                    ? styles.messageSuccess
+                    : styles.messageError
+                }`}
               >
                 {message}
               </div>
