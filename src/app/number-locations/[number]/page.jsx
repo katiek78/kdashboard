@@ -315,78 +315,81 @@ const NumberLocationPage = () => {
 
   return (
     <div className={styles.galleryContainer + " pageContainer"}>
-      <div
-        className={`${styles.numberHeaderContainer} ${styles.headerContainer}`}
-      >
-        <button onClick={handleBackToGroup} className={styles.backButton}>
-          Back to level
-        </button>
-        <div className={styles.navigationContainer}>
-          <div className={styles.navButtonRow}>
-            <button
-              onClick={handleUp}
-              className={`${styles.navButton} ${
-                number.length === 1 ? styles.navButtonDisabled : ""
-              }`}
-              disabled={number.length === 1}
-            >
-              ↑
-            </button>
-          </div>
-          <div className={styles.navButtonRowCenter}>
-            <button onClick={handlePrev} className={styles.navButton}>
-              ←
-            </button>
-            <h1
-              className={`${styles.numberHeader} ${
-                fourDigitBenTricky && number.length === 4
-                  ? styles.numberHeaderTricky
-                  : ""
-              }`}
-            >
-              {number}
-            </h1>
-            <button onClick={handleNext} className={styles.navButton}>
-              →
-            </button>
-          </div>
-          <div className={styles.navButtonRowBottom}>
-            <button onClick={handleDown} className={styles.navButton}>
-              ↓
-            </button>
-          </div>
-        </div>
-        <div className={styles.rightSection}>
-          <div className={styles.directNumberContainer}>
-            <input
-              type="text"
-              value={directNumberInput}
-              onChange={(e) => setDirectNumberInput(e.target.value)}
-              onKeyPress={handleDirectNumberKeyPress}
-              placeholder="Go to..."
-              className={styles.directNumberInput}
-              maxLength={4}
-            />
-            <button
-              onClick={handleDirectNumberGo}
-              className={styles.goButton}
-              disabled={
-                !directNumberInput.trim() ||
-                !/^\d+$/.test(directNumberInput.trim())
-              }
-            >
-              Go
-            </button>
-          </div>
-          <button onClick={handleRandomNumber} className={styles.randomButton}>
-            Random Number
+      <div className={styles.compactWhiteSection}>
+        {/* Compact header with navigation and main number */}
+        <div className={styles.compactHeader}>
+          <button onClick={handleBackToGroup} className={styles.backButton}>
+            ← Back
           </button>
+
+          <div className={styles.centerSection}>
+            <div className={styles.navigationGrid}>
+              <button
+                onClick={handleUp}
+                className={`${styles.navButton} ${
+                  number.length === 1 ? styles.navButtonDisabled : ""
+                }`}
+                disabled={number.length === 1}
+              >
+                ↑
+              </button>
+              <div className={styles.navRow}>
+                <button onClick={handlePrev} className={styles.navButton}>
+                  ←
+                </button>
+                <h1
+                  className={`${styles.compactNumberHeader} ${
+                    fourDigitBenTricky && number.length === 4
+                      ? styles.numberHeaderTricky
+                      : ""
+                  }`}
+                >
+                  {number}
+                </h1>
+                <button onClick={handleNext} className={styles.navButton}>
+                  →
+                </button>
+              </div>
+              <button onClick={handleDown} className={styles.navButton}>
+                ↓
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.compactRightSection}>
+            <div className={styles.directNumberContainer}>
+              <input
+                type="text"
+                value={directNumberInput}
+                onChange={(e) => setDirectNumberInput(e.target.value)}
+                onKeyPress={handleDirectNumberKeyPress}
+                placeholder="Go to..."
+                className={styles.directNumberInput}
+                maxLength={4}
+              />
+              <button
+                onClick={handleDirectNumberGo}
+                className={styles.goButton}
+                disabled={
+                  !directNumberInput.trim() ||
+                  !/^\d+$/.test(directNumberInput.trim())
+                }
+              >
+                Go
+              </button>
+            </div>
+            <button
+              onClick={handleRandomNumber}
+              className={styles.randomButton}
+            >
+              Random
+            </button>
+          </div>
         </div>
-      </div>
-      <div className={styles.responsiveWhiteSection}>
-        {/* Location name at the top */}
+
+        {/* Location name */}
         <div
-          className={`${styles.locationName} ${
+          className={`${styles.compactLocationName} ${
             !location && !editMode ? styles.locationNameEmpty : ""
           } ${
             fourDigitBenTricky && number.length === 4
@@ -399,10 +402,12 @@ const NumberLocationPage = () => {
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className={styles.locationNameInput}
+              className={styles.compactLocationInput}
               placeholder="(no location name)"
               autoFocus
             />
+          ) : loading ? (
+            <span>Loading location...</span>
           ) : (
             <>
               {fourDigitBenTricky && number.length === 4 && (
@@ -412,35 +417,33 @@ const NumberLocationPage = () => {
             </>
           )}
         </div>
-        {loading ? (
-          <div>Loading...</div>
-        ) : (
-          <>
-            <div className={styles.fieldContainer}>
+
+        <div className={styles.compactContent}>
+          {/* Two-column layout */}
+          <div className={styles.twoColumnLayout}>
+            {/* Left column - Street View */}
+            <div className={styles.leftColumn}>
               {editMode ? (
                 <>
-                  <label className={styles.streetViewLabel}>
-                    Street View (Paste coordinates, full URL, or embed URL):
-                  </label>
+                  <label className={styles.compactLabel}>Street View:</label>
                   <input
                     type="text"
                     value={locationView}
                     onChange={(e) => setLocationView(e.target.value)}
-                    className={styles.streetViewInput}
-                    placeholder="e.g. 51.5074,-0.1278 or https://www.google.com/maps/embed?... or https://www.google.com/maps/@?..."
+                    className={styles.compactInput}
+                    placeholder="Coordinates or URL"
                   />
                 </>
               ) : (
                 <>
-                  {/* <div
-                    className={`${styles.streetViewValue} ${
-                      !locationView ? styles.streetViewValueEmpty : ""
-                    }`}
-                  >
-                    {!locationView && <span>(none)</span>}
-                  </div> */}
-                  {/* Show Street View with comp_image_pic overlay if possible */}
-                  {locationView &&
+                  {loading ? (
+                    <div className={styles.loadingPlaceholder}>
+                      <div className={styles.loadingText}>
+                        Loading Street View...
+                      </div>
+                    </div>
+                  ) : (
+                    locationView &&
                     (() => {
                       let val = locationView.trim();
                       // If user pasted an iframe HTML, extract the src attribute
@@ -452,11 +455,11 @@ const NumberLocationPage = () => {
                       }
                       // Helper to render the iframe with overlay if compImagePic exists
                       const renderIframeWithOverlay = (iframeSrc) => (
-                        <div className={styles.streetViewContainer}>
+                        <div className={styles.compactStreetViewContainer}>
                           <iframe
                             src={iframeSrc}
                             width="100%"
-                            height="320"
+                            height="300"
                             className={styles.streetViewIframe}
                             allowFullScreen
                             loading="lazy"
@@ -467,7 +470,7 @@ const NumberLocationPage = () => {
                             <img
                               src={compImagePic}
                               alt="Comp Image Overlay"
-                              className={styles.compImageOverlay}
+                              className={styles.compactCompImageOverlay}
                             />
                           )}
                         </div>
@@ -516,164 +519,196 @@ const NumberLocationPage = () => {
                       }
                       // Fallback: not recognized
                       return null;
-                    })()}
-                </>
-              )}
-            </div>
-            <div className={styles.fieldContainer}>
-              <label className={styles.fieldLabel}>Person:</label>
-              {editMode ? (
-                <input
-                  type="text"
-                  value={person}
-                  onChange={(e) => setPerson(e.target.value)}
-                  className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
-                />
-              ) : (
-                <div
-                  className={`${styles.fieldValue} ${
-                    !person ? styles.fieldValueEmpty : ""
-                  }`}
-                >
-                  {person || <span>(none)</span>}
-                </div>
-              )}
-            </div>
-            <div className={styles.fieldContainer}>
-              <label className={styles.fieldLabel}>
-                Comp Image:
-                {fourDigitBenTricky && number.length === 4 && compImage === categoryImage && (
-                  <span className={styles.trickyIndicator}> (copied from category)</span>
-                )}
-              </label>
-              {editMode ? (
-                <input
-                  type="text"
-                  value={compImage}
-                  onChange={(e) => setCompImage(e.target.value)}
-                  className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
-                />
-              ) : (
-                <div
-                  className={`${styles.fieldValue} ${
-                    !compImage ? styles.fieldValueEmpty : ""
-                  } ${fourDigitBenTricky && number.length === 4 && compImage === categoryImage ? styles.fieldValueTricky : ""}`}
-                >
-                  {compImage || <span>(none)</span>}
-                </div>
-              )}
-            </div>
-            {number.length === 4 && (
-              <div className={styles.fieldContainer}>
-                <label className={styles.fieldLabel}>Category Image:</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    value={categoryImage}
-                    onChange={(e) => setCategoryImage(e.target.value)}
-                    className={`${styles.fieldInput} ${styles.fieldInputLarge}`}
-                  />
-                ) : (
-                  <div
-                    className={`${styles.fieldValue} ${
-                      !categoryImage ? styles.fieldValueEmpty : ""
-                    }`}
-                  >
-                    {categoryImage || <span>(none)</span>}
-                  </div>
-                )}
-              </div>
-            )}
-            {editMode && (
-              <div className={styles.fieldContainer}>
-                <label className={styles.fieldLabel}>
-                  Comp Image Pic (URL):
-                </label>
-                <input
-                  type="text"
-                  value={compImagePic}
-                  onChange={(e) => setCompImagePic(e.target.value)}
-                  className={styles.fieldInput}
-                  placeholder="https://... (image URL)"
-                />
-              </div>
-            )}
-
-            <div style={{ marginTop: 24 }}>
-              <label className={styles.phoneticsLabel}>Phonetics:</label>
-              <div
-                className={`${styles.phoneticsValue} ${
-                  !phonetics ? styles.phoneticsValueEmpty : ""
-                }`}
-              >
-                {phonetics || <span>(none)</span>}
-              </div>
-            </div>
-            <div className={styles.actionButtons}>
-              {editMode ? (
-                <>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className={styles.saveButton}
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setEditMode(false)}
-                    disabled={saving}
-                    className={styles.cancelButton}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className={styles.editButton}
-                  >
-                    Edit
-                  </button>
-                  {number.length === 4 && (
-                    <>
-                      {!fourDigitBenTricky && categoryImage && (
-                        <button
-                          onClick={handleMarkAsTricky}
-                          className={styles.trickyButton}
-                          title="Copy category image to comp image and mark as tricky"
-                        >
-                          Mark as Tricky
-                        </button>
-                      )}
-                      {fourDigitBenTricky && (
-                        <button
-                          onClick={handleMarkAsNotTricky}
-                          className={styles.notTrickyButton}
-                          title="Remove tricky marking"
-                        >
-                          Mark as Not Tricky
-                        </button>
-                      )}
-                    </>
+                    })()
+                  )}
+                  {!loading && !locationView && (
+                    <div className={styles.noStreetView}>No Street View</div>
                   )}
                 </>
               )}
             </div>
 
-            {message && (
-              <div
-                className={`${styles.message} ${
-                  message === "Saved!"
-                    ? styles.messageSuccess
-                    : styles.messageError
-                }`}
-              >
-                {message}
+            {/* Right column - Details */}
+            <div className={styles.rightColumn}>
+              <div className={styles.compactField}>
+                <label className={styles.compactLabel}>Person:</label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={person}
+                    onChange={(e) => setPerson(e.target.value)}
+                    className={styles.compactInput}
+                  />
+                ) : loading ? (
+                  <div className={styles.compactValue}>Loading...</div>
+                ) : (
+                  <div
+                    className={`${styles.compactValue} ${
+                      !person ? styles.compactValueEmpty : ""
+                    }`}
+                  >
+                    {person || <span>(none)</span>}
+                  </div>
+                )}
               </div>
+
+              <div className={styles.compactField}>
+                <label className={styles.compactLabel}>
+                  Comp Image:
+                  {fourDigitBenTricky &&
+                    number.length === 4 &&
+                    compImage === categoryImage && (
+                      <span className={styles.trickyIndicator}>
+                        {" "}
+                        (from category)
+                      </span>
+                    )}
+                </label>
+                {editMode ? (
+                  <input
+                    type="text"
+                    value={compImage}
+                    onChange={(e) => setCompImage(e.target.value)}
+                    className={styles.compactInput}
+                  />
+                ) : loading ? (
+                  <div className={styles.compactValue}>Loading...</div>
+                ) : (
+                  <div
+                    className={`${styles.compactValue} ${
+                      !compImage ? styles.compactValueEmpty : ""
+                    } ${
+                      fourDigitBenTricky &&
+                      number.length === 4 &&
+                      compImage === categoryImage
+                        ? styles.fieldValueTricky
+                        : ""
+                    }`}
+                  >
+                    {compImage || <span>(none)</span>}
+                  </div>
+                )}
+              </div>
+
+              {number.length === 4 && (
+                <div className={styles.compactField}>
+                  <label className={styles.compactLabel}>Category Image:</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      value={categoryImage}
+                      onChange={(e) => setCategoryImage(e.target.value)}
+                      className={styles.compactInput}
+                    />
+                  ) : loading ? (
+                    <div className={styles.compactValue}>Loading...</div>
+                  ) : (
+                    <div
+                      className={`${styles.compactValue} ${
+                        !categoryImage ? styles.compactValueEmpty : ""
+                      }`}
+                    >
+                      {categoryImage || <span>(none)</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editMode && (
+                <div className={styles.compactField}>
+                  <label className={styles.compactLabel}>Comp Image Pic:</label>
+                  <input
+                    type="text"
+                    value={compImagePic}
+                    onChange={(e) => setCompImagePic(e.target.value)}
+                    className={styles.compactInput}
+                    placeholder="https://... (image URL)"
+                  />
+                </div>
+              )}
+
+              <div className={styles.compactField}>
+                <label className={styles.compactLabel}>Phonetics:</label>
+                {loading ? (
+                  <div className={styles.compactValue}>Loading...</div>
+                ) : (
+                  <div
+                    className={`${styles.compactValue} ${
+                      !phonetics ? styles.compactValueEmpty : ""
+                    }`}
+                  >
+                    {phonetics || <span>(none)</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className={styles.compactActionButtons}>
+            {editMode ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className={styles.saveButton}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditMode(false)}
+                  disabled={saving}
+                  className={styles.cancelButton}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className={styles.editButton}
+                >
+                  Edit
+                </button>
+                {number.length === 4 && (
+                  <>
+                    {!fourDigitBenTricky && categoryImage && (
+                      <button
+                        onClick={handleMarkAsTricky}
+                        className={styles.trickyButton}
+                        title="Copy category image to comp image and mark as tricky"
+                      >
+                        Mark as Tricky
+                      </button>
+                    )}
+                    {fourDigitBenTricky && (
+                      <button
+                        onClick={handleMarkAsNotTricky}
+                        className={styles.notTrickyButton}
+                        title="Remove tricky marking"
+                      >
+                        Mark as Not Tricky
+                      </button>
+                    )}
+                  </>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+
+          {message && (
+            <div
+              className={`${styles.message} ${
+                message === "Saved!"
+                  ? styles.messageSuccess
+                  : styles.messageError
+              }`}
+            >
+              {message}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
