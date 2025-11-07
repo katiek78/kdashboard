@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import styles from "./TrainingSettings.module.css";
 
 export default function TrainingSettings({
@@ -101,7 +102,7 @@ export default function TrainingSettings({
         };
       case "words":
         return {
-          title: "Word Lists Training Settings",
+          title: "Words Training Settings",
           fields: [
             {
               key: "wordCount",
@@ -149,7 +150,12 @@ export default function TrainingSettings({
 
   return (
     <div className={styles.settingsContainer}>
-      <h2>{config.title}</h2>
+      <div className={styles.header}>
+        <Link href="/memory-training" className={styles.backLink}>
+          ← Back to Memory Training
+        </Link>
+        <h2>{config.title}</h2>
+      </div>
 
       <div className={styles.settingsGrid}>
         {config.fields.map((field) => (

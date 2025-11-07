@@ -12,9 +12,9 @@ export default function WordListsTrainingPage() {
   return (
     <div className="page">
       <main className="main">
-        <div className="title">Word Lists Training</div>
+        {/* <div className="title">Word Lists Training</div> */}
         <div className="pageContainer">
-          <TrainingCoordinator discipline="words" title="Word Lists Training" />
+          <TrainingCoordinator discipline="words" title="Words Training" />
         </div>
       </main>
     </div>
