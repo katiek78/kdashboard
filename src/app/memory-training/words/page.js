@@ -1,5 +1,6 @@
 "use client";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import TrainingCoordinator from "@/components/TrainingCoordinator";
 
 export default function WordListsTrainingPage() {
   const loading = useAuthRedirect();
@@ -13,25 +14,7 @@ export default function WordListsTrainingPage() {
       <main className="main">
         <div className="title">Word Lists Training</div>
         <div className="pageContainer">
-          <h1>Word Lists Training</h1>
-          <p>This training tool is coming soon! Memorize random word lists.</p>
-          <div
-            style={{
-              padding: "20px",
-              background: "#f8f9fa",
-              borderRadius: "8px",
-              marginTop: "20px",
-            }}
-          >
-            <h3>Features to be added:</h3>
-            <ul>
-              <li>Random word generation</li>
-              <li>Customizable list lengths</li>
-              <li>Story method assistance</li>
-              <li>Memory palace integration</li>
-              <li>Recall testing and scoring</li>
-            </ul>
-          </div>
+          <TrainingCoordinator discipline="words" title="Word Lists Training" />
         </div>
       </main>
     </div>

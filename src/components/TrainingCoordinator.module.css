@@ -1,0 +1,221 @@
+.coordinatorContainer {
+  width: calc(100% + 40px);
+  margin: -20px;
+  padding: 44px;
+  background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 25%, #1e40af 50%, #2563eb 75%, #1d4ed8 100%);
+  border-radius: 8px;
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  min-height: calc(100% + 40px);
+  box-sizing: border-box;
+}
+
+
+
+.header {
+  margin-bottom: 32px;
+  padding: 24px 0 16px 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header h1 {
+  margin: 0 0 24px 0;
+  color: #1e293b;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.phaseIndicator {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.phase {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.8);
+  color: #374151;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(5px);
+}
+
+.phase.active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-color: #f59e0b;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.phase.completed {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-color: #10b981;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.content {
+  margin-bottom: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.actionSection {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.newSessionButton {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #007acc 0%, #005a9e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.newSessionButton:hover {
+  background: linear-gradient(135deg, #005a9e 0%, #004578 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 122, 204, 0.3);
+}
+
+.restartButton {
+  padding: 12px 24px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.restartButton:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.backButton {
+  padding: 10px 20px;
+  background: transparent;
+  color: #666;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  background: #f8f9fa;
+  border-color: #007acc;
+  color: #007acc;
+}
+
+/* Subtle animation for the background gradient */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.coordinatorContainer {
+  animation: gradientShift 20s ease infinite;
+  background-size: 200% 200%;
+}
+
+/* Fade-in animation for content sections */
+.content, .actionSection {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .coordinatorContainer {
+    width: calc(100% + 20px);
+    margin: -10px;
+    padding: 26px;
+    border-radius: 8px;
+    min-height: calc(100% + 20px);
+  }
+  
+  .header {
+    padding: 16px 0 12px 0;
+    margin-bottom: 24px;
+  }
+  
+  .header h1 {
+    font-size: 24px;
+  }
+  
+  .content {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .phaseIndicator {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .phase {
+    text-align: center;
+  }
+  
+  .actionSection {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .newSessionButton,
+  .restartButton {
+    width: 100%;
+  }
+}

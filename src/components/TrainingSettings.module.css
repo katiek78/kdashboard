@@ -1,0 +1,93 @@
+.settingsContainer {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.settingsContainer h2 {
+  margin: 0 0 24px 0;
+  color: #333;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.settingsGrid {
+  display: grid;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.settingField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-weight: 500;
+  color: #555;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.select,
+.input {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: #007acc;
+  box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.startButton {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #007acc 0%, #005a9e 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.startButton:hover {
+  background: linear-gradient(135deg, #005a9e 0%, #004578 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 122, 204, 0.3);
+}
+
+.startButton:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .settingsContainer {
+    margin: 16px;
+    padding: 24px;
+  }
+  
+  .settingsContainer h2 {
+    font-size: 20px;
+  }
+}
