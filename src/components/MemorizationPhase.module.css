@@ -113,17 +113,15 @@
   color: #333;
   text-align: center;
   min-width: 60px;
-}
-
-.numberGroup.hoverable {
-  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.numberGroup.hoverable:hover {
-  background: #f0f8ff;
-  border-color: #007acc;
+.numberGroup.selected {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-color: #1e40af;
+  color: white;
   transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .hoverImageOverlay {
@@ -221,9 +219,14 @@
   font-size: 20px;
 }
 
+.controlsSection {
+  text-align: center;
+  margin-top: 16px;
+}
+
 .skipButton {
   display: block;
-  margin: 0 auto;
+  margin: 0 auto 12px auto;
   padding: 12px 24px;
   background: #6c757d;
   color: white;
@@ -236,6 +239,13 @@
 
 .skipButton:hover {
   background: #5a6268;
+}
+
+.instructionsText {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-top: 8px;
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import TrainingSettings from "./TrainingSettings";
 import MemorizationPhase from "./MemorizationPhase";
 import RecallPhase from "./RecallPhase";
@@ -13,6 +13,42 @@ export default function TrainingCoordinator({
   const [trainingSettings, setTrainingSettings] = useState({});
   const [trainingData, setTrainingData] = useState([]);
   const [results, setResults] = useState(null);
+
+  // Load saved settings on component mount
+  useEffect(() => {
+    const savedSettings = loadSettings(discipline);
+    if (savedSettings && Object.keys(savedSettings).length > 0) {
+      setTrainingSettings(savedSettings);
+    }
+  }, [discipline]);
+
+  // Save settings to localStorage
+  const saveSettings = (settings) => {
+    try {
+      const key = `trainingSettings_${discipline}`;
+      localStorage.setItem(key, JSON.stringify(settings));
+    } catch (error) {
+      console.warn("Failed to save training settings:", error);
+    }
+  };
+
+  // Load settings from localStorage
+  const loadSettings = (disciplineName) => {
+    try {
+      const key = `trainingSettings_${disciplineName}`;
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.warn("Failed to load training settings:", error);
+      return {};
+    }
+  };
+
+  // Handle settings changes
+  const handleSettingsChange = (newSettings) => {
+    setTrainingSettings(newSettings);
+    saveSettings(newSettings);
+  };
 
   const generateTrainingData = (settings) => {
     switch (discipline) {
@@ -133,6 +169,7 @@ export default function TrainingCoordinator({
 
   const handleStartTraining = (settings) => {
     setTrainingSettings(settings);
+    saveSettings(settings);
     const data = generateTrainingData(settings);
     setTrainingData(data);
     setCurrentPhase("memorization");
@@ -169,7 +206,7 @@ export default function TrainingCoordinator({
             discipline={discipline}
             onStartTraining={handleStartTraining}
             settings={trainingSettings}
-            onSettingsChange={setTrainingSettings}
+            onSettingsChange={handleSettingsChange}
           />
         );
 

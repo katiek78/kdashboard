@@ -15,6 +15,8 @@ export default function MemorizationPhase({
   const [isActive, setIsActive] = useState(false);
   const [hoverImage, setHoverImage] = useState(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
+  const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     let interval = null;
@@ -29,6 +31,114 @@ export default function MemorizationPhase({
 
     return () => clearInterval(interval);
   }, [isActive, timeRemaining]);
+
+  // Keyboard navigation effect
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!isActive) return;
+
+      const grouping = settings.grouping || 2;
+      const totalGroups = Math.ceil(data.length / grouping);
+
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          setSelectedGroupIndex((prev) =>
+            prev > 0 ? prev - 1 : totalGroups - 1
+          );
+          setShowHint(false); // Hide hint when navigating
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          setSelectedGroupIndex((prev) =>
+            prev < totalGroups - 1 ? prev + 1 : 0
+          );
+          setShowHint(false); // Hide hint when navigating
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          // Navigate up by one row (assuming grid layout)
+          setSelectedGroupIndex((prev) => {
+            const cols = Math.min(6, totalGroups); // Estimate columns
+            const newIndex = prev - cols;
+            return newIndex >= 0 ? newIndex : prev;
+          });
+          setShowHint(false); // Hide hint when navigating
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          // Navigate down by one row
+          setSelectedGroupIndex((prev) => {
+            const cols = Math.min(6, totalGroups);
+            const newIndex = prev + cols;
+            return newIndex < totalGroups ? newIndex : prev;
+          });
+          setShowHint(false); // Hide hint when navigating
+          break;
+        case "h":
+        case "H":
+          event.preventDefault();
+          if (settings.showImageOnHover) {
+            setShowHint(true);
+            // Auto-hide hint after 3 seconds
+            setTimeout(() => setShowHint(false), 3000);
+          }
+          break;
+      }
+    };
+
+    if (isActive) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isActive, data.length, settings.grouping]);
+
+  // Show hint for selected group when 'h' key is pressed
+  useEffect(() => {
+    if (!showHint || !isActive || !settings.showImageOnHover) {
+      if (!showHint) {
+        setHoverImage(null); // Clear tooltip when not showing hint
+      }
+      return;
+    }
+
+    const grouping = settings.grouping || 2;
+    const groupedNumbers = [];
+
+    for (let i = 0; i < data.length; i += grouping) {
+      groupedNumbers.push(data.slice(i, i + grouping).join(""));
+    }
+
+    if (selectedGroupIndex < groupedNumbers.length) {
+      const selectedGroup = groupedNumbers[selectedGroupIndex];
+      const phonetics = getNumberPhonetics(selectedGroup);
+
+      // Show tooltip for selected group
+      setHoverImage(`(${phonetics})`);
+
+      // Fetch the memory image
+      fetchCompImage(selectedGroup)
+        .then((imageData) => {
+          if (imageData && imageData.comp_image) {
+            setHoverImage(`${imageData.comp_image} (${phonetics})`);
+          }
+        })
+        .catch(() => {
+          // Keep just phonetics if there's an error
+          setHoverImage(`(${phonetics})`);
+        });
+    }
+  }, [
+    showHint,
+    selectedGroupIndex,
+    isActive,
+    settings.showImageOnHover,
+    data,
+    settings.grouping,
+  ]);
 
   const handleStart = () => {
     setIsActive(true);
@@ -65,10 +175,11 @@ export default function MemorizationPhase({
 
     // First, immediately show phonetics while we fetch the image
     const phonetics = getNumberPhonetics(numberString);
-    
+
     // Show phonetics immediately
     setHoverImage(`(${phonetics})`);
     setHoverPosition({ x: event.clientX, y: event.clientY });
+    setShowHint(false); // Clear keyboard hint when using mouse
 
     try {
       const imageData = await fetchCompImage(numberString);
@@ -88,7 +199,9 @@ export default function MemorizationPhase({
   };
 
   const handleMouseLeave = () => {
-    setHoverImage(null);
+    if (!showHint) {
+      setHoverImage(null);
+    }
   };
 
   const handleMouseMove = (event) => {
@@ -111,11 +224,17 @@ export default function MemorizationPhase({
           <div
             key={index}
             className={`${styles.numberGroup} ${
-              settings.showImageOnHover ? styles.hoverable : ""
+              index === selectedGroupIndex ? styles.selected : ""
             }`}
-            onMouseEnter={(e) => handleMouseEnter(group, e)}
-            onMouseLeave={handleMouseLeave}
-            onMouseMove={handleMouseMove}
+            onMouseEnter={(e) =>
+              settings.showImageOnHover && handleMouseEnter(group, e)
+            }
+            onMouseLeave={
+              settings.showImageOnHover ? handleMouseLeave : undefined
+            }
+            onMouseMove={
+              settings.showImageOnHover ? handleMouseMove : undefined
+            }
           >
             {group}
           </div>
@@ -189,19 +308,26 @@ export default function MemorizationPhase({
       )}
 
       {isActive && (
-        <button onClick={handlePhaseComplete} className={styles.skipButton}>
-          Skip to Recall
-        </button>
+        <div className={styles.controlsSection}>
+          <button onClick={handlePhaseComplete} className={styles.skipButton}>
+            Skip to Recall
+          </button>
+          {settings.showImageOnHover && (
+            <div className={styles.instructionsText}>
+              Use arrow keys to navigate • Press 'H' for hints
+            </div>
+          )}
+        </div>
       )}
 
       {hoverImage && (
         <div
           className={styles.hoverImageOverlay}
           style={{
-            position: 'fixed',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
+            position: "fixed",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
             zIndex: 9999,
           }}
         >

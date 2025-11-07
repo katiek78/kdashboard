@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "./TrainingSettings.module.css";
 
 export default function TrainingSettings({
@@ -15,6 +15,16 @@ export default function TrainingSettings({
     recallTime: settings.recallTime || 120,
     ...settings,
   });
+
+  // Update local settings when props change (e.g., when loaded from localStorage)
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      setLocalSettings((prevSettings) => ({
+        ...prevSettings,
+        ...settings,
+      }));
+    }
+  }, [settings]);
 
   const handleSettingChange = (key, value) => {
     console.log("Setting change:", key, "=", value);

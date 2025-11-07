@@ -8,13 +8,26 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const TABLE = "comp_images";
 
 export async function fetchCompImage(num_string) {
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("num_string,comp_image")
-    .eq("num_string", num_string)
-    .single();
-  if (error && error.code !== "PGRST116") throw error;
-  return data;
+  try {
+    // Use regular select instead of .single() to avoid 406 errors
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("num_string,comp_image")
+      .eq("num_string", num_string)
+      .limit(1);
+
+    // Handle any Supabase errors gracefully
+    if (error) {
+      console.warn(`Failed to fetch comp image for ${num_string}:`, error);
+      return null;
+    }
+
+    // Return the first result if found, otherwise null
+    return data && data.length > 0 ? data[0] : null;
+  } catch (err) {
+    console.warn(`Error fetching comp image for ${num_string}:`, err);
+    return null;
+  }
 }
 
 export async function fetchAllCompImages() {
