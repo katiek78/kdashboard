@@ -40,6 +40,8 @@ const NumberLocationPage = () => {
   const [locationView, setLocationView] = useState("");
   const [compImagePic, setCompImagePic] = useState("");
   const [phonetics, setPhonetics] = useState("");
+  const [fourDigitBenTricky, setFourDigitBenTricky] = useState(false);
+  const [directNumberInput, setDirectNumberInput] = useState("");
 
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState({});
@@ -64,6 +66,7 @@ const NumberLocationPage = () => {
             category_image: data.category_image || "",
             location_view: data.location_view || "",
             comp_image_pic: data.comp_image_pic || "",
+            four_digit_ben_tricky: data.four_digit_ben_tricky || false,
           };
           setLocation(values.location);
           setPerson(values.person);
@@ -71,6 +74,7 @@ const NumberLocationPage = () => {
           setCategoryImage(values.category_image);
           setLocationView(values.location_view);
           setCompImagePic(values.comp_image_pic);
+          setFourDigitBenTricky(values.four_digit_ben_tricky);
           setOriginalValues(values);
           console.log("Setting original values:", values);
         } else if (!ignore) {
@@ -81,6 +85,7 @@ const NumberLocationPage = () => {
             category_image: "",
             location_view: "",
             comp_image_pic: "",
+            four_digit_ben_tricky: false,
           };
           setLocation("");
           setPerson("");
@@ -88,6 +93,7 @@ const NumberLocationPage = () => {
           setCategoryImage("");
           setLocationView("");
           setCompImagePic("");
+          setFourDigitBenTricky(false);
           setOriginalValues(emptyValues);
           console.log("Setting empty original values:", emptyValues);
         }
@@ -185,6 +191,9 @@ const NumberLocationPage = () => {
       if (compImagePic.trim() !== originalValues.comp_image_pic) {
         payload.comp_image_pic = compImagePic.trim();
       }
+      if (fourDigitBenTricky !== originalValues.four_digit_ben_tricky) {
+        payload.four_digit_ben_tricky = fourDigitBenTricky;
+      }
 
       // Only include category_image for 4-digit numbers and only if it has changed
       if (
@@ -212,6 +221,7 @@ const NumberLocationPage = () => {
         category_image: categoryImage.trim(),
         location_view: normalizedLocationView.trim(),
         comp_image_pic: compImagePic.trim(),
+        four_digit_ben_tricky: fourDigitBenTricky,
       });
     } catch (error) {
       console.error("Save error:", error);
@@ -230,6 +240,42 @@ const NumberLocationPage = () => {
     const n = Math.floor(Math.random() * (max - min + 1)) + min;
     const numString = n.toString().padStart(digits, "0");
     router.push(`/number-locations/${numString}`);
+  };
+
+  // Handler for "Mark as tricky" functionality
+  const handleMarkAsTricky = () => {
+    if (number.length === 4) {
+      setCompImage(categoryImage);
+      setFourDigitBenTricky(true);
+    }
+  };
+
+  // Handler for "Mark as not tricky" functionality
+  const handleMarkAsNotTricky = () => {
+    if (number.length === 4) {
+      setFourDigitBenTricky(false);
+    }
+  };
+
+  // Handler for direct number navigation
+  const handleDirectNumberGo = () => {
+    const input = directNumberInput.trim();
+    if (
+      input &&
+      /^\d+$/.test(input) &&
+      input.length >= 1 &&
+      input.length <= 4
+    ) {
+      const paddedNumber = input.padStart(input.length, "0");
+      router.push(`/number-locations/${paddedNumber}`);
+    }
+  };
+
+  // Handle Enter key in direct number input
+  const handleDirectNumberKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleDirectNumberGo();
+    }
   };
 
   // Navigation handlers for Previous, Next, Up, Down
@@ -291,7 +337,15 @@ const NumberLocationPage = () => {
             <button onClick={handlePrev} className={styles.navButton}>
               ←
             </button>
-            <h1 className={styles.numberHeader}>{number}</h1>
+            <h1
+              className={`${styles.numberHeader} ${
+                fourDigitBenTricky && number.length === 4
+                  ? styles.numberHeaderTricky
+                  : ""
+              }`}
+            >
+              {number}
+            </h1>
             <button onClick={handleNext} className={styles.navButton}>
               →
             </button>
@@ -302,15 +356,42 @@ const NumberLocationPage = () => {
             </button>
           </div>
         </div>
-        <button onClick={handleRandomNumber} className={styles.randomButton}>
-          Random Number
-        </button>
+        <div className={styles.rightSection}>
+          <div className={styles.directNumberContainer}>
+            <input
+              type="text"
+              value={directNumberInput}
+              onChange={(e) => setDirectNumberInput(e.target.value)}
+              onKeyPress={handleDirectNumberKeyPress}
+              placeholder="Go to..."
+              className={styles.directNumberInput}
+              maxLength={4}
+            />
+            <button
+              onClick={handleDirectNumberGo}
+              className={styles.goButton}
+              disabled={
+                !directNumberInput.trim() ||
+                !/^\d+$/.test(directNumberInput.trim())
+              }
+            >
+              Go
+            </button>
+          </div>
+          <button onClick={handleRandomNumber} className={styles.randomButton}>
+            Random Number
+          </button>
+        </div>
       </div>
       <div className={styles.responsiveWhiteSection}>
         {/* Location name at the top */}
         <div
           className={`${styles.locationName} ${
             !location && !editMode ? styles.locationNameEmpty : ""
+          } ${
+            fourDigitBenTricky && number.length === 4
+              ? styles.locationNameTricky
+              : ""
           }`}
         >
           {editMode ? (
@@ -323,7 +404,12 @@ const NumberLocationPage = () => {
               autoFocus
             />
           ) : (
-            location || <span>(no location name)</span>
+            <>
+              {fourDigitBenTricky && number.length === 4 && (
+                <span className={styles.trickyBadge}>TRICKY</span>
+              )}
+              {location || <span>(no location name)</span>}
+            </>
           )}
         </div>
         {loading ? (
@@ -454,7 +540,12 @@ const NumberLocationPage = () => {
               )}
             </div>
             <div className={styles.fieldContainer}>
-              <label className={styles.fieldLabel}>Comp Image:</label>
+              <label className={styles.fieldLabel}>
+                Comp Image:
+                {fourDigitBenTricky && number.length === 4 && compImage === categoryImage && (
+                  <span className={styles.trickyIndicator}> (copied from category)</span>
+                )}
+              </label>
               {editMode ? (
                 <input
                   type="text"
@@ -466,7 +557,7 @@ const NumberLocationPage = () => {
                 <div
                   className={`${styles.fieldValue} ${
                     !compImage ? styles.fieldValueEmpty : ""
-                  }`}
+                  } ${fourDigitBenTricky && number.length === 4 && compImage === categoryImage ? styles.fieldValueTricky : ""}`}
                 >
                   {compImage || <span>(none)</span>}
                 </div>
@@ -537,12 +628,36 @@ const NumberLocationPage = () => {
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => setEditMode(true)}
-                  className={styles.editButton}
-                >
-                  Edit
-                </button>
+                <>
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className={styles.editButton}
+                  >
+                    Edit
+                  </button>
+                  {number.length === 4 && (
+                    <>
+                      {!fourDigitBenTricky && categoryImage && (
+                        <button
+                          onClick={handleMarkAsTricky}
+                          className={styles.trickyButton}
+                          title="Copy category image to comp image and mark as tricky"
+                        >
+                          Mark as Tricky
+                        </button>
+                      )}
+                      {fourDigitBenTricky && (
+                        <button
+                          onClick={handleMarkAsNotTricky}
+                          className={styles.notTrickyButton}
+                          title="Remove tricky marking"
+                        >
+                          Mark as Not Tricky
+                        </button>
+                      )}
+                    </>
+                  )}
+                </>
               )}
             </div>
 

@@ -24,6 +24,12 @@
   text-align: center;
   margin: 0;
   flex: 1 1 100%;
+  transition: color 0.3s ease;
+}
+
+.numberHeaderTricky {
+  color: #ff6b35;
+  text-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
 }
 @media (max-width: 600px) {
   .numberHeader {
@@ -35,8 +41,19 @@
     justify-content: center !important;
     flex-direction: column;
     align-items: center !important;
-    gap: 0 !important;
+    gap: 8px !important;
     padding: 0 4px !important;
+  }
+  .rightSection {
+    align-items: center;
+    width: 100%;
+  }
+  .directNumberContainer {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .directNumberInput {
+    width: 120px;
   }
 }
 .galleryContainer {
@@ -96,10 +113,46 @@
   text-align: center;
   margin-bottom: 24px;
   min-height: 36px;
+  position: relative;
 }
 
 .locationNameEmpty {
   color: #aaa;
+}
+
+.locationNameTricky {
+  background: linear-gradient(135deg, #ffe6dc 0%, #ffccb8 100%);
+  border: 2px solid #ff6b35;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.trickyBadge {
+  display: inline-block;
+  background: #ff6b35;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 6px;
+  margin-right: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trickyIndicator {
+  font-size: 14px;
+  color: #ff6b35;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.fieldValueTricky {
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 6px;
+  padding: 4px 8px;
+  border-left: 3px solid #ff6b35;
 }
 
 .locationNameInput {
@@ -300,6 +353,63 @@
   color: #333;
   border: none;
   cursor: pointer;
+}
+
+.trickyButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #ff6b35;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.notTrickyButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.rightSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.directNumberContainer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.directNumberInput {
+  font-size: 16px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 80px;
+  text-align: center;
+}
+
+.goButton {
+  font-size: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #008080;
+  color: #fff;
+  cursor: pointer;
+}
+
+.goButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .message {

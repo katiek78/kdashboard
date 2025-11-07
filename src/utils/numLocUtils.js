@@ -34,11 +34,15 @@ export async function fetchNumLoc(numString) {
       categoryImage = categoryData.category_image;
   }
 
+  // Fetch four_digit_ben_tricky flag from numberstrings table (already included in numData)
+  const fourDigitBenTricky = numData?.four_digit_ben_tricky || false;
+
   return {
     ...numData,
     comp_image: compImage,
     comp_image_pic: compImagePic,
     category_image: categoryImage,
+    four_digit_ben_tricky: fourDigitBenTricky,
   };
 }
 
@@ -50,11 +54,17 @@ export async function upsertNumLoc({
   comp_image_pic,
   location_view,
   category_image,
+  four_digit_ben_tricky,
 }) {
   // Upsert numberstrings row
+  const numberstringData = { num_string, location, person, location_view };
+  if (four_digit_ben_tricky !== undefined) {
+    numberstringData.four_digit_ben_tricky = four_digit_ben_tricky;
+  }
+
   const { data, error } = await supabase
     .from("numberstrings")
-    .upsert([{ num_string, location, person, location_view }], {
+    .upsert([numberstringData], {
       onConflict: ["num_string"],
     })
     .select()
