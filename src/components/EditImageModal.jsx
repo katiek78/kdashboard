@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 
-const EditImageModal = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  editingEntry, 
-  duplicateType 
+const EditImageModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  editingEntry,
+  duplicateType,
 }) => {
   const [editImageValue, setEditImageValue] = useState("");
   const [markAsTricky, setMarkAsTricky] = useState(false);
