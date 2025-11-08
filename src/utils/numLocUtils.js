@@ -272,10 +272,17 @@ export async function fetchRandomNumberWithoutCompImage(currentNumber) {
       startNum = 0; // 3-digit: 000, 001, 002, ..., 999
       endNum = 999;
     } else {
-      // For 4-digit, find which thousand we're in (e.g., 4334 -> 4000-4999)
+      // For 4-digit numbers, check if we're in fallback mode or normal mode
       const currentNum = parseInt(currentNumber);
-      startNum = Math.floor(currentNum / 1000) * 1000;
-      endNum = startNum + 999;
+      if (currentNumber.startsWith("0") && currentNum < 1000) {
+        // Fallback mode: search entire 4-digit range
+        startNum = 0; // 0000-9999
+        endNum = 9999;
+      } else {
+        // Normal mode: find which thousand we're in (e.g., 4334 -> 4000-4999)
+        startNum = Math.floor(currentNum / 1000) * 1000;
+        endNum = startNum + 999;
+      }
     }
 
     console.log(`Searching for gaps in range ${startNum} to ${endNum}`);
@@ -324,9 +331,24 @@ export async function fetchRandomNumberWithoutCompImage(currentNumber) {
     console.log(`Sample gaps:`, numbersWithoutCompImage.slice(0, 5));
 
     if (numbersWithoutCompImage.length === 0) {
-      throw new Error(
-        `All numbers in range ${startNum}-${endNum} have comp_image assigned!`
+      console.log(
+        `All numbers in range ${startNum}-${endNum} have comp_image assigned. Trying next digit level...`
       );
+
+      // Try the next digit level
+      if (digitCount < 4) {
+        return await fetchRandomNumberWithoutCompImage(
+          currentNumber.padStart(digitCount + 1, "0")
+        );
+      } else if (digitCount === 4 && endNum - startNum < 9999) {
+        // If we were checking a specific 1000-range of 4-digit numbers, try the full range
+        console.log(
+          `Trying full 4-digit range instead of just ${startNum}-${endNum}...`
+        );
+        return await fetchRandomNumberWithoutCompImage("0000");
+      } else {
+        throw new Error(`All numbers in all ranges have comp_image assigned!`);
+      }
     }
 
     // Pick a random number from those without comp_image
