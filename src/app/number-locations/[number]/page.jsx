@@ -4,7 +4,12 @@ import React, { useEffect, useState } from "react";
 import styles from "./NumberPage.module.css";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
-import { fetchNumLoc, upsertNumLoc } from "../../../utils/numLocUtils";
+import {
+  fetchNumLoc,
+  upsertNumLoc,
+  fetchRandomNumberWithoutCompImage,
+  debugSpecificNumber,
+} from "../../../utils/numLocUtils";
 import { getNumberPhonetics } from "../../../utils/memTrainingUtils";
 
 const NumberLocationPage = () => {
@@ -56,6 +61,12 @@ const NumberLocationPage = () => {
     async function load() {
       setLoading(true);
       setMessage("");
+
+      // DEBUG: Check what's actually in the database for this number
+      if (number.length === 3) {
+        await debugSpecificNumber(number.toString());
+      }
+
       try {
         const data = await fetchNumLoc(number.toString());
         if (!ignore && data) {
@@ -242,6 +253,18 @@ const NumberLocationPage = () => {
     router.push(`/number-locations/${numString}`);
   };
 
+  // Handler for random number without comp_image navigation
+  const handleRandomNumberWithoutCompImage = async () => {
+    try {
+      setMessage("Finding random number without comp image...");
+      const randomNumString = await fetchRandomNumberWithoutCompImage(number);
+      router.push(`/number-locations/${randomNumString}`);
+    } catch (error) {
+      console.error("Error finding random number without comp_image:", error);
+      setMessage("Error: " + error.message);
+    }
+  };
+
   // Handler for "Mark as tricky" functionality
   const handleMarkAsTricky = () => {
     if (number.length === 4) {
@@ -383,6 +406,13 @@ const NumberLocationPage = () => {
               className={styles.randomButton}
             >
               Random
+            </button>
+            <button
+              onClick={handleRandomNumberWithoutCompImage}
+              className={styles.randomButton}
+              title="Go to a random number that doesn't have a comp image"
+            >
+              Random Gap
             </button>
           </div>
         </div>

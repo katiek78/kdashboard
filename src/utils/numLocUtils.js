@@ -104,17 +104,31 @@ export async function upsertNumLoc({
       delete updateData.num_string;
 
       console.log("Updating numberstrings with:", updateData);
-      const { data: updateResult, error } = await supabase
-        .from("numberstrings")
-        .update(updateData)
-        .eq("num_string", num_string)
-        .select()
-        .maybeSingle();
-      if (error) {
-        console.error("Numberstrings update error:", error);
-        throw error;
+
+      // Only perform update if there's actual data to update
+      if (Object.keys(updateData).length > 0) {
+        const { data: updateResult, error } = await supabase
+          .from("numberstrings")
+          .update(updateData)
+          .eq("num_string", num_string)
+          .select()
+          .maybeSingle();
+        if (error) {
+          console.error("Numberstrings update error:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          throw error;
+        }
+        data = updateResult;
+      } else {
+        console.log("No numberstrings data to update, skipping update");
+        // Fetch existing data since we're not updating
+        const { data: existingData } = await supabase
+          .from("numberstrings")
+          .select("*")
+          .eq("num_string", num_string)
+          .maybeSingle();
+        data = existingData;
       }
-      data = updateResult;
     } else {
       // Insert new record
       console.log("Inserting numberstrings with:", numberstringData);
@@ -225,6 +239,106 @@ export async function upsertNumLoc({
     return data;
   } catch (error) {
     console.error("Upsert operation failed:", error);
+    throw error;
+  }
+}
+
+export async function debugSpecificNumber(numString) {
+  console.log(`DEBUG: Checking number ${numString}`);
+
+  const { data: compData, error } = await supabase
+    .from("comp_images")
+    .select("*")
+    .eq("num_string", numString)
+    .maybeSingle();
+
+  console.log(`DEBUG: comp_images result for ${numString}:`, compData, error);
+  return compData;
+}
+
+export async function fetchRandomNumberWithoutCompImage(currentNumber) {
+  try {
+    // Determine the range based on current number
+    const digitCount = currentNumber ? currentNumber.length : 4;
+    let startNum, endNum;
+
+    if (digitCount === 1) {
+      startNum = 0;
+      endNum = 9;
+    } else if (digitCount === 2) {
+      startNum = 0; // 2-digit: 00, 01, 02, ..., 99
+      endNum = 99;
+    } else if (digitCount === 3) {
+      startNum = 0; // 3-digit: 000, 001, 002, ..., 999
+      endNum = 999;
+    } else {
+      // For 4-digit, find which thousand we're in (e.g., 4334 -> 4000-4999)
+      const currentNum = parseInt(currentNumber);
+      startNum = Math.floor(currentNum / 1000) * 1000;
+      endNum = startNum + 999;
+    }
+
+    console.log(`Searching for gaps in range ${startNum} to ${endNum}`);
+
+    // Generate all numbers in this range with proper padding
+    const allNumbersInRange = [];
+    for (let i = startNum; i <= endNum; i++) {
+      const numString = i.toString().padStart(digitCount, "0");
+      allNumbersInRange.push(numString);
+    }
+
+    // Fetch records for this specific range
+    const { data: recordsInRange, error } = await supabase
+      .from("comp_images")
+      .select("num_string, comp_image")
+      .in("num_string", allNumbersInRange);
+
+    if (error) {
+      console.error("Error fetching comp_images records:", error);
+      throw error;
+    }
+
+    console.log(
+      `Found ${
+        recordsInRange?.length || 0
+      } records in range ${startNum}-${endNum}`
+    );
+
+    // Find which numbers have comp_image values
+    const numbersWithCompImage = new Set();
+    recordsInRange?.forEach((record) => {
+      if (record.comp_image && record.comp_image.trim() !== "") {
+        numbersWithCompImage.add(record.num_string);
+      }
+    });
+
+    // Find gaps - numbers that don't have comp_image
+    const numbersWithoutCompImage = allNumbersInRange.filter(
+      (numString) => !numbersWithCompImage.has(numString)
+    );
+
+    console.log(`Numbers WITH comp_image: ${numbersWithCompImage.size}`);
+    console.log(
+      `Numbers WITHOUT comp_image: ${numbersWithoutCompImage.length}`
+    );
+    console.log(`Sample gaps:`, numbersWithoutCompImage.slice(0, 5));
+
+    if (numbersWithoutCompImage.length === 0) {
+      throw new Error(
+        `All numbers in range ${startNum}-${endNum} have comp_image assigned!`
+      );
+    }
+
+    // Pick a random number from those without comp_image
+    const randomIndex = Math.floor(
+      Math.random() * numbersWithoutCompImage.length
+    );
+    const selectedNumber = numbersWithoutCompImage[randomIndex];
+    console.log("Selected random number without comp_image:", selectedNumber);
+
+    return selectedNumber;
+  } catch (error) {
+    console.error("Error fetching random number without comp_image:", error);
     throw error;
   }
 }
