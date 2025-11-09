@@ -73,65 +73,141 @@
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
-/* Compact header layout */
-.compactHeader {
+/* Clean header layout */
+.cleanHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   gap: 16px;
 }
 
-.centerSection {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.navigationGrid {
-  display: grid;
-  grid-template-rows: auto auto auto;
-  grid-template-columns: 1fr;
-  gap: 4px;
-  align-items: center;
-  justify-items: center;
-}
-
-.navRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.compactNumberHeader {
-  font-size: 48px;
+.cleanNumberHeader {
+  font-size: 64px;
   color: #004d4d;
   margin: 0;
   font-weight: bold;
   transition: color 0.3s ease;
+  text-align: center;
+  flex: 1;
 }
 
-.compactRightSection {
+/* Navigation buttons row */
+.navigationButtonsRow {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.navBtn {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #f0f8ff;
+  color: #004d4d;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.navBtn:hover {
+  background: #e6f3ff;
+  transform: translateY(-1px);
+}
+
+.navBtnDisabled {
+  background: #e9e9e9;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.navBtnDisabled:hover {
+  background: #e9e9e9;
+  transform: none;
+}
+
+/* Utility buttons row */
+.utilityButtonsRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.randomButtonsContainer {
+  display: flex;
+  gap: 8px;
+}
+
+.utilityBtn {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #008080;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.utilityBtn:hover {
+  background: #006666;
+  transform: translateY(-1px);
+}
+
+.goToContainer {
+  display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.goToInput {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 80px;
+  text-align: center;
+}
+
+.goToBtn {
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #008080;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.goToBtn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 /* Compact location name */
 .compactLocationName {
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 600;
   color: #004d4d;
   text-align: center;
-  margin-bottom: 16px;
-  min-height: 30px;
+  margin-bottom: 20px;
+  margin-top: 8px;
+  min-height: 24px;
   position: relative;
 }
 
 .compactLocationInput {
   width: 100%;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 600;
   color: #004d4d;
   text-align: center;
@@ -142,27 +218,139 @@
   background: #fff;
 }
 
-/* Two-column layout */
-.compactContent {
+.locationNameTricky {
+  color: #ff6b35;
+}
+
+/* New content area layout */
+.contentArea {
   margin-bottom: 16px;
 }
 
-.twoColumnLayout {
+.detailsSection {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fffe;
+  border-radius: 12px;
+  border: 2px solid #26c4bc;
 }
 
-.leftColumn {
-  display: flex;
-  flex-direction: column;
+.streetViewSection {
+  margin-bottom: 20px;
 }
 
-.rightColumn {
+.actionButtonsRow {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+/* Specific action button styles with original colors */
+.editButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #eee;
+  color: #333;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.editButton:hover {
+  background: #ddd;
+  transform: translateY(-1px);
+}
+
+.saveButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #008080;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover {
+  background: #006666;
+  transform: translateY(-1px);
+}
+
+.cancelButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #eee;
+  color: #333;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background: #ddd;
+  transform: translateY(-1px);
+}
+
+.trickyButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #ff6b35;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.trickyButton:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+}
+
+.notTrickyButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.notTrickyButton:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.copyPhoneticsButton {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #850e53bd;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.copyPhoneticsButton:hover {
+  background: #6b0a42;
+  transform: translateY(-1px);
 }
 
 .compactStreetViewContainer {
@@ -255,12 +443,7 @@
   background: #fff;
 }
 
-.compactActionButtons {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
+/* Removed unused compactActionButtons - now using actionButtonsRow */
 
 /* Mobile responsive styles */
 @media (max-width: 768px) {
@@ -269,28 +452,52 @@
   }
   
   .compactWhiteSection {
-    padding: 12px;
+    padding: 16px;
   }
   
-  .compactHeader {
+  .cleanHeader {
     flex-direction: column;
     gap: 12px;
+    text-align: center;
   }
   
-  .compactRightSection {
-    align-items: center;
-    width: 100%;
-    flex-direction: row;
-    justify-content: center;
+  .cleanNumberHeader {
+    font-size: 48px;
   }
   
-  .compactNumberHeader {
-    font-size: 36px;
+  .navigationButtonsRow {
+    gap: 8px;
   }
   
-  .twoColumnLayout {
+  .navBtn {
+    min-width: 70px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .utilityButtonsRow {
+    gap: 8px;
+  }
+  
+  .utilityBtn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .goToInput {
+    width: 70px;
+    padding: 6px 8px;
+  }
+  
+  .goToBtn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .detailsSection {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 12px;
+    padding: 12px;
   }
   
   .compactStreetViewContainer iframe {
@@ -309,13 +516,82 @@
     max-width: 30%;
     max-height: 30%;
   }
+  
+  .actionButtonsRow {
+    gap: 8px;
+  }
+  
+  .editButton,
+  .saveButton,
+  .cancelButton,
+  .trickyButton,
+  .notTrickyButton,
+  .copyPhoneticsButton {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 600px) {
   .galleryContainer {
-    padding: 8px 0;
-    max-width: 95vw;
-    width: 95vw;
+    padding: 4px;
+  }
+  
+  .compactWhiteSection {
+    padding: 12px;
+  }
+  
+  .cleanNumberHeader {
+    font-size: 40px;
+  }
+  
+  .compactLocationName {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .compactLocationInput {
+    font-size: 20px;
+  }
+  
+  .navigationButtonsRow {
+    gap: 6px;
+  }
+  
+  .navBtn {
+    min-width: 60px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .utilityButtonsRow {
+    gap: 8px;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .randomButtonsContainer {
+    gap: 6px;
+  }
+  
+  .goToContainer {
+    margin-top: 0;
+  }
+  
+  .detailsSection {
+    padding: 8px;
+  }
+  
+  .compactStreetViewContainer iframe {
+    height: 200px;
+  }
+  
+  .noStreetView {
+    height: 200px;
+  }
+  
+  .loadingPlaceholder {
+    height: 200px;
   }
 }
 /* Responsive white section for number detail */
@@ -566,65 +842,7 @@
   margin-top: 24px;
 }
 
-.saveButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #008080;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-
-.cancelButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #eee;
-  color: #333;
-  border: none;
-  cursor: pointer;
-}
-
-.editButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #eee;
-  color: #333;
-  border: none;
-  cursor: pointer;
-}
-
-.trickyButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #ff6b35;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-
-.notTrickyButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #28a745;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-
-.copyPhoneticsButton {
-  font-size: 16px;
-  padding: 8px 20px;
-  border-radius: 8px;
-  background: #850e53bd;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
+/* Old duplicate button styles removed - now using updated styles above */
 
 .rightSection {
   display: flex;
