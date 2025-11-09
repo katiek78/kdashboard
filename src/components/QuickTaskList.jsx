@@ -846,14 +846,14 @@ const QuickTaskList = () => {
       const randomIdx = Math.floor(Math.random() * taggedTasks.length);
       const selectedTask = taggedTasks[randomIdx];
       setRandomTaskId(selectedTask.id);
-      
+
       // Scroll to the selected task
       setTimeout(() => {
         const taskElement = document.getElementById(`task-${selectedTask.id}`);
         if (taskElement) {
-          taskElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
+          taskElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
           });
         }
       }, 100);
@@ -874,14 +874,14 @@ const QuickTaskList = () => {
     const randomIdx = Math.floor(Math.random() * pool.length);
     const selectedTask = pool[randomIdx];
     setRandomTaskId(selectedTask.id);
-    
+
     // Scroll to the selected task
     setTimeout(() => {
       const taskElement = document.getElementById(`task-${selectedTask.id}`);
       if (taskElement) {
-        taskElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center' 
+        taskElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
         });
       }
     }, 100);

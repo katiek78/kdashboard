@@ -616,6 +616,16 @@
   cursor: pointer;
 }
 
+.copyPhoneticsButton {
+  font-size: 16px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #850e53bd;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
 .rightSection {
   display: flex;
   flex-direction: column;

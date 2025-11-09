@@ -169,6 +169,34 @@ const NumberLocationPage = () => {
     return val;
   };
 
+  const handleCopyPhonetics = async () => {
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const payload = {
+        num_string: number.toString(),
+        comp_image: phonetics.trim(),
+      };
+
+      console.log("Copying phonetics:", phonetics.trim());
+      await upsertNumLoc(payload);
+
+      // Update the comp image state and original values after successful save
+      setCompImage(phonetics.trim());
+      setOriginalValues((prev) => ({
+        ...prev,
+        comp_image: phonetics.trim(),
+      }));
+
+      setMessage("Phonetics copied and saved!");
+    } catch (error) {
+      console.error("Copy phonetics error:", error);
+      setMessage(`Error copying phonetics: ${error.message || error}`);
+    }
+    setSaving(false);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setMessage("");
@@ -773,6 +801,14 @@ const NumberLocationPage = () => {
                         {saving ? "Saving..." : "Mark as Not Tricky"}
                       </button>
                     )}
+                    <button
+                      onClick={handleCopyPhonetics}
+                      disabled={saving}
+                      className={styles.copyPhoneticsButton}
+                      title="Copy phonetics"
+                    >
+                      Copy phonetics
+                    </button>
                   </>
                 )}
               </>
