@@ -5,6 +5,12 @@ import Link from "next/link";
 export default function MemoryTrainingContainer() {
   const trainingTools = [
     {
+      title: "3-Digit System",
+      description: "Manage and train with the Ben System for 3-digit numbers",
+      path: "/memory-training/three-digit-system",
+      icon: "🔢",
+    },
+    {
       title: "4-Digit System",
       description: "Manage and train with the Ben System for 4-digit numbers",
       path: "/memory-training/four-digit-system",
