@@ -1,14 +1,24 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import supabase from "../utils/supabaseClient";
 
 const FourDigitGrid = React.memo(function FourDigitGrid({
   refresh,
+  onEditClick,
   onUpdateCallback,
 }) {
   const [categoryImages, setCategoryImages] = useState({});
   const [compImages, setCompImages] = useState({});
+  const [numberStrings, setNumberStrings] = useState({});
   const [loading, setLoading] = useState(true);
   const [prefix, setPrefix] = useState("00"); // first two digits
+
+  // Generate the 100 numbers for the current prefix
+  const numbers = useMemo(() => {
+    return Array.from(
+      { length: 100 },
+      (_, i) => `${prefix}${i.toString().padStart(2, "0")}`
+    );
+  }, [prefix]);
 
   // Callback to update individual entries without full refresh
   const updateSingleEntry = useCallback((numString, type, newValue) => {
@@ -36,49 +46,65 @@ const FourDigitGrid = React.memo(function FourDigitGrid({
   useEffect(() => {
     async function fetchImages() {
       setLoading(true);
-      // Only fetch the 100 for the current prefix
-      const rangeStart = prefix + "00";
-      const rangeEnd = prefix + "99";
-      // Fetch category_images
+
+      // Fetch category_images for specific number list
       const { data: catImgs, error: catErr } = await supabase
         .from("category_images")
         .select("num_string,category_image")
-        .gte("num_string", rangeStart)
-        .lte("num_string", rangeEnd);
-      // Fetch comp_images
+        .in("num_string", numbers);
+
+      // Fetch comp_images for specific number list
       const { data: compImgs, error: compErr } = await supabase
         .from("comp_images")
         .select("num_string,comp_image")
-        .gte("num_string", rangeStart)
-        .lte("num_string", rangeEnd);
+        .in("num_string", numbers);
+
+      // Fetch numberstrings for location and person data
+      const { data: numStrings, error: numErr } = await supabase
+        .from("numberstrings")
+        .select("num_string,location,person")
+        .in("num_string", numbers);
+
+      if (catErr) {
+        console.error("Error fetching category images:", catErr);
+      }
+      if (compErr) {
+        console.error("Error fetching comp images:", compErr);
+      }
+      if (numErr) {
+        console.error("Error fetching number strings:", numErr);
+      }
+
       // Map by num_string for fast lookup
       const catMap = {};
       (catImgs || []).forEach((img) => {
         if (img?.num_string) catMap[img.num_string] = img;
       });
+
       const compMap = {};
       (compImgs || []).forEach((img) => {
         if (img?.num_string) compMap[img.num_string] = img;
       });
+
+      const numStringsMap = {};
+      (numStrings || []).forEach((numStr) => {
+        if (numStr?.num_string) numStringsMap[numStr.num_string] = numStr;
+      });
+
       setCategoryImages(catMap);
       setCompImages(compMap);
+      setNumberStrings(numStringsMap);
       setLoading(false);
     }
     fetchImages();
-  }, [refresh, prefix]);
+  }, [refresh, numbers]);
 
   // Register the update callback with parent component
   useEffect(() => {
     if (onUpdateCallback) {
-      onUpdateCallback(() => updateSingleEntry);
+      onUpdateCallback(updateSingleEntry);
     }
   }, [onUpdateCallback, updateSingleEntry]);
-
-  // Show only the 100 numbers for the selected prefix
-  const numbers = Array.from(
-    { length: 100 },
-    (_, i) => `${prefix}${i.toString().padStart(2, "0")}`
-  );
 
   if (loading) return <div>Loading grid...</div>;
 
@@ -101,74 +127,92 @@ const FourDigitGrid = React.memo(function FourDigitGrid({
           ))}
         </select>
       </div>
-      <table style={{ borderCollapse: "collapse", width: "100%" }}>
+
+      <table
+        style={{
+          borderCollapse: "collapse",
+          fontSize: "13px",
+          minWidth: "1000px",
+        }}
+      >
         <thead>
           <tr>
-            <th
-              style={{
-                position: "sticky",
-                top: 0,
-                background: "#f8f8f8",
-                zIndex: 1,
-              }}
-            >
+            <th style={{ border: "1px solid #ccc", padding: "4px 8px" }}>
               Number
             </th>
-            <th
-              style={{
-                position: "sticky",
-                top: 0,
-                background: "#f8f8f8",
-                zIndex: 1,
-              }}
-            >
+            <th style={{ border: "1px solid #ccc", padding: "4px 8px" }}>
+              Location
+            </th>
+            <th style={{ border: "1px solid #ccc", padding: "4px 8px" }}>
+              Person
+            </th>
+            <th style={{ border: "1px solid #ccc", padding: "4px 8px" }}>
               Category Image
             </th>
-            <th
-              style={{
-                position: "sticky",
-                top: 0,
-                background: "#f8f8f8",
-                zIndex: 1,
-              }}
-            >
+            <th style={{ border: "1px solid #ccc", padding: "4px 8px" }}>
               Comp Image
             </th>
           </tr>
         </thead>
         <tbody>
-          {numbers.map((numStr) => {
-            const catLabel = categoryImages[numStr]?.category_image || "";
-            const compLabel = compImages[numStr]?.comp_image || "";
+          {numbers.map((num) => {
+            const catImg = categoryImages[num];
+            const compImg = compImages[num];
+            const numString = numberStrings[num];
             return (
-              <tr key={numStr}>
+              <tr key={num}>
                 <td
                   style={{
-                    border: "1px solid #eee",
-                    padding: "2px 8px",
-                    textAlign: "right",
-                    fontFamily: "monospace",
+                    border: "1px solid #ccc",
+                    padding: "4px 8px",
+                    fontWeight: "bold",
+                    backgroundColor: "#f9f9f9",
                   }}
                 >
-                  {numStr}
+                  {num}
                 </td>
                 <td
                   style={{
-                    border: "1px solid #eee",
-                    padding: "2px 8px",
-                    textAlign: "center",
+                    border: "1px solid #ccc",
+                    padding: "4px 8px",
+                    backgroundColor: numString?.location ? "#f0f8ff" : "#fff",
                   }}
                 >
-                  {catLabel}
+                  {numString?.location || ""}
                 </td>
                 <td
                   style={{
-                    border: "1px solid #eee",
-                    padding: "2px 8px",
-                    textAlign: "center",
+                    border: "1px solid #ccc",
+                    padding: "4px 8px",
+                    backgroundColor: numString?.person ? "#f0f8ff" : "#fff",
                   }}
                 >
-                  {compLabel}
+                  {numString?.person || ""}
+                </td>
+                <td
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "4px 8px",
+                    backgroundColor: catImg?.category_image
+                      ? "#e8f5e8"
+                      : "#fff5f5",
+                  }}
+                >
+                  {catImg?.category_image || ""}
+                </td>
+                <td
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "4px 8px",
+                    cursor: "pointer",
+                    backgroundColor: compImg?.comp_image
+                      ? "#e8f5e8"
+                      : "#fff5f5",
+                  }}
+                  onClick={() => onEditClick?.(num, compImg?.comp_image || "")}
+                  title="Click to edit"
+                >
+                  {compImg?.comp_image || ""}
                 </td>
               </tr>
             );
