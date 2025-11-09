@@ -266,17 +266,67 @@ const NumberLocationPage = () => {
   };
 
   // Handler for "Mark as tricky" functionality
-  const handleMarkAsTricky = () => {
+  const handleMarkAsTricky = async () => {
     if (number.length === 4) {
       setCompImage(categoryImage);
       setFourDigitBenTricky(true);
+
+      // Save immediately
+      setSaving(true);
+      setMessage("");
+
+      try {
+        const payload = {
+          num_string: number.toString(),
+          comp_image: categoryImage.trim(),
+          four_digit_ben_tricky: true,
+        };
+
+        await upsertNumLoc(payload);
+        setMessage("Marked as tricky and saved!");
+
+        // Update original values after successful save
+        setOriginalValues((prev) => ({
+          ...prev,
+          comp_image: categoryImage.trim(),
+          four_digit_ben_tricky: true,
+        }));
+      } catch (error) {
+        console.error("Save error:", error);
+        setMessage(`Error saving tricky status: ${error.message || error}`);
+      }
+      setSaving(false);
     }
   };
 
   // Handler for "Mark as not tricky" functionality
-  const handleMarkAsNotTricky = () => {
+  const handleMarkAsNotTricky = async () => {
     if (number.length === 4) {
       setFourDigitBenTricky(false);
+
+      // Save immediately
+      setSaving(true);
+      setMessage("");
+
+      try {
+        const payload = {
+          num_string: number.toString(),
+          four_digit_ben_tricky: false,
+        };
+
+        await upsertNumLoc(payload);
+        setMessage("Marked as not tricky and saved!");
+
+        // Update original values after successful save
+        setOriginalValues((prev) => ({
+          ...prev,
+          four_digit_ben_tricky: false,
+        }));
+      } catch (error) {
+        console.error("Save error:", error);
+        setMessage(`Error saving tricky status: ${error.message || error}`);
+      }
+      setSaving(false);
     }
   };
 
@@ -706,19 +756,21 @@ const NumberLocationPage = () => {
                     {!fourDigitBenTricky && categoryImage && (
                       <button
                         onClick={handleMarkAsTricky}
+                        disabled={saving}
                         className={styles.trickyButton}
                         title="Copy category image to comp image and mark as tricky"
                       >
-                        Mark as Tricky
+                        {saving ? "Saving..." : "Mark as Tricky"}
                       </button>
                     )}
                     {fourDigitBenTricky && (
                       <button
                         onClick={handleMarkAsNotTricky}
+                        disabled={saving}
                         className={styles.notTrickyButton}
                         title="Remove tricky marking"
                       >
-                        Mark as Not Tricky
+                        {saving ? "Saving..." : "Mark as Not Tricky"}
                       </button>
                     )}
                   </>
