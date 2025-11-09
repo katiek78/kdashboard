@@ -399,6 +399,55 @@
   font-size: 16px;
   font-weight: 500;
 }
+/* Dark mode overrides for readability when not editing */
+@media (prefers-color-scheme: dark) {
+  .detailsSection {
+    /* darker, low-contrast background and softer border in dark mode */
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  }
+
+  .compactWhiteSection {
+    /* convert the bright white section into a dark card */
+    background: rgba(20,20,20,0.6);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+    color: var(--foreground);
+  }
+
+  /* Make inputs readable on dark backgrounds */
+  .compactLocationInput,
+  .goToInput {
+    background: #0f1113;
+    color: var(--foreground);
+    border: 1px solid #333;
+  }
+
+  /* Ensure headings and labels contrast on dark */
+  .compactLocationName,
+  .numberHeader,
+  .cleanNumberHeader,
+  .navigationButtonsRow,
+  .utilityButtonsRow {
+    color: var(--foreground);
+  }
+
+  .noStreetView,
+  .loadingPlaceholder {
+    background: #111;
+    color: #bbb;
+  }
+
+  /* Slightly tweak nav button look in dark mode */
+  .navBtn {
+    background: rgba(255,255,255,0.03);
+    color: var(--foreground);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .navBtn:hover {
+    background: rgba(255,255,255,0.05);
+  }
+}
 
 @keyframes loading-shimmer {
   0% {
@@ -910,4 +959,82 @@
   border-radius: 12px;
   display: block;
   width: 100%;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  .compactWhiteSection {
+    background: rgba(40, 40, 40, 0.95) !important;
+    color: #f3f3f3;
+  }
+
+  .cleanNumberHeader {
+    color: #4dd2d2 !important;
+  }
+
+  .numberHeaderTricky {
+    color: #ff8c5a !important;
+  }
+
+  .compactLocationName {
+    color: #4dd2d2 !important;
+  }
+
+  .compactLocationInput {
+    background: #333 !important;
+    color: #f3f3f3 !important;
+    border: 1px solid #555 !important;
+  }
+
+  .compactLocationInput::placeholder {
+    color: #aaa !important;
+  }
+
+  .compactInput {
+    background: #333 !important;
+    color: #f3f3f3 !important;
+    border: 1px solid #555 !important;
+  }
+
+  .compactInput::placeholder {
+    color: #aaa !important;
+  }
+
+  .goToInput {
+    background: #333 !important;
+    color: #f3f3f3 !important;
+    border: 1px solid #555 !important;
+  }
+
+  .goToInput::placeholder {
+    color: #aaa !important;
+  }
+
+  .compactLabel {
+    color: #f3f3f3 !important;
+  }
+
+  .compactValue {
+    color: #f3f3f3 !important;
+  }
+
+  .compactValueEmpty {
+    color: #888 !important;
+  }
+
+  .locationNameEmpty {
+    color: #888 !important;
+  }
+
+  .trickyIndicator {
+    color: #ff8c5a !important;
+  }
+
+  .fieldValueTricky {
+    color: #ff8c5a !important;
+  }
+
+  .locationNameTricky {
+    color: #ff8c5a !important;
+  }
 }
