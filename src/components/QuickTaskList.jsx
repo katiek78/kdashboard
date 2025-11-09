@@ -844,7 +844,19 @@ const QuickTaskList = () => {
       console.log("taggedTasks:", taggedTasks);
       if (taggedTasks.length === 0) return;
       const randomIdx = Math.floor(Math.random() * taggedTasks.length);
-      setRandomTaskId(taggedTasks[randomIdx].id);
+      const selectedTask = taggedTasks[randomIdx];
+      setRandomTaskId(selectedTask.id);
+      
+      // Scroll to the selected task
+      setTimeout(() => {
+        const taskElement = document.getElementById(`task-${selectedTask.id}`);
+        if (taskElement) {
+          taskElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 100);
       return;
     }
 
@@ -860,7 +872,19 @@ const QuickTaskList = () => {
       pool = nonUrgent;
     }
     const randomIdx = Math.floor(Math.random() * pool.length);
-    setRandomTaskId(pool[randomIdx].id);
+    const selectedTask = pool[randomIdx];
+    setRandomTaskId(selectedTask.id);
+    
+    // Scroll to the selected task
+    setTimeout(() => {
+      const taskElement = document.getElementById(`task-${selectedTask.id}`);
+      if (taskElement) {
+        taskElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }, 100);
   }
 
   async function toggleBlocked(id, blocked) {
@@ -920,7 +944,8 @@ const QuickTaskList = () => {
         </button>
       </div>
       <div style={{ margin: "12px 0", fontWeight: 500, fontSize: 18 }}>
-        Total tasks for today: {visibleTasks?.length}
+        Total tasks for today: {visibleTasks?.length} (
+        {visibleTasks.filter((t) => !t.blocked).length} unblocked)
         {/* {completingTaskId && (
           <span style={{ marginLeft: 20, color: "#ff9800", fontSize: 14 }}>
             Completing: {completingTaskId}

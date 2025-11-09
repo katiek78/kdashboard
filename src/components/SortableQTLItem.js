@@ -80,6 +80,7 @@ function SortableQTLItem({
 
   return (
     <div
+      id={`task-${id}`}
       ref={setNodeRef}
       style={style}
       className={styles.qtlRoot}

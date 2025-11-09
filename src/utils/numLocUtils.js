@@ -324,11 +324,10 @@ export async function fetchRandomNumberWithoutCompImage(currentNumber) {
       (numString) => !numbersWithCompImage.has(numString)
     );
 
-    console.log(`Numbers WITH comp_image: ${numbersWithCompImage.size}`);
+    //    console.log(`Numbers WITH comp_image: ${numbersWithCompImage.size}`);
     console.log(
       `Numbers WITHOUT comp_image: ${numbersWithoutCompImage.length}`
     );
-    console.log(`Sample gaps:`, numbersWithoutCompImage.slice(0, 5));
 
     if (numbersWithoutCompImage.length === 0) {
       console.log(
