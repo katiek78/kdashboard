@@ -832,9 +832,10 @@ const NumberLocationPage = () => {
           {message && (
             <div
               className={`${styles.message} ${
-                message === "Saved!"
-                  ? styles.messageSuccess
-                  : styles.messageError
+                message.startsWith("Error") ||
+                message.toLowerCase().includes("error")
+                  ? styles.messageError
+                  : styles.messageInfo
               }`}
             >
               {message}
