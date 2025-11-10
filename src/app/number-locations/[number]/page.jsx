@@ -289,7 +289,28 @@ const NumberLocationPage = () => {
       router.push(`/number-locations/${randomNumString}`);
     } catch (error) {
       console.error("Error finding random number without comp_image:", error);
-      setMessage("Error: " + error.message);
+
+      // Provide more user-friendly error messages
+      if (
+        error.message &&
+        error.message.includes(
+          "All numbers in all ranges have comp_image assigned"
+        )
+      ) {
+        setMessage(
+          "Great! All numbers in this range already have comp images assigned."
+        );
+      } else if (
+        error.message &&
+        (error.message.includes("Failed to fetch") ||
+          error.message.includes("Network connection error"))
+      ) {
+        setMessage(
+          "Network error occurred. Please check your connection and try again."
+        );
+      } else {
+        setMessage("Error: " + (error.message || "Unknown error occurred"));
+      }
     }
   };
 
