@@ -5,6 +5,7 @@ const FourDigitGrid = React.memo(function FourDigitGrid({
   refresh,
   onEditClick,
   onUpdateCallback,
+  onDataUpdate,
 }) {
   const [categoryImages, setCategoryImages] = useState({});
   const [compImages, setCompImages] = useState({});
@@ -105,6 +106,27 @@ const FourDigitGrid = React.memo(function FourDigitGrid({
       onUpdateCallback(updateSingleEntry);
     }
   }, [onUpdateCallback, updateSingleEntry]);
+
+  // Update parent with current grid data when data changes
+  useEffect(() => {
+    if (onDataUpdate && !loading) {
+      const gridData = numbers.map((num) => ({
+        number: num,
+        location: numberStrings[num]?.location || "",
+        person: numberStrings[num]?.person || "",
+        categoryImage: categoryImages[num]?.category_image || "",
+        compImage: compImages[num]?.comp_image || "",
+      }));
+      onDataUpdate(gridData);
+    }
+  }, [
+    onDataUpdate,
+    numbers,
+    categoryImages,
+    compImages,
+    numberStrings,
+    loading,
+  ]);
 
   if (loading) return <div>Loading grid...</div>;
 

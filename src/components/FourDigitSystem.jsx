@@ -39,8 +39,21 @@ export default function FourDigitSystem() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
 
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportSettings, setExportSettings] = useState({
+    includeNumber: true,
+    includeLocation: true,
+    includePerson: true,
+    includeCategoryImage: true,
+    includeCompImage: true,
+  });
+
   // Callback to update a single entry in the grid without full refresh
   const [gridUpdateCallback, setGridUpdateCallback] = useState(null);
+
+  // Store current grid data for export
+  const [currentGridData, setCurrentGridData] = useState([]);
 
   // Memoize phonetics calculations to avoid expensive recalculations on every render
   const memoizedPhonetics = useMemo(() => {
@@ -852,6 +865,68 @@ export default function FourDigitSystem() {
     }
   };
 
+  const handleExport = () => {
+    if (!currentGridData || currentGridData.length === 0) {
+      alert("No data available to export. Please wait for the grid to load.");
+      return;
+    }
+
+    const headers = [];
+    if (exportSettings.includeNumber) headers.push("Number");
+    if (exportSettings.includeLocation) headers.push("Location");
+    if (exportSettings.includePerson) headers.push("Person");
+    if (exportSettings.includeCategoryImage) headers.push("Category Image");
+    if (exportSettings.includeCompImage) headers.push("Comp Image");
+
+    if (headers.length === 0) {
+      alert("Please select at least one column to export.");
+      return;
+    }
+
+    const rows = currentGridData.map((row) => {
+      const exportRow = [];
+      if (exportSettings.includeNumber) exportRow.push(row.number || "");
+      if (exportSettings.includeLocation) exportRow.push(row.location || "");
+      if (exportSettings.includePerson) exportRow.push(row.person || "");
+      if (exportSettings.includeCategoryImage)
+        exportRow.push(row.categoryImage || "");
+      if (exportSettings.includeCompImage) exportRow.push(row.compImage || "");
+      return exportRow;
+    });
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row
+          .map((field) =>
+            // Escape fields that contain commas or quotes
+            typeof field === "string" &&
+            (field.includes(",") || field.includes('"'))
+              ? `"${field.replace(/"/g, '""')}"`
+              : field
+          )
+          .join(",")
+      ),
+    ].join("\n");
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `four-digit-system-export-${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setShowExportModal(false);
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.toolbar}>
@@ -866,6 +941,7 @@ export default function FourDigitSystem() {
         </button>
         <button onClick={() => setShowPersonImport(true)}>Import People</button>
         <button onClick={() => setShowDuplicates(true)}>Find Duplicates</button>
+        <button onClick={() => setShowExportModal(true)}>Export Data</button>
         <button onClick={() => setRefreshGrid(Date.now())}>Refresh Grid</button>
       </div>
 
@@ -873,6 +949,7 @@ export default function FourDigitSystem() {
         refresh={refreshGrid}
         onEditClick={handleEditClick}
         onUpdateCallback={setGridUpdateCallback}
+        onDataUpdate={setCurrentGridData}
       />
       {/* Category Images Import Modal */}
       {showImport && (
@@ -1080,6 +1157,93 @@ export default function FourDigitSystem() {
 
             <div className={styles.modalButtons}>
               <button onClick={() => setShowDuplicates(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Export Settings</h3>
+            <p>Select which columns to include in the export:</p>
+
+            <div className={styles.exportOptions}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includeNumber}
+                  onChange={(e) =>
+                    setExportSettings((prev) => ({
+                      ...prev,
+                      includeNumber: e.target.checked,
+                    }))
+                  }
+                />
+                Number
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includeLocation}
+                  onChange={(e) =>
+                    setExportSettings((prev) => ({
+                      ...prev,
+                      includeLocation: e.target.checked,
+                    }))
+                  }
+                />
+                Location
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includePerson}
+                  onChange={(e) =>
+                    setExportSettings((prev) => ({
+                      ...prev,
+                      includePerson: e.target.checked,
+                    }))
+                  }
+                />
+                Person
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includeCategoryImage}
+                  onChange={(e) =>
+                    setExportSettings((prev) => ({
+                      ...prev,
+                      includeCategoryImage: e.target.checked,
+                    }))
+                  }
+                />
+                Category Image
+              </label>
+
+              <label>
+                <input
+                  type="checkbox"
+                  checked={exportSettings.includeCompImage}
+                  onChange={(e) =>
+                    setExportSettings((prev) => ({
+                      ...prev,
+                      includeCompImage: e.target.checked,
+                    }))
+                  }
+                />
+                Comp Image
+              </label>
+            </div>
+
+            <div className={styles.modalButtons}>
+              <button onClick={handleExport}>Export CSV</button>
+              <button onClick={() => setShowExportModal(false)}>Cancel</button>
             </div>
           </div>
         </div>

@@ -215,3 +215,21 @@
 .fourDigitContainer {
   background: #fff;
 }
+
+.exportOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.exportOptions label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.exportOptions input[type="checkbox"] {
+  margin: 0;
+}
