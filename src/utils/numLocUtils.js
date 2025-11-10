@@ -256,7 +256,10 @@ export async function debugSpecificNumber(numString) {
   return compData;
 }
 
-export async function fetchRandomNumberWithoutCompImage(currentNumber) {
+export async function fetchRandomNumberWithoutCompImage(
+  currentNumber,
+  triedThousands = null
+) {
   try {
     // Determine the range based on current number
     const digitCount = currentNumber ? currentNumber.length : 4;
@@ -336,33 +339,38 @@ export async function fetchRandomNumberWithoutCompImage(currentNumber) {
 
     if (numbersWithoutCompImage.length === 0) {
       console.log(
-        `All numbers in range ${startNum}-${endNum} have comp_image assigned. Trying next digit level...`
+        `All numbers in range ${startNum}-${endNum} have comp_image assigned. Trying next digit level or other thousands...`
       );
 
       // Try the next digit level
       if (digitCount < 4) {
         return await fetchRandomNumberWithoutCompImage(
-          currentNumber.padStart(digitCount + 1, "0")
+          currentNumber.padStart(digitCount + 1, "0"),
+          triedThousands
         );
       } else {
-        // For 4-digit numbers, if no gaps in current thousand, try other thousands
-        const firstDigit = parseInt(currentNumber.charAt(0));
-
-        // Try the next thousand range (0->1, 1->2, etc.)
-        if (firstDigit < 9) {
-          const nextThousand = (firstDigit + 1).toString() + "000";
-          console.log(
-            `No gaps in ${startNum}-${endNum} range. Trying ${nextThousand.charAt(
-              0
-            )}000-${nextThousand.charAt(0)}999 range...`
+        // For 4-digit numbers, if no gaps in current thousand, try all thousands (0-9)
+        if (!triedThousands) triedThousands = new Set();
+        let firstDigit = parseInt(currentNumber.charAt(0));
+        let startTry = firstDigit;
+        triedThousands.add(currentNumber.padStart(4, "0"));
+        // Try all thousands from 0 to 9
+        for (let i = 0; i < 10; i++) {
+          const thousand =
+            ((startTry + i) % 10).toString().padStart(1, "0") + "000";
+          if (triedThousands.has(thousand)) continue;
+          triedThousands.add(thousand);
+          // Check for gaps in this thousand
+          const result = await fetchRandomNumberWithoutCompImage(
+            thousand,
+            triedThousands
           );
-          return await fetchRandomNumberWithoutCompImage(nextThousand);
-        } else {
-          // If we've tried all thousands (0-9), then we're done
-          throw new Error(
-            "All numbers in all ranges have comp_image assigned! You've completed this section."
-          );
+          if (result !== null) {
+            return result;
+          }
         }
+        // If we've tried all thousands (0-9) and found no gaps, return null
+        return null;
       }
     }
 
@@ -372,7 +380,6 @@ export async function fetchRandomNumberWithoutCompImage(currentNumber) {
     );
     const selectedNumber = numbersWithoutCompImage[randomIndex];
     console.log("Selected random number without comp_image:", selectedNumber);
-
     return selectedNumber;
   } catch (error) {
     console.error("Error fetching random number without comp_image:", error);
