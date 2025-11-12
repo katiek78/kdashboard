@@ -7,6 +7,7 @@ import { getNumberPhonetics } from "../utils/memTrainingUtils";
 import supabase from "../utils/supabaseClient";
 
 export default function FourDigitSystem() {
+  const [searchTerm, setSearchTerm] = useState("");
   const [refreshGrid, setRefreshGrid] = useState(0);
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
@@ -18,6 +19,11 @@ export default function FourDigitSystem() {
   const [compOverwriteMode, setCompOverwriteMode] = useState("no-overwrite");
   const [compImportStatus, setCompImportStatus] = useState("");
 
+  // Global search state
+  const [globalSearchTerm, setGlobalSearchTerm] = useState("");
+  const [globalSearchField, setGlobalSearchField] = useState("comp_image");
+  const [globalSearchResults, setGlobalSearchResults] = useState([]);
+  const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
   // Location import state
   const [showLocationImport, setShowLocationImport] = useState(false);
   const [locationImportText, setLocationImportText] = useState("");
@@ -49,12 +55,46 @@ export default function FourDigitSystem() {
     includeCompImage: true,
   });
 
-  // Callback to update a single entry in the grid without full refresh
-  const [gridUpdateCallback, setGridUpdateCallback] = useState(null);
+  // No callback registration needed; use refreshGrid to trigger updates
 
   // Store current grid data for export
   const [currentGridData, setCurrentGridData] = useState([]);
 
+  // Handler for global search
+  async function handleGlobalSearch() {
+    if (!globalSearchTerm.trim()) return;
+    setGlobalSearchLoading(true);
+    let table, column;
+    if (globalSearchField === "comp_image") {
+      table = "comp_images";
+      column = "comp_image";
+    } else if (globalSearchField === "category_image") {
+      table = "category_images";
+      column = "category_image";
+    } else if (
+      globalSearchField === "location" ||
+      globalSearchField === "person"
+    ) {
+      table = "numberstrings";
+      column = globalSearchField;
+    } else {
+      // number
+      table = "numberstrings";
+      column = "num_string";
+    }
+    // Use ilike for case-insensitive partial match
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .ilike(column, `%${globalSearchTerm.trim()}%`)
+      .limit(20);
+    if (error) {
+      setGlobalSearchResults([{ error: error.message }]);
+    } else {
+      setGlobalSearchResults(data || []);
+    }
+    setGlobalSearchLoading(false);
+  }
   // Memoize phonetics calculations to avoid expensive recalculations on every render
   const memoizedPhonetics = useMemo(() => {
     const phoneticCache = new Map();
@@ -651,13 +691,7 @@ export default function FourDigitSystem() {
       }
 
       // Update the grid directly instead of triggering full refresh
-      if (gridUpdateCallback) {
-        gridUpdateCallback(
-          editingEntry.numString,
-          duplicateType,
-          finalImageValue
-        );
-      }
+      setRefreshGrid((r) => r + 1);
 
       // Close modal
       setShowEditModal(false);
@@ -851,11 +885,7 @@ export default function FourDigitSystem() {
       if (error) throw error;
 
       // Update the grid without full refresh if callback is available
-      if (gridUpdateCallback) {
-        gridUpdateCallback(numString, "comp", newValue);
-      } else {
-        setRefreshGrid(Date.now());
-      }
+      setRefreshGrid((r) => r + 1);
 
       setShowEditModal(false);
       setEditingEntry(null);
@@ -945,11 +975,95 @@ export default function FourDigitSystem() {
         <button onClick={() => setRefreshGrid(Date.now())}>Refresh Grid</button>
       </div>
 
+      <div style={{ margin: "16px 0" }}>
+        <input
+          type="text"
+          placeholder="Find by number, location, person, or image..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ width: 320, padding: 6, fontSize: 14 }}
+        />
+      </div>
+
+      {/* Global search UI */}
+      <div
+        style={{
+          margin: "16px 0",
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Search all..."
+          value={globalSearchTerm}
+          onChange={(e) => setGlobalSearchTerm(e.target.value)}
+          style={{ width: 220, padding: 6, fontSize: 14 }}
+        />
+        <select
+          value={globalSearchField}
+          onChange={(e) => setGlobalSearchField(e.target.value)}
+          style={{ padding: 6, fontSize: 14 }}
+        >
+          <option value="comp_image">Comp Image</option>
+          <option value="category_image">Category Image</option>
+          <option value="location">Location</option>
+          <option value="person">Person</option>
+          <option value="number">Number</option>
+        </select>
+        <button
+          onClick={handleGlobalSearch}
+          style={{ padding: "6px 16px", fontSize: 14 }}
+        >
+          Find
+        </button>
+      </div>
+
+      {/* Global search results */}
+      {globalSearchLoading && <div>Searching...</div>}
+      {globalSearchResults.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Results:</div>
+          <ul
+            style={{
+              background: "#f8f8f8",
+              border: "1px solid #ddd",
+              borderRadius: 4,
+              padding: 8,
+              maxHeight: 220,
+              overflowY: "auto",
+            }}
+          >
+            {globalSearchResults.map((row, i) => (
+              <li
+                key={row.num_string || row.id || i}
+                style={{ marginBottom: 4 }}
+              >
+                {row.error ? (
+                  <span style={{ color: "red" }}>{row.error}</span>
+                ) : (
+                  <span>
+                    <b>{row.num_string || row.id}</b>
+                    {globalSearchField === "comp_image" &&
+                      `: ${row.comp_image}`}
+                    {globalSearchField === "category_image" &&
+                      `: ${row.category_image}`}
+                    {globalSearchField === "location" && `: ${row.location}`}
+                    {globalSearchField === "person" && `: ${row.person}`}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <FourDigitGrid
         refresh={refreshGrid}
         onEditClick={handleEditClick}
-        onUpdateCallback={setGridUpdateCallback}
         onDataUpdate={setCurrentGridData}
+        searchTerm={searchTerm}
       />
       {/* Category Images Import Modal */}
       {showImport && (
