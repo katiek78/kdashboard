@@ -673,12 +673,52 @@ export default function FourDigitSystem() {
         duplicateType === "comp" ? "comp_image" : "category_image";
 
       // Update the image
-      const { error: imageError } = await supabase
+      const {
+        error: imageError,
+        data,
+        count,
+        status,
+      } = await supabase
         .from(tableName)
         .update({ [imageColumn]: finalImageValue })
-        .eq("num_string", editingEntry.numString);
+        .eq("num_string", editingEntry.numString)
+        .select();
 
-      if (imageError) throw imageError;
+      if (imageError) {
+        console.error("Error updating image:", imageError);
+        // User-friendly error for unique constraint
+        if (
+          imageError.message?.includes("duplicate key value") ||
+          imageError.code === "23505"
+        ) {
+          alert(
+            "Unique constraint error: There is already an entry with this number string. Please check for duplicates."
+          );
+        } else if (imageError.code === "409" || imageError.status === 409) {
+          alert(
+            "Conflict error: The image could not be updated due to a conflict. Please try again or reload the page."
+          );
+        } else if (
+          imageError.code === "PGRST116" ||
+          imageError.message?.includes("No rows")
+        ) {
+          alert(
+            "Update failed: The entry could not be found. It may have been deleted."
+          );
+        } else {
+          alert(
+            "Error updating image: " +
+              (imageError.message || imageError.toString())
+          );
+        }
+        return;
+      }
+
+      // Check if any row was actually updated
+      if ((Array.isArray(data) && data.length === 0) || count === 0) {
+        alert("No entry was updated. The number string may not exist.");
+        return;
+      }
 
       // If marking as tricky, update the numberstrings table
       if (markAsTricky) {
@@ -687,7 +727,14 @@ export default function FourDigitSystem() {
           .update({ four_digit_ben_tricky: true })
           .eq("num_string", editingEntry.numString);
 
-        if (trickyError) throw trickyError;
+        if (trickyError) {
+          console.error("Error updating tricky flag:", trickyError);
+          alert(
+            "Error updating tricky flag: " +
+              (trickyError.message || trickyError.toString())
+          );
+          return;
+        }
       }
 
       // Update the grid directly instead of triggering full refresh
@@ -697,7 +744,11 @@ export default function FourDigitSystem() {
       setShowEditModal(false);
       setEditingEntry(null);
     } catch (error) {
-      console.error("Error updating image:", error);
+      console.error("Unexpected error updating image:", error);
+      alert(
+        "Unexpected error updating image: " +
+          (error.message || error.toString())
+      );
     }
   }
 
