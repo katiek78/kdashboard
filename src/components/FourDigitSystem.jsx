@@ -45,9 +45,9 @@ export default function FourDigitSystem() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
 
-  // Export modal state
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportSettings, setExportSettings] = useState({
+  // Copy Data modal state
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [copySettings, setCopySettings] = useState({
     includeNumber: true,
     includeLocation: true,
     includePerson: true,
@@ -895,66 +895,38 @@ export default function FourDigitSystem() {
     }
   };
 
-  const handleExport = () => {
+  // Copy Data logic will be added here
+
+  // Copy selected columns to clipboard (no headers)
+  const handleCopyData = async () => {
     if (!currentGridData || currentGridData.length === 0) {
-      alert("No data available to export. Please wait for the grid to load.");
-      return;
-    }
-
-    const headers = [];
-    if (exportSettings.includeNumber) headers.push("Number");
-    if (exportSettings.includeLocation) headers.push("Location");
-    if (exportSettings.includePerson) headers.push("Person");
-    if (exportSettings.includeCategoryImage) headers.push("Category Image");
-    if (exportSettings.includeCompImage) headers.push("Comp Image");
-
-    if (headers.length === 0) {
-      alert("Please select at least one column to export.");
+      alert("No data available to copy. Please wait for the grid to load.");
       return;
     }
 
     const rows = currentGridData.map((row) => {
-      const exportRow = [];
-      if (exportSettings.includeNumber) exportRow.push(row.number || "");
-      if (exportSettings.includeLocation) exportRow.push(row.location || "");
-      if (exportSettings.includePerson) exportRow.push(row.person || "");
-      if (exportSettings.includeCategoryImage)
-        exportRow.push(row.categoryImage || "");
-      if (exportSettings.includeCompImage) exportRow.push(row.compImage || "");
-      return exportRow;
+      const copyRow = [];
+      if (copySettings.includeNumber) copyRow.push(row.number || "");
+      if (copySettings.includeLocation) copyRow.push(row.location || "");
+      if (copySettings.includePerson) copyRow.push(row.person || "");
+      if (copySettings.includeCategoryImage)
+        copyRow.push(row.categoryImage || "");
+      if (copySettings.includeCompImage) copyRow.push(row.compImage || "");
+      return copyRow.join("\t"); // tab-separated for easy pasting
     });
 
-    // Create CSV content
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row
-          .map((field) =>
-            // Escape fields that contain commas or quotes
-            typeof field === "string" &&
-            (field.includes(",") || field.includes('"'))
-              ? `"${field.replace(/"/g, '""')}"`
-              : field
-          )
-          .join(",")
-      ),
-    ].join("\n");
+    if (rows.length === 0) {
+      alert("No data to copy with the selected columns.");
+      return;
+    }
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `four-digit-system-export-${new Date().toISOString().split("T")[0]}.csv`
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setShowExportModal(false);
+    try {
+      await navigator.clipboard.writeText(rows.join("\n"));
+      setShowCopyModal(false);
+      alert("Copied to clipboard!");
+    } catch (err) {
+      alert("Failed to copy to clipboard.");
+    }
   };
 
   return (
@@ -971,7 +943,7 @@ export default function FourDigitSystem() {
         </button>
         <button onClick={() => setShowPersonImport(true)}>Import People</button>
         <button onClick={() => setShowDuplicates(true)}>Find Duplicates</button>
-        <button onClick={() => setShowExportModal(true)}>Export Data</button>
+        <button onClick={() => setShowCopyModal(true)}>Copy Data</button>
         <button onClick={() => setRefreshGrid(Date.now())}>Refresh Grid</button>
       </div>
 
@@ -1301,20 +1273,21 @@ export default function FourDigitSystem() {
         </div>
       )}
 
-      {/* Export Modal */}
-      {showExportModal && (
+      {/* Copy Data Modal will be added here */}
+      {/* Copy Data Modal */}
+      {showCopyModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Export Settings</h3>
-            <p>Select which columns to include in the export:</p>
+            <h3>Copy Data</h3>
+            <p>Select which columns to include in the copy:</p>
 
             <div className={styles.exportOptions}>
               <label>
                 <input
                   type="checkbox"
-                  checked={exportSettings.includeNumber}
+                  checked={copySettings.includeNumber}
                   onChange={(e) =>
-                    setExportSettings((prev) => ({
+                    setCopySettings((prev) => ({
                       ...prev,
                       includeNumber: e.target.checked,
                     }))
@@ -1326,9 +1299,9 @@ export default function FourDigitSystem() {
               <label>
                 <input
                   type="checkbox"
-                  checked={exportSettings.includeLocation}
+                  checked={copySettings.includeLocation}
                   onChange={(e) =>
-                    setExportSettings((prev) => ({
+                    setCopySettings((prev) => ({
                       ...prev,
                       includeLocation: e.target.checked,
                     }))
@@ -1340,9 +1313,9 @@ export default function FourDigitSystem() {
               <label>
                 <input
                   type="checkbox"
-                  checked={exportSettings.includePerson}
+                  checked={copySettings.includePerson}
                   onChange={(e) =>
-                    setExportSettings((prev) => ({
+                    setCopySettings((prev) => ({
                       ...prev,
                       includePerson: e.target.checked,
                     }))
@@ -1354,9 +1327,9 @@ export default function FourDigitSystem() {
               <label>
                 <input
                   type="checkbox"
-                  checked={exportSettings.includeCategoryImage}
+                  checked={copySettings.includeCategoryImage}
                   onChange={(e) =>
-                    setExportSettings((prev) => ({
+                    setCopySettings((prev) => ({
                       ...prev,
                       includeCategoryImage: e.target.checked,
                     }))
@@ -1368,9 +1341,9 @@ export default function FourDigitSystem() {
               <label>
                 <input
                   type="checkbox"
-                  checked={exportSettings.includeCompImage}
+                  checked={copySettings.includeCompImage}
                   onChange={(e) =>
-                    setExportSettings((prev) => ({
+                    setCopySettings((prev) => ({
                       ...prev,
                       includeCompImage: e.target.checked,
                     }))
@@ -1381,8 +1354,8 @@ export default function FourDigitSystem() {
             </div>
 
             <div className={styles.modalButtons}>
-              <button onClick={handleExport}>Export CSV</button>
-              <button onClick={() => setShowExportModal(false)}>Cancel</button>
+              <button onClick={handleCopyData}>Copy to Clipboard</button>
+              <button onClick={() => setShowCopyModal(false)}>Cancel</button>
             </div>
           </div>
         </div>
