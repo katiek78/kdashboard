@@ -1141,11 +1141,36 @@ export default function FourDigitSystem() {
                       <strong>"{dup.image}"</strong> ({dup.count} numbers):
                       <div className={styles.numberList}>
                         {dup.numStrings.map((numString) => (
-                          <span key={numString} className={styles.numberItem}>
+                          <span
+                            key={numString}
+                            className={styles.numberItem}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
                             {numString}
                             <span className={styles.phonetics}>
                               {memoizedPhonetics.get(numString)}
                             </span>
+                            <button
+                              style={{
+                                marginLeft: 6,
+                                padding: "2px 8px",
+                                fontSize: "12px",
+                                backgroundColor: "#007bff",
+                                color: "white",
+                                border: "none",
+                                borderRadius: 3,
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                openEditModal(numString, dup.image)
+                              }
+                            >
+                              Edit
+                            </button>
                           </span>
                         ))}
                       </div>
@@ -1255,10 +1280,8 @@ export default function FourDigitSystem() {
           isOpen={showEditModal}
           onClose={cancelEdit}
           onSave={saveImageEdit}
-          currentValue={editingEntry?.currentValue || ""}
-          title={`Edit ${
-            duplicateType === "comp" ? "Comp" : "Category"
-          } Image for ${editingEntry?.numString}`}
+          editingEntry={editingEntry}
+          duplicateType={duplicateType}
         />
       )}
     </div>
