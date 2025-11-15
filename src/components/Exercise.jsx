@@ -12,6 +12,8 @@ export default function Exercise() {
   const [loading, setLoading] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [fetching, setFetching] = useState(true);
+  const [randomModal, setRandomModal] = useState(false);
+  const [randomExercise, setRandomExercise] = useState(null);
 
   useEffect(() => {
     async function fetchExercises() {
@@ -32,6 +34,17 @@ export default function Exercise() {
       .select("id, name")
       .order("id", { ascending: false });
     if (!error) setExercises(data || []);
+  }
+
+  function handlePickRandom() {
+    if (exercises.length === 0) {
+      setRandomExercise(null);
+      setRandomModal(true);
+      return;
+    }
+    const idx = Math.floor(Math.random() * exercises.length);
+    setRandomExercise(exercises[idx]);
+    setRandomModal(true);
   }
 
   async function handleAdd() {
@@ -72,7 +85,11 @@ export default function Exercise() {
         >
           Add exercise
         </button>
-        <button type="button" className={styles.button}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={handlePickRandom}
+        >
           Pick random exercise
         </button>
       </div>
@@ -107,6 +124,73 @@ export default function Exercise() {
           </ul>
         )}
       </div>
+
+      {/* Random Exercise Modal */}
+      {randomModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.18)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: "2rem 1.5rem",
+              minWidth: 320,
+              boxShadow: "0 4px 32px rgba(60, 72, 100, 0.13)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setRandomModal(false)}
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 12,
+                background: "none",
+                border: "none",
+                fontSize: 22,
+                color: "#888",
+                cursor: "pointer",
+                fontWeight: 700,
+              }}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h3 style={{ color: "#217a3a", marginBottom: 18, fontWeight: 700 }}>
+              Random Exercise
+            </h3>
+            {randomExercise ? (
+              <div
+                style={{
+                  fontSize: "1.3rem",
+                  color: "#15803d",
+                  fontWeight: 600,
+                  marginBottom: 8,
+                }}
+              >
+                {randomExercise.name}
+              </div>
+            ) : (
+              <div style={{ color: "#b91c1c" }}>No exercises to pick from.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div
