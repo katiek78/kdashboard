@@ -39,6 +39,8 @@ const TaskDetailModal = ({
   }, [task]);
 
   const handleSave = () => {
+    // Close modal immediately to prevent flash of old value
+    onClose();
     onSave(editedTask);
     setIsEditing(false);
   };

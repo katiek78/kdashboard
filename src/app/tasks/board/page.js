@@ -29,11 +29,22 @@ const BoardPage = () => {
   }
 
   const handleTaskUpdate = (updatedTasks, scrollToColumn) => {
-    // Only update tasks if we have an actual tasks array
+    // If updatedTasks is an array, replace the whole list (e.g., after reorder or bulk update)
     if (Array.isArray(updatedTasks)) {
       setTasks(updatedTasks);
+    } else if (
+      updatedTasks &&
+      typeof updatedTasks === "object" &&
+      updatedTasks.id
+    ) {
+      // If a single updated task object is provided, merge it into the local state
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === updatedTasks.id ? { ...t, ...updatedTasks } : t
+        )
+      );
     }
-    // If updatedTasks is null/undefined, do nothing - let the component that called this handle its own state
+    // If updatedTasks is null/undefined, do nothing
 
     // Scroll to specific column if requested
     if (scrollToColumn === "future") {
@@ -167,6 +178,14 @@ const BoardPage = () => {
       base.setDate(base.getDate() + 7);
       const result = base.toISOString().slice(0, 10);
       console.log("Weekly result:", result);
+      return result;
+    }
+
+    // e.g. 1y, yearly, y
+    if (rep === "1y" || rep === "yearly" || rep === "y") {
+      base.setFullYear(base.getFullYear() + 1);
+      const result = base.toISOString().slice(0, 10);
+      console.log("Yearly result:", result);
       return result;
     }
 

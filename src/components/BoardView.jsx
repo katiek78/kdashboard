@@ -122,15 +122,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
   };
 
   const handleTaskComplete = async (taskId) => {
-    console.log("BoardView handleTaskComplete called with taskId:", taskId);
-    console.log("onTaskComplete function exists:", !!onTaskComplete);
+    // Always delegate to parent handler for all completion logic
     if (onTaskComplete) {
-      console.log("About to call onTaskComplete with taskId:", taskId);
       await onTaskComplete(taskId);
-      console.log("onTaskComplete completed for taskId:", taskId);
-      // No additional update needed - parent handles state
-    } else {
-      console.log("No onTaskComplete function provided");
     }
   };
 
@@ -166,108 +160,27 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
 
   const handleTaskSave = async (updatedTask) => {
     try {
-      const originalTask = tasks.find((t) => t.id === updatedTask.id);
-      const urgentStatusChanged =
-        originalTask && originalTask.urgent !== updatedTask.urgent;
+      // Always update the task in the database
+      const { error } = await supabase
+        .from("quicktasks")
+        .update({
+          title: updatedTask.title,
+          description: updatedTask.description,
+          next_due: updatedTask.next_due,
+          urgent: updatedTask.urgent,
+          blocked: updatedTask.blocked,
+          repeat: updatedTask.repeat,
+        })
+        .eq("id", updatedTask.id);
 
-      if (urgentStatusChanged) {
-        // Handle urgent status change with reordering
-        const currentTask = originalTask;
-        const urgent = updatedTask.urgent;
+      if (error) throw error;
 
-        if (urgent) {
-          // Making task urgent: move to bottom of urgent tasks
-          const urgentTasks = tasks.filter(
-            (task) => task.urgent && task.id !== updatedTask.id
-          );
-          const nonUrgentTasks = tasks.filter(
-            (task) => !task.urgent && task.id !== updatedTask.id
-          );
-
-          // New order: [existing urgent tasks, newly urgent task, non-urgent tasks]
-          const newTaskOrder = [
-            ...urgentTasks,
-            { ...currentTask, urgent: true },
-            ...nonUrgentTasks,
-          ];
-
-          // Update all affected tasks with new order values
-          const updates = newTaskOrder.map((task, index) => {
-            const updateData = { order: index + 1 };
-            if (task.id === updatedTask.id) {
-              // Include all the updated fields for the main task
-              updateData.title = updatedTask.title;
-              updateData.description = updatedTask.description;
-              updateData.next_due = updatedTask.next_due;
-              updateData.urgent = updatedTask.urgent;
-              updateData.blocked = updatedTask.blocked;
-              updateData.repeat = updatedTask.repeat;
-            }
-            return supabase
-              .from("quicktasks")
-              .update(updateData)
-              .eq("id", task.id);
-          });
-
-          await Promise.all(updates);
-        } else {
-          // Making task non-urgent: move to bottom of all tasks
-          const urgentTasks = tasks.filter(
-            (task) => task.urgent && task.id !== updatedTask.id
-          );
-          const nonUrgentTasks = tasks.filter(
-            (task) => !task.urgent && task.id !== updatedTask.id
-          );
-
-          // New order: [urgent tasks, non-urgent tasks, newly non-urgent task]
-          const newTaskOrder = [
-            ...urgentTasks,
-            ...nonUrgentTasks,
-            { ...currentTask, urgent: false },
-          ];
-
-          // Update all affected tasks with new order values
-          const updates = newTaskOrder.map((task, index) => {
-            const updateData = { order: index + 1 };
-            if (task.id === updatedTask.id) {
-              // Include all the updated fields for the main task
-              updateData.title = updatedTask.title;
-              updateData.description = updatedTask.description;
-              updateData.next_due = updatedTask.next_due;
-              updateData.urgent = updatedTask.urgent;
-              updateData.blocked = updatedTask.blocked;
-              updateData.repeat = updatedTask.repeat;
-            }
-            return supabase
-              .from("quicktasks")
-              .update(updateData)
-              .eq("id", task.id);
-          });
-
-          await Promise.all(updates);
-        }
-      } else {
-        // No urgent status change, just update the task normally
-        const { error } = await supabase
-          .from("quicktasks")
-          .update({
-            title: updatedTask.title,
-            description: updatedTask.description,
-            next_due: updatedTask.next_due,
-            urgent: updatedTask.urgent,
-            blocked: updatedTask.blocked,
-            repeat: updatedTask.repeat,
-          })
-          .eq("id", updatedTask.id);
-
-        if (error) throw error;
-      }
-
-      if (onTaskUpdate) {
-        onTaskUpdate();
-      }
-
+      // Close modal first to prevent flash of old value
       handleModalClose();
+      // Then update parent state
+      if (onTaskUpdate) {
+        onTaskUpdate(updatedTask);
+      }
     } catch (error) {
       console.error("Error updating task:", error);
       alert("Failed to update task");
@@ -766,11 +679,9 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
       // Handle repeating tasks
       if (task.repeat) {
         const rep = task.repeat.trim().toLowerCase();
-        // Pure daily tasks (d, daily) should still respect their next_due date
-        // but if they have no next_due date, they go to today
+        // Daily tasks (d, daily)
         if (rep === "d" || rep === "daily") {
           if (!task.next_due) {
-            // Daily tasks with no due date go to today
             if (tasksByColumn[today]) {
               tasksByColumn[today].push(task);
             }
@@ -778,9 +689,46 @@ const BoardView = ({ tasks = [], onTaskUpdate, onTaskComplete, router }) => {
           }
           // If daily task has a next_due date, fall through to use that date
         }
+        // Yearly tasks (1y, yearly, y)
+        if (rep === "1y" || rep === "yearly" || rep === "y") {
+          // If next_due is this year, show in correct column; if not, check if due this year
+          if (task.next_due) {
+            // If next_due is within our 10-day view, show it
+            if (
+              task.next_due <= maxDate &&
+              task.next_due >= today &&
+              tasksByColumn[task.next_due]
+            ) {
+              tasksByColumn[task.next_due].push(task);
+              return;
+            }
+            // If next_due is in the past, schedule for next occurrence
+            const nextDueDate = new Date(task.next_due);
+            const now = new Date(today);
+            if (nextDueDate < now) {
+              // Set to next year
+              nextDueDate.setFullYear(now.getFullYear());
+              if (nextDueDate < now) {
+                nextDueDate.setFullYear(now.getFullYear() + 1);
+              }
+              const nextDueStr = nextDueDate.toISOString().slice(0, 10);
+              if (
+                nextDueStr <= maxDate &&
+                nextDueStr >= today &&
+                tasksByColumn[nextDueStr]
+              ) {
+                tasksByColumn[nextDueStr].push(task);
+                return;
+              } else if (nextDueStr > maxDate) {
+                futureTasks.push({ ...task, next_due: nextDueStr });
+                return;
+              }
+            }
+          }
+        }
       }
 
-      // For non-daily repeating tasks and one-time tasks, use their next_due date
+      // For non-daily/yearly repeating tasks and one-time tasks, use their next_due date
       if (task.next_due) {
         if (task.next_due <= today) {
           // Tasks due today or in the past go to today's column
