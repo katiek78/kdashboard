@@ -685,16 +685,21 @@ const QuickTaskList = () => {
       .insert([insertObj])
       .select();
     if (!error && data) {
-      // Add the new task to local state instead of refetching
-      const newTask = data[0];
-      setTasks((prevTasks) => [...prevTasks, newTask]);
-
-      // Save tag relation if tag selected
+      // Add the new task to local state, attaching tagId if set
+      let newTask = data[0];
       if (newTagId) {
-        await supabase
+        const { error: tagInsertError, data: tagInsertData } = await supabase
           .from("quicktasks_task_tags")
           .insert({ quicktask_id: newTask.id, tag_id: newTagId });
+        if (tagInsertError) {
+          console.error("Error inserting tag relation:", tagInsertError);
+        } else {
+          console.log("Tag relation inserted:", tagInsertData);
+          newTask = { ...newTask, tagId: newTagId };
+        }
       }
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+      setVisibleTasks((prevVisible) => [...prevVisible, newTask]);
 
       setNewTitle("");
       setNewDue(new Date().toISOString().slice(0, 10));
@@ -1035,6 +1040,7 @@ const QuickTaskList = () => {
                   onSaveEdit={onSaveEdit}
                   onCancelEdit={onCancelEdit}
                   tags={tags}
+                  tagId={task.tagId}
                   editTagId={editTagIdMap[task.id] || ""}
                   setEditTagId={(tagId) =>
                     setEditTagIdMap((prev) => ({ ...prev, [task.id]: tagId }))

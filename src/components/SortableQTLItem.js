@@ -35,6 +35,7 @@ function SortableQTLItem({
   onCancelEdit,
   onComplete,
   tags = [],
+  tagId = "",
   editTagId = "",
   setEditTagId = () => {},
 }) {
@@ -76,7 +77,9 @@ function SortableQTLItem({
   // Find tag for this task
   const tag =
     tags.find((t) => t.id == editTagId) ||
-    tags.find((t) => t.id == (typeof id === "number" ? id.tagId : undefined));
+    tags.find(
+      (t) => t.id == (typeof tagId !== "undefined" ? tagId : undefined)
+    );
 
   return (
     <div
