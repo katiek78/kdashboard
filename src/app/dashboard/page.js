@@ -22,6 +22,8 @@ import {
   faUtensils,
   faCalendarDay,
   faNoteSticky,
+  faArrowAltCircleDown,
+  faBullseye,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Dashboard() {
@@ -63,6 +65,11 @@ export default function Dashboard() {
             <div className="card segmentCard">
               <Link href="/calendar-locations">
                 <FontAwesomeIcon icon={faCalendar} /> Calendar locations
+              </Link>
+            </div>
+            <div className="card segmentCard">
+              <Link href="/goals">
+                <FontAwesomeIcon icon={faBullseye} /> Goals
               </Link>
             </div>
             <div className="card segmentCard">

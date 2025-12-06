@@ -1,0 +1,42 @@
+.goalsPage {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e0f7fa 0%, #fce4ec 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+
+.goalsHeader {
+  margin-top: 48px;
+  font-size: 2.5rem;
+  color: #1976d2;
+  text-shadow: 0 2px 8px rgba(30, 136, 229, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.goalsCardParent {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 500px;
+}
+
+.goalsCard {
+  background: #ffffffcc;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(30, 136, 229, 0.10);
+  padding: 32px 24px;
+  font-size: 1.2rem;
+  color: #333;
+  transition: box-shadow 0.2s;
+}
+
+.goalsCard:hover {
+  box-shadow: 0 8px 32px rgba(30, 136, 229, 0.18);
+}
