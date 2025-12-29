@@ -63,6 +63,55 @@ export default function MonthLocationModal({
     return months[monthNumber - 1];
   };
 
+  // Normalization logic for Google Maps/Street View preview
+  function normalizeLocationViewForEmbed(val) {
+    if (!val) return "";
+    val = val.trim();
+    // If iframe HTML, extract src
+    if (val.startsWith("<iframe")) {
+      const srcMatch = val.match(/src=["']([^"']+)["']/);
+      if (srcMatch && srcMatch[1]) {
+        val = srcMatch[1];
+      } else {
+        return "";
+      }
+    }
+    // If already an embed URL
+    if (val.startsWith("https://www.google.com/maps/embed?")) {
+      return val;
+    }
+    // Full Street View URL
+    if (val.startsWith("https://www.google.com/maps/@")) {
+      const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (match) {
+        const coords = `${match[1]},${match[2]}`;
+        return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+          coords
+        )}&cbp=11,0,0,0,0&output=svembed`;
+      }
+    }
+    // /place/.../@lat,lng,... URLs
+    const placeMatch = val.match(/\/@(\-?\d+\.\d+),(\-?\d+\.\d+)/);
+    if (placeMatch) {
+      const coords = `${placeMatch[1]},${placeMatch[2]}`;
+      return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+        coords
+      )}&cbp=11,0,0,0,0&output=svembed`;
+    }
+    // Coordinates in parentheses or plain
+    const coordMatch = val.match(
+      /^\(?\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\)?$/
+    );
+    if (coordMatch) {
+      const coords = `${coordMatch[1]},${coordMatch[3]}`;
+      return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+        coords
+      )}&cbp=11,0,0,0,0&output=svembed`;
+    }
+    // Fallback: return as is (will be shown as a link)
+    return val;
+  }
+
   if (!isOpen || !monthData) return null;
 
   return (
@@ -112,27 +161,41 @@ export default function MonthLocationModal({
             <div className={styles.previewSection}>
               <label className={styles.label}>Preview:</label>
               <div className={styles.streetViewPreview}>
-                {/* If it's a Google Maps embed URL, show iframe, else show link */}
-                {locationView.includes("/embed?") ? (
-                  <iframe
-                    src={locationView}
-                    width="300"
-                    height="200"
-                    style={{ border: 0 }}
-                    allowFullScreen=""
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Google Street View Preview"
-                  ></iframe>
-                ) : (
-                  <a
-                    href={locationView}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open in Google Maps
-                  </a>
-                )}
+                {(() => {
+                  const embedUrl = normalizeLocationViewForEmbed(locationView);
+                  if (
+                    embedUrl.startsWith("https://www.google.com/maps?") ||
+                    embedUrl.startsWith("https://www.google.com/maps/embed?")
+                  ) {
+                    return (
+                      <iframe
+                        src={embedUrl}
+                        width="300"
+                        height="200"
+                        style={{
+                          border: 0,
+                          borderRadius: 6,
+                          marginTop: 4,
+                          marginBottom: 4,
+                        }}
+                        allowFullScreen=""
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Google Street View Preview"
+                      ></iframe>
+                    );
+                  }
+                  // Otherwise, show as a link
+                  return (
+                    <a
+                      href={embedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open in Google Maps
+                    </a>
+                  );
+                })()}
               </div>
             </div>
           )}
