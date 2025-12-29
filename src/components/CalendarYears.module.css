@@ -1,3 +1,24 @@
+.cityName {
+  font-size: 0.85rem;
+  color: #388e3c;
+  margin-top: 0.25rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+.currentYear .cityName {
+  color: #e8f5e9;
+  text-shadow: 0 1px 2px #1976d2cc;
+  font-weight: 600;
+}
+.cityName {
+  font-size: 0.85rem;
+  color: #388e3c;
+  margin-top: 0.25rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
 .section {
   background: white;
   border-radius: 12px;
@@ -42,6 +63,14 @@
   font-weight: 500;
   position: relative;
   overflow: hidden;
+}
+
+.currentYear {
+  background: #1976d2;
+  color: #fff;
+  border: 2px solid #1976d2;
+  font-weight: bold;
+  box-shadow: 0 0 8px 2px #1976d233;
 }
 
 .item::before {
