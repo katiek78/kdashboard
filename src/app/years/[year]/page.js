@@ -78,6 +78,54 @@ export default function YearPage() {
     setMonthsData(updated);
   };
 
+  // Normalize the Street View input to store or display as an embed URL
+  const normalizeLocationView = (input) => {
+    let val = (input || "").trim();
+    // If iframe HTML, extract src
+    if (val.startsWith("<iframe")) {
+      const srcMatch = val.match(/src=["']([^"']+)["']/);
+      if (srcMatch && srcMatch[1]) {
+        val = srcMatch[1];
+      } else {
+        return "";
+      }
+    }
+    // If already an embed URL
+    if (val.startsWith("https://www.google.com/maps/embed?")) {
+      return val;
+    }
+    // If full Street View URL, extract lat,lng
+    if (val.startsWith("https://www.google.com/maps/@")) {
+      const match = val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (match) {
+        const coords = `${match[1]},${match[2]}`;
+        return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+          coords
+        )}&cbp=11,0,0,0,0&output=svembed`;
+      }
+    }
+    // /place/.../@lat,lng,... URLs
+    const placeMatch = val.match(/\/@(\-?\d+\.\d+),(\-?\d+\.\d+)/);
+    if (placeMatch) {
+      const coords = `${placeMatch[1]},${placeMatch[2]}`;
+      return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+        coords
+      )}&cbp=11,0,0,0,0&output=svembed`;
+    }
+    // Coordinates in parentheses or plain
+    const coordMatch = val.match(
+      /^\(?\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\)?$/
+    );
+    if (coordMatch) {
+      const coords = `${coordMatch[1]},${coordMatch[3]}`;
+      return `https://www.google.com/maps?q=&layer=c&cbll=${encodeURIComponent(
+        coords
+      )}&cbp=11,0,0,0,0&output=svembed`;
+    }
+    // Fallback: return as is (will be shown as a link)
+    return val;
+  };
+
   return (
     <div className={styles.container}>
       <Link href="/calendar-locations" className={styles.backLink}>
@@ -96,27 +144,39 @@ export default function YearPage() {
           const monthData = getMonthData(monthNumber);
           return (
             <li key={month} className={styles.monthItem}>
-              <span style={{ fontWeight: 500, fontSize: '1.08rem' }}>{month}</span>
-              <button
-                className={styles.monthEditBtn}
-                onClick={() => handleEdit(monthNumber)}
-                type="button"
-                title="Edit month location"
-              >
-                <span role="img" aria-label="Edit">✏️</span>
-              </button>
+              <span style={{ fontWeight: 800, fontSize: "1.08rem" }}>
+                {month}
+              </span>
+
               {monthData.location_view && (
                 <div className={styles.monthLocationPreview}>
-                  <span style={{ color: '#1976d2', fontSize: 15, marginRight: 4 }}>📍</span>
+                  {monthData.description && (
+                    <div className={styles.monthLocationDescription}>
+                      {monthData.description}
+                    </div>
+                  )}
                   {(() => {
-                    const val = monthData.location_view.trim();
-                    if (val.includes('/embed?')) {
+                    const embedUrl = normalizeLocationView(
+                      monthData.location_view
+                    );
+                    if (
+                      embedUrl.startsWith(
+                        "https://www.google.com/ma  ps/embed?"
+                      ) ||
+                      embedUrl.includes("output=svembed")
+                    ) {
                       return (
                         <iframe
-                          src={val}
+                          src={embedUrl}
                           width="100%"
                           height="120"
-                          style={{ border: 0, marginTop: 4, marginBottom: 4, borderRadius: 6, maxWidth: 320 }}
+                          style={{
+                            border: 0,
+                            marginTop: 4,
+                            marginBottom: 4,
+                            borderRadius: 6,
+                            maxWidth: 320,
+                          }}
                           allowFullScreen=""
                           loading="lazy"
                           referrerPolicy="no-referrer-when-downgrade"
@@ -124,26 +184,30 @@ export default function YearPage() {
                         ></iframe>
                       );
                     }
-                    if (val.startsWith('https://goo.gl/maps/')) {
-                      return (
-                        <a href={val} target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
-                      );
-                    }
-                    if (!val.startsWith('http')) {
-                      const searchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(val)}`;
-                      return (
-                        <a href={searchUrl} target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
-                      );
-                    }
+                    // Otherwise, show as a link
                     return (
-                      <a href={val} target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+                      <a
+                        href={embedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open in Google Maps
+                      </a>
                     );
                   })()}
                 </div>
               )}
-              {monthData.description && (
-                <div className={styles.monthLocationDescription}>{monthData.description}</div>
-              )}
+              <br />
+              <button
+                className={styles.monthEditBtn}
+                onClick={() => handleEdit(monthNumber)}
+                type="button"
+                title="Edit month location"
+              >
+                <span role="img" aria-label="Edit">
+                  ✏️
+                </span>
+              </button>
             </li>
           );
         })}

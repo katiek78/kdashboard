@@ -15,7 +15,7 @@
   padding: 2rem;
   background: #f5faff;
   border-radius: 12px;
-  max-width: 400px;
+  max-width: 1000px;
   margin: 2rem auto;
   box-shadow: 0 2px 10px rgba(25, 118, 210, 0.08);
 }
@@ -32,6 +32,18 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
+}
+@media (max-width: 900px) {
+  .monthList {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+}
+@media (max-width: 700px) {
+  .monthList {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
 }
 .monthItem {
   background: #fff;
