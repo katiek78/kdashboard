@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import styles from "./CalendarMonthDays.module.css";
 import MonthDayModal from "./MonthDayModal";
-import { fetchMonthDays, upsertMonthDay } from "../utils/calendarUtils";
+import { fetchMonthDays, upsertMonthDay } from "../utils/calendarUtils.mjs";
 
 export default function CalendarMonthDays() {
   const [selectedDay, setSelectedDay] = useState(null);

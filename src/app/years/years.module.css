@@ -1,0 +1,69 @@
+/* years.module.css - improved layout for months and buttons */
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 24px 16px 40px 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #1976d2;
+}
+.backLink {
+  color: #1976d2;
+  text-decoration: none;
+  font-size: 1rem;
+  margin-bottom: 18px;
+  display: inline-block;
+}
+.monthList {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.monthItem {
+  background: #f8faff;
+  border: 1px solid #cbe2f7;
+  border-radius: 8px;
+  padding: 14px 18px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 70px;
+  box-sizing: border-box;
+  transition: box-shadow 0.15s;
+}
+.monthItem:hover {
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+}
+.monthEditBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #1976d2;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding: 2px 0 2px 0;
+  align-self: flex-start;
+}
+.monthLocationPreview {
+  font-size: 0.97rem;
+  color: #444;
+  margin-top: 2px;
+  word-break: break-word;
+}
+.monthLocationDescription {
+  color: #888;
+  font-size: 0.92rem;
+  margin-top: 2px;
+}

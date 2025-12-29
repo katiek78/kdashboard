@@ -1,4 +1,4 @@
-import supabase from "./supabaseClient";
+import supabase from "./supabaseClient.mjs";
 
 // Fetch year_id (UUID) from year number
 export async function fetchYearIdFromYear(year) {
@@ -32,7 +32,11 @@ export async function fetchYearMonthLocations(year_id) {
       return [];
     }
     return data;
-
+  } catch (error) {
+    console.error("Error fetching year/month locations:", error);
+    return [];
+  }
+}
 
 // Upsert a month location for a given year
 export async function upsertYearMonthLocation({

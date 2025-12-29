@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from "react";
 import styles from "./CalendarMonths.module.css";
-import { fetchMonthColours, upsertMonthColour } from "../utils/calendarUtils";
+import {
+  fetchMonthColours,
+  upsertMonthColour,
+} from "../utils/calendarUtils.mjs";
 import MonthColourModal from "./MonthColourModal";
+import MonthLocationModal from "./MonthLocationModal";
 
 export default function CalendarMonths() {
   const [monthsData, setMonthsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   const defaultMonths = [
     "January",
@@ -65,6 +70,11 @@ export default function CalendarMonths() {
     setModalOpen(true);
   };
 
+  const handleLocationClick = (month) => {
+    setSelectedMonth(month);
+    setLocationModalOpen(true);
+  };
+
   const handleModalClose = () => {
     setModalOpen(false);
     setSelectedMonth(null);
@@ -73,8 +83,6 @@ export default function CalendarMonths() {
   const handleSaveColour = async (updatedMonth) => {
     try {
       await upsertMonthColour(updatedMonth);
-
-      // Update the local state
       setMonthsData((prevData) =>
         prevData.map((month) =>
           month.month_number === updatedMonth.month_number
@@ -84,6 +92,22 @@ export default function CalendarMonths() {
       );
     } catch (error) {
       console.error("Error saving month colour:", error);
+      throw error;
+    }
+  };
+
+  const handleSaveLocation = async (updatedMonth) => {
+    try {
+      await upsertMonthColour(updatedMonth); // upsertMonthColour also works for location fields
+      setMonthsData((prevData) =>
+        prevData.map((month) =>
+          month.month_number === updatedMonth.month_number
+            ? { ...month, ...updatedMonth }
+            : month
+        )
+      );
+    } catch (error) {
+      console.error("Error saving month location:", error);
       throw error;
     }
   };
@@ -105,19 +129,20 @@ export default function CalendarMonths() {
         <h3 className={styles.sectionTitle}>Months</h3>
         <div className={styles.grid}>
           {monthsData.map((month) => (
-            <div
-              key={month.month_number}
-              className={styles.item}
-              onClick={() => handleMonthClick(month)}
-            >
-              <div className={styles.monthName}>
-                {month.month_name || defaultMonths[month.month_number - 1]}
-              </div>
+            <div key={month.month_number} className={styles.item}>
               <div
-                className={styles.colourStripe}
-                style={{ backgroundColor: month.colour_hex }}
-                title={month.colour_name || "Click to edit colour"}
-              ></div>
+                onClick={() => handleMonthClick(month)}
+                style={{ cursor: "pointer" }}
+              >
+                <div className={styles.monthName}>
+                  {month.month_name || defaultMonths[month.month_number - 1]}
+                </div>
+                <div
+                  className={styles.colourStripe}
+                  style={{ backgroundColor: month.colour_hex }}
+                  title={month.colour_name || "Click to edit colour"}
+                ></div>
+              </div>
             </div>
           ))}
         </div>
@@ -128,6 +153,15 @@ export default function CalendarMonths() {
         onClose={handleModalClose}
         monthData={selectedMonth}
         onSave={handleSaveColour}
+      />
+      <MonthLocationModal
+        isOpen={locationModalOpen}
+        onClose={() => {
+          setLocationModalOpen(false);
+          setSelectedMonth(null);
+        }}
+        monthData={selectedMonth}
+        onSave={handleSaveLocation}
       />
     </>
   );
