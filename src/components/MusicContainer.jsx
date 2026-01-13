@@ -13,6 +13,13 @@ export default function MusicContainer() {
             <p>View and learn UK chart number 1s</p>
           </div>
         </Link>
+
+        <Link href="/music/song-list" className={styles.chartLink}>
+          <div className={styles.card}>
+            <h2>🎵 My song list</h2>
+            <p>Create and manage your personal song list</p>
+          </div>
+        </Link>
       </div>
 
       {/* <MusicGenres />

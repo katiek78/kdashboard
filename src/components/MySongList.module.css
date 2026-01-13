@@ -1,0 +1,84 @@
+.container {
+  padding: 1.5rem;
+  color: #e9d5ff;
+}
+
+.card {
+  background: rgba(45, 21, 55, 0.85);
+  border: 1px solid rgba(186, 85, 211, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.formRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(45,21,55,0.9);
+  border: 2px solid rgba(186,85,211,0.25);
+  color: #e9d5ff;
+}
+
+.addBtn {
+  background: linear-gradient(45deg, #8b5a9f, #ba55d3);
+  border: 0;
+  color: white;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.songItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(20, 10, 30, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(186,85,211,0.12);
+}
+
+.sequenceBadge {
+  min-width: 36px;
+  height: 36px;
+  background: linear-gradient(45deg,#5b21b6,#7c3aed);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.artist {
+  font-size: 0.9rem;
+  color: #d6bcfa;
+}
+
+.removeBtn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #ffb4d9;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.empty {
+  color: #d6bcfa;
+  opacity: 0.9;
+}
