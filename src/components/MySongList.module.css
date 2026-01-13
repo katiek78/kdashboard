@@ -82,3 +82,11 @@
   color: #d6bcfa;
   opacity: 0.9;
 }
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.75rem;
+  color: #d6bcfa;
+}

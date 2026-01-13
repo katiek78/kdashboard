@@ -9,16 +9,43 @@ export default function MySongList() {
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
 
-  async function loadSongs() {
-    const { data, error } = await supabase
+  // pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [pageInput, setPageInput] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingSongs, setLoadingSongs] = useState(false);
+
+  // keep the page input in sync when current page changes
+  React.useEffect(() => {
+    setPageInput(page);
+  }, [page]);
+
+  async function loadSongs(p = page, ps = pageSize) {
+    setLoadingSongs(true);
+    const from = (p - 1) * ps;
+    const to = from + ps - 1;
+    const { data, error, count } = await supabase
       .from("songs")
-      .select("id,sequence,title,artist,first_listen_date,notes")
-      .order("sequence", { ascending: true });
+      .select("id,sequence,title,artist,first_listen_date,notes", {
+        count: "exact",
+      })
+      .order("sequence", { ascending: true })
+      .range(from, to);
+    setLoadingSongs(false);
     if (error) {
       console.error("loadSongs error", error);
       return;
     }
     setSongs(data || []);
+    setTotalCount(count || 0);
+
+    // If requested page is out of range, move to last available page
+    const totalPages = Math.max(1, Math.ceil((count || 0) / ps));
+    if (p > totalPages) {
+      setPage(totalPages);
+      await loadSongs(totalPages, ps);
+    }
   }
 
   async function addSong() {
@@ -59,13 +86,28 @@ export default function MySongList() {
 
   async function saveSongNotes(id) {
     try {
+      // prefer reading from uncontrolled input refs when editing (avoids frequent re-renders while typing)
+      const titleVal =
+        songTitleRef.current && songTitleRef.current.value !== undefined
+          ? songTitleRef.current.value
+          : songTitleDraft;
+      const artistVal =
+        songArtistRef.current && songArtistRef.current.value !== undefined
+          ? songArtistRef.current.value
+          : songArtistDraft;
+      const notesVal =
+        songNotesRef.current && songNotesRef.current.value !== undefined
+          ? songNotesRef.current.value
+          : songNotesDraft;
+
       const payload = {
-        title: songTitleDraft,
-        artist: songArtistDraft,
-        notes: songNotesDraft,
-        norm_title: (songTitleDraft || "").toLowerCase().trim(),
-        norm_artist: (songArtistDraft || "").toLowerCase().trim(),
+        title: titleVal,
+        artist: artistVal,
+        notes: notesVal,
+        norm_title: (titleVal || "").toLowerCase().trim(),
+        norm_artist: (artistVal || "").toLowerCase().trim(),
       };
+
       const { data, error } = await supabase
         .from("songs")
         .update(payload)
@@ -83,6 +125,12 @@ export default function MySongList() {
       setSongNotesDraft("");
       setSongTitleDraft("");
       setSongArtistDraft("");
+
+      // clear refs' DOM values if they exist (safe no-op if unmounted)
+      if (songTitleRef.current) songTitleRef.current.value = "";
+      if (songArtistRef.current) songArtistRef.current.value = "";
+      if (songNotesRef.current) songNotesRef.current.value = "";
+
       await loadSongs();
     } catch (err) {
       console.error("saveSongNotes exception", err);
@@ -99,6 +147,11 @@ export default function MySongList() {
   const [songNotesDraft, setSongNotesDraft] = useState("");
   const [songTitleDraft, setSongTitleDraft] = useState("");
   const [songArtistDraft, setSongArtistDraft] = useState("");
+
+  // refs for uncontrolled edit inputs to avoid frequent re-renders while typing
+  const songTitleRef = React.useRef(null);
+  const songArtistRef = React.useRef(null);
+  const songNotesRef = React.useRef(null);
 
   async function loadPendingImportRows() {
     // fetch latest import for this user
@@ -234,11 +287,15 @@ export default function MySongList() {
     }
   }
 
-  // load songs & pending import rows on mount
+  // load pending import rows on mount
   React.useEffect(() => {
-    loadSongs();
     loadPendingImportRows();
   }, []);
+
+  // load songs whenever page or pageSize changes
+  React.useEffect(() => {
+    loadSongs();
+  }, [page, pageSize]);
 
   async function resolveImportRow(importRowId, action) {
     try {
@@ -266,6 +323,7 @@ export default function MySongList() {
     }
   }
 
+  // Memoized song item to reduce re-renders when typing in notes
   return (
     <div className={styles.container + " pageContainer"}>
       <h1>My song list</h1>
@@ -504,22 +562,22 @@ export default function MySongList() {
                 {editingSongId === s.id ? (
                   <div style={{ marginTop: "0.5rem" }}>
                     <input
-                      value={songTitleDraft}
-                      onChange={(e) => setSongTitleDraft(e.target.value)}
+                      defaultValue={songTitleDraft}
+                      ref={songTitleRef}
                       placeholder="Title"
                       className={styles.input}
                       style={{ marginBottom: "0.5rem" }}
                     />
                     <input
-                      value={songArtistDraft}
-                      onChange={(e) => setSongArtistDraft(e.target.value)}
+                      defaultValue={songArtistDraft}
+                      ref={songArtistRef}
                       placeholder="Artist"
                       className={styles.input}
                       style={{ marginBottom: "0.5rem" }}
                     />
                     <textarea
-                      value={songNotesDraft}
-                      onChange={(e) => setSongNotesDraft(e.target.value)}
+                      defaultValue={songNotesDraft}
+                      ref={songNotesRef}
                       rows={3}
                       style={{
                         width: "100%",
@@ -550,6 +608,12 @@ export default function MySongList() {
                           setSongNotesDraft("");
                           setSongTitleDraft("");
                           setSongArtistDraft("");
+                          if (songTitleRef.current)
+                            songTitleRef.current.value = "";
+                          if (songArtistRef.current)
+                            songArtistRef.current.value = "";
+                          if (songNotesRef.current)
+                            songNotesRef.current.value = "";
                         }}
                       >
                         Cancel
@@ -590,6 +654,112 @@ export default function MySongList() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className={styles.pagination}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "1rem",
+            marginTop: "0.75rem",
+          }}
+        >
+          <div style={{ color: "#d6bcfa" }}>
+            {totalCount === 0
+              ? "No songs"
+              : `Showing ${
+                  totalCount === 0 ? 0 : (page - 1) * pageSize + 1
+                } - ${Math.min(page * pageSize, totalCount)} of ${totalCount}`}
+          </div>
+
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            {(() => {
+              const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+              return (
+                <>
+                  <button
+                    className={styles.removeBtn}
+                    onClick={() => setPage(1)}
+                    disabled={page <= 1}
+                  >
+                    First
+                  </button>
+
+                  <button
+                    className={styles.removeBtn}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                  >
+                    Prev
+                  </button>
+
+                  <span style={{ color: "#d6bcfa" }}>
+                    Page {page} of {totalPages}
+                  </span>
+
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </button>
+
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => setPage(totalPages)}
+                    disabled={page >= totalPages}
+                  >
+                    Last
+                  </button>
+
+                  <input
+                    type="number"
+                    min={1}
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    style={{
+                      width: 80,
+                      marginLeft: "0.5rem",
+                      padding: "0.35rem",
+                      borderRadius: 6,
+                      background: "rgba(45,21,55,0.9)",
+                      color: "#e9d5ff",
+                      border: "1px solid rgba(186,85,211,0.25)",
+                    }}
+                  />
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => {
+                      const n = Math.max(
+                        1,
+                        Math.min(totalPages, Number(pageInput) || 1)
+                      );
+                      setPage(n);
+                    }}
+                  >
+                    Go
+                  </button>
+
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPage(1);
+                      setPageSize(Number(e.target.value));
+                    }}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </>
+              );
+            })()}
+          </div>
+        </div>
       </div>
     </div>
   );
