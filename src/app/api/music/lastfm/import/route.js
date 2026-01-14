@@ -640,6 +640,35 @@ export async function POST(req) {
       }
     }
 
+    // best-effort: compact sequences after the import to ensure contiguous numbering
+    try {
+      const { error: reseqErr } = await db.rpc("resequence_songs");
+      if (reseqErr) {
+        if (reseqErr && reseqErr.code === "PGRST202") {
+          try {
+            const { resequenceSongsUsingSQL } = await import(
+              "@/lib/resequenceSongs"
+            );
+            await resequenceSongsUsingSQL(db);
+          } catch (fe) {
+            console.error("resequence fallback failed", fe);
+          }
+        } else {
+          console.error("resequence_songs rpc error", reseqErr);
+        }
+      }
+    } catch (e) {
+      console.error("resequence_songs call failed", e);
+      try {
+        const { resequenceSongsUsingSQL } = await import(
+          "@/lib/resequenceSongs"
+        );
+        await resequenceSongsUsingSQL(db);
+      } catch (fe) {
+        console.error("resequence fallback failed after rpc exception", fe);
+      }
+    }
+
     return NextResponse.json({ success: true, results });
   } catch (err) {
     console.error("lastfm import failed", err);

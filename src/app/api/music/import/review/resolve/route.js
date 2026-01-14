@@ -166,6 +166,35 @@ export async function POST(req) {
       if (updRowErr)
         return NextResponse.json({ error: String(updRowErr) }, { status: 500 });
 
+      // best-effort: compact sequences after creating a song during review
+      try {
+        const { error: reseqErr } = await db.rpc("resequence_songs");
+        if (reseqErr) {
+          if (reseqErr && reseqErr.code === "PGRST202") {
+            try {
+              const { resequenceSongsUsingSQL } = await import(
+                "@/lib/resequenceSongs"
+              );
+              await resequenceSongsUsingSQL(db);
+            } catch (fe) {
+              console.error("resequence fallback failed", fe);
+            }
+          } else {
+            console.error("resequence_songs rpc error", reseqErr);
+          }
+        }
+      } catch (e) {
+        console.error("resequence_songs call failed", e);
+        try {
+          const { resequenceSongsUsingSQL } = await import(
+            "@/lib/resequenceSongs"
+          );
+          await resequenceSongsUsingSQL(db);
+        } catch (fe) {
+          console.error("resequence fallback failed after rpc exception", fe);
+        }
+      }
+
       // return warnings to client if any
       const resp = { success: true, song: createdSong };
       if (warnings && warnings.length) resp.warnings = warnings;

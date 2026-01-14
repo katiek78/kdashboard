@@ -80,9 +80,60 @@ export default function MySongList() {
   }
 
   async function removeSong(id) {
-    const { error } = await supabase.from("songs").delete().eq("id", id);
-    if (error) console.error("removeSong error", error);
-    await loadSongs();
+    try {
+      // fetch sequence of the song to remove (best-effort)
+      const { data: row, error: fetchErr } = await supabase
+        .from("songs")
+        .select("sequence")
+        .eq("id", id)
+        .maybeSingle();
+      if (fetchErr) {
+        console.error("removeSong: failed fetching song sequence", fetchErr);
+      }
+      const seq = row?.sequence ?? null;
+
+      const { error } = await supabase.from("songs").delete().eq("id", id);
+      if (error) {
+        console.error("removeSong error", error);
+      } else if (seq !== null) {
+        // compact sequences (best-effort). Use DB-side rpc for correctness and concurrency.
+        try {
+          const { error: rpcErr } = await supabase.rpc("resequence_songs");
+          if (rpcErr) {
+            if (rpcErr && rpcErr.code === "PGRST202") {
+              try {
+                const { resequenceSongsUsingSQL } = await import(
+                  "@/lib/resequenceSongs"
+                );
+                await resequenceSongsUsingSQL(supabase);
+              } catch (fe) {
+                console.error("client resequence fallback failed", fe);
+              }
+            } else {
+              console.error("resequence_songs rpc error", rpcErr);
+            }
+          }
+        } catch (e) {
+          console.error("resequence_songs exception", e);
+          try {
+            const { resequenceSongsUsingSQL } = await import(
+              "@/lib/resequenceSongs"
+            );
+            await resequenceSongsUsingSQL(supabase);
+          } catch (fe) {
+            console.error(
+              "client resequence fallback failed after exception",
+              fe
+            );
+          }
+        }
+      }
+
+      await loadSongs();
+    } catch (err) {
+      console.error("removeSong exception", err);
+      await loadSongs();
+    }
   }
 
   async function saveSongNotes(id) {
@@ -211,6 +262,7 @@ export default function MySongList() {
   // Import UI state
   const [showImport, setShowImport] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [resequencing, setResequencing] = useState(false);
   const [hasHeader, setHasHeader] = useState(true);
   const [delimiter, setDelimiter] = useState("");
   const [preview, setPreview] = useState(null);
@@ -321,6 +373,40 @@ export default function MySongList() {
         setShowImport(false);
         setPasteText("");
         setPreview(null);
+        // attempt to compact sequences (best-effort)
+        try {
+          const { error: rpcErr } = await supabase.rpc("resequence_songs");
+          if (rpcErr) {
+            if (rpcErr && rpcErr.code === "PGRST202") {
+              try {
+                const { resequenceSongsUsingSQL } = await import(
+                  "@/lib/resequenceSongs"
+                );
+                await resequenceSongsUsingSQL(supabase);
+              } catch (fe) {
+                console.error("client resequence fallback failed", fe);
+              }
+            } else {
+              console.error(
+                "resequence_songs after import create failed",
+                rpcErr
+              );
+            }
+          }
+        } catch (e) {
+          console.error("resequence_songs after import create exception", e);
+          try {
+            const { resequenceSongsUsingSQL } = await import(
+              "@/lib/resequenceSongs"
+            );
+            await resequenceSongsUsingSQL(supabase);
+          } catch (fe) {
+            console.error(
+              "client resequence fallback failed after exception",
+              fe
+            );
+          }
+        }
         // refresh songs and pending import rows
         await loadSongs();
         await loadPendingImportRows();
@@ -690,6 +776,43 @@ export default function MySongList() {
         const msg = formatImportResults(js.results);
         alert(msg);
         console.log("Last.fm import results:", js.results);
+        // compact sequences (best-effort)
+        try {
+          const { error: rpcErr } = await supabase.rpc("resequence_songs");
+          if (rpcErr) {
+            if (rpcErr && rpcErr.code === "PGRST202") {
+              try {
+                const { resequenceSongsUsingSQL } = await import(
+                  "@/lib/resequenceSongs"
+                );
+                await resequenceSongsUsingSQL(supabase);
+              } catch (fe) {
+                console.error("client resequence fallback failed", fe);
+              }
+            } else {
+              console.error(
+                "resequence_songs after performActualImport failed",
+                rpcErr
+              );
+            }
+          }
+        } catch (e) {
+          console.error(
+            "resequence_songs after performActualImport exception",
+            e
+          );
+          try {
+            const { resequenceSongsUsingSQL } = await import(
+              "@/lib/resequenceSongs"
+            );
+            await resequenceSongsUsingSQL(supabase);
+          } catch (fe) {
+            console.error(
+              "client resequence fallback failed after exception",
+              fe
+            );
+          }
+        }
         await loadSongs();
         await loadPendingImportRows();
         setShowLastFm(false);
@@ -745,6 +868,54 @@ export default function MySongList() {
             style={{ marginLeft: "0.5rem" }}
           >
             Import (Last.fm)
+          </button>
+
+          {/* Tools: Resequence */}
+          <button
+            className={styles.removeBtn}
+            style={{ marginLeft: "0.5rem" }}
+            onClick={async () => {
+              if (
+                !confirm(
+                  "Resequence all songs now? This will compact numbering starting at 1."
+                )
+              )
+                return;
+              try {
+                setResequencing(true);
+                const { data: sessionData } = await supabase.auth.getSession();
+                const token =
+                  sessionData?.session?.access_token ||
+                  sessionData?.access_token ||
+                  null;
+                const headers = { "Content-Type": "application/json" };
+                if (token) headers["Authorization"] = `Bearer ${token}`;
+                const res = await fetch("/api/music/resequence", {
+                  method: "POST",
+                  headers,
+                });
+                const js = await res.json();
+                if (!res.ok) {
+                  console.error("Resequence failed", js);
+                  alert(js.error || "Resequence failed");
+                } else {
+                  alert(
+                    js.resequenced
+                      ? `Resequenced ${js.resequenced} songs.`
+                      : "Resequenced songs."
+                  );
+                  await loadSongs();
+                }
+              } catch (err) {
+                console.error("Resequence error", err);
+                alert("Resequence failed");
+              } finally {
+                setResequencing(false);
+              }
+            }}
+            disabled={resequencing}
+          >
+            {resequencing ? "Resequencing…" : "Resequence"}
           </button>
         </div>
 
@@ -860,6 +1031,55 @@ export default function MySongList() {
                     disabled={lfmLoading || lfmImporting || !lfmUser}
                   >
                     {lfmLoading || lfmImporting ? "Running…" : "Fetch Last.fm"}
+                  </button>
+
+                  <button
+                    className={styles.addBtn}
+                    onClick={async () => {
+                      try {
+                        const { data: sessionData } =
+                          await supabase.auth.getSession();
+                        const token =
+                          sessionData?.session?.access_token ||
+                          sessionData?.access_token ||
+                          null;
+                        const headers = { "Content-Type": "application/json" };
+                        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+                        const res = await fetch("/api/music/export", {
+                          method: "POST",
+                          headers,
+                          body: JSON.stringify({
+                            from: lfmFrom || null,
+                            to: lfmTo || null,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const js = await res.json().catch(() => null);
+                          alert(js?.error || "Export failed");
+                          return;
+                        }
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        const fnFrom = lfmFrom || "all";
+                        const fnTo = lfmTo || "all";
+                        a.href = url;
+                        a.download = `songs_${fnFrom}_${fnTo}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                      } catch (err) {
+                        console.error("export csv failed", err);
+                        alert("Export failed");
+                      }
+                    }}
+                    disabled={!lfmFrom && !lfmTo}
+                    title="Export songs for the selected date or date range as CSV"
+                    style={{ marginLeft: 8 }}
+                  >
+                    Export CSV
                   </button>
                   <button
                     className={styles.removeBtn}

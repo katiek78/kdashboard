@@ -276,6 +276,37 @@ export async function POST(req) {
       console.error("Error marking import completed", e);
     }
 
+    // best-effort: compact sequences after the import so there are no gaps
+    try {
+      const { error: reseqErr } = await db.rpc("resequence_songs");
+      if (reseqErr) {
+        // If the function isn't found in the schema cache (PGRST202), fall back to SQL-based resequence
+        if (reseqErr && reseqErr.code === "PGRST202") {
+          try {
+            const { resequenceSongsUsingSQL } = await import(
+              "@/lib/resequenceSongs"
+            );
+            await resequenceSongsUsingSQL(db);
+          } catch (fe) {
+            console.error("resequence fallback failed", fe);
+          }
+        } else {
+          console.error("resequence_songs rpc error", reseqErr);
+        }
+      }
+    } catch (e) {
+      // If rpc call threw, try fallback too
+      console.error("resequence_songs call failed", e);
+      try {
+        const { resequenceSongsUsingSQL } = await import(
+          "@/lib/resequenceSongs"
+        );
+        await resequenceSongsUsingSQL(db);
+      } catch (fe) {
+        console.error("resequence fallback failed after rpc exception", fe);
+      }
+    }
+
     return NextResponse.json({
       importId,
       importedRows: importRowInserts.length,
