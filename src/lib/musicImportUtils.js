@@ -10,6 +10,8 @@ export function normalizeString(text) {
   if (!text) return "";
   let s = text.toLowerCase().trim();
   s = stripBracketed(s);
+  // remove leading articles (a, an, the)
+  s = s.replace(/^(a|an|the)\s+/i, "");
   // remove punctuation except letters numbers and spaces
   s = s.replace(/[\p{P}]/gu, "");
   // collapse whitespace

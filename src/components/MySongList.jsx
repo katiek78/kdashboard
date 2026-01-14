@@ -228,7 +228,23 @@ export default function MySongList() {
   const [lfmPerPage, setLfmPerPage] = useState(50);
   const [lfmAscending, setLfmAscending] = useState(true); // true => oldest -> newest
   const [lfmImporting, setLfmImporting] = useState(false);
+  const [lastFmDryRun, setLastFmDryRun] = useState(null);
+  const [lfmOverrides, setLfmOverrides] = useState({});
+  const dryRunRef = React.useRef(null);
   const lfmUserRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (lastFmDryRun && dryRunRef.current) {
+      try {
+        dryRunRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }, [lastFmDryRun]);
 
   React.useEffect(() => {
     if (showLastFm && lfmUserRef.current) {
@@ -471,7 +487,47 @@ export default function MySongList() {
 
       if (dryJs && dryJs.dryRun && dryJs.plan) {
         const p = dryJs.plan;
-        const msg = `Dry run: ${p.totalFetched} plays fetched (${p.datedCount} dated, ${p.uniqueCount} unique songs). This will import ${p.wouldCreate} unique new tracks (plus ${p.wouldUpdate} updates and ${p.wouldLink} links). Proceed to import all ${p.wouldCreate} new tracks?`;
+        let msg = `Dry run: ${p.totalFetched} plays fetched (${p.datedCount} dated, ${p.uniqueCount} unique songs). This will import ${p.wouldCreate} unique new tracks (plus ${p.wouldUpdate} updates and ${p.wouldLink} no-update matches).`;
+
+        // If we have per-track decisions, summarize them and include top items in the confirmation
+        if (dryJs.decisions && Array.isArray(dryJs.decisions)) {
+          const updates = dryJs.decisions.filter((d) => d.action === "update");
+          const links = dryJs.decisions.filter((d) => d.action === "link");
+          const creates = dryJs.decisions.filter((d) => d.action === "create");
+
+          const createLines = creates.map(
+            (c) => `CREATE: ${c.title} — ${c.artist} (${c.iso})`
+          );
+          const updateLines = updates.map(
+            (u) =>
+              `UPDATE: ${u.title} — ${u.artist} (${
+                u.existingFirstListenDate || "(no date)"
+              } → ${u.wouldUpdateTo})`
+          );
+          const linkLines = links.map(
+            (l) =>
+              `LINK: ${l.title} — ${l.artist} (existing ${
+                l.existingFirstListenDate || "(no date)"
+              })`
+          );
+
+          const details = [
+            ...updateLines.slice(0, 20),
+            ...linkLines.slice(0, 20),
+            ...createLines.slice(0, 20),
+          ];
+
+          if (details.length > 0) {
+            msg +=
+              "\n\nTop decisions (showing up to 60 items):\n" +
+              details.join("\n");
+            msg += "\n\n(Full list is available in the browser console)";
+          }
+
+          // log full decisions for inspection
+          console.log("Last.fm import dry-run decisions:", dryJs.decisions);
+        }
+
         if (!confirm(msg)) {
           setLfmImporting(false);
           return;
@@ -482,17 +538,21 @@ export default function MySongList() {
       const res = await fetch("/api/music/lastfm/import", {
         method: "POST",
         headers,
-        body: JSON.stringify({ username: lfmUser, from: fromUnix, to: toUnix }),
+        body: JSON.stringify({
+          username: lfmUser,
+          from: fromUnix,
+          to: toUnix,
+          overrides: lfmOverrides,
+        }),
       });
       const js = await res.json();
       if (!res.ok) {
         console.error("Import failed", js);
         alert(js.error || "Import failed");
       } else {
-        alert(
-          "Import completed: " +
-            (js.results ? JSON.stringify(js.results) : "done")
-        );
+        const msg = formatImportResults(js.results);
+        alert(msg);
+        console.log("Last.fm import results:", js.results);
         await loadSongs();
         await loadPendingImportRows();
         setShowLastFm(false);
@@ -500,6 +560,145 @@ export default function MySongList() {
       }
     } catch (err) {
       console.error("importLastFm error", err);
+      alert("Import failed");
+    } finally {
+      setLfmImporting(false);
+    }
+  }
+
+  async function performDryRun() {
+    if (!lfmUser) {
+      alert("Enter a Last.fm username to run a dry run");
+      return;
+    }
+    setLfmImporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const fromUnix = lfmFrom
+        ? Math.floor(new Date(lfmFrom + "T00:00:00Z").getTime() / 1000)
+        : null;
+      const toUnix = lfmTo
+        ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
+        : null;
+
+      const dryRes = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          username: lfmUser,
+          from: fromUnix,
+          to: toUnix,
+          dryRun: true,
+        }),
+      });
+      const dryJs = await dryRes.json();
+      if (!dryRes.ok) {
+        console.error("Dry run failed", dryJs);
+        alert(dryJs.error || "Dry run failed");
+        setLfmImporting(false);
+        return;
+      }
+
+      if (dryJs && dryJs.dryRun && dryJs.plan) {
+        setLastFmDryRun(dryJs);
+        // initialize per-row overrides: default to suggestion link when available
+        const ov = {};
+        (dryJs.decisions || []).forEach((d) => {
+          if (d.suggestion)
+            ov[d.key] = { action: "link", existingId: d.suggestion.id };
+        });
+        setLfmOverrides(ov);
+        console.log("Last.fm import dry-run decisions:", dryJs.decisions);
+      }
+    } catch (err) {
+      console.error("performDryRun error", err);
+      alert("Dry run failed");
+    } finally {
+      setLfmImporting(false);
+    }
+  }
+
+  function formatImportResults(results) {
+    if (!results) return "Import completed";
+    const { created = [], updated = [], linked = [], skipped = 0 } = results;
+    const lines = [];
+    if (created.length) {
+      lines.push(`Added (${created.length}):`);
+      created.forEach((c) =>
+        lines.push(`  • ${c.title} — ${c.artist} (seq ${c.sequence})`)
+      );
+    }
+    if (updated.length) {
+      lines.push(`Updated (${updated.length}):`);
+      updated.forEach((u) =>
+        lines.push(
+          `  • ${u.title || u.id} — ${u.artist || ""} (${
+            u.old || "(no date)"
+          } → ${u.new})`
+        )
+      );
+    }
+    if (linked.length) {
+      lines.push(`Linked (no change) (${linked.length}):`);
+      linked.forEach((l) =>
+        lines.push(`  • ${l.title || l.id} — ${l.artist || ""}`)
+      );
+    }
+    if (skipped) lines.push(`Skipped: ${skipped}`);
+    if (lines.length === 0) return `Import completed: no changes.`;
+    lines.push("\nFull results logged to console.");
+    return lines.join("\n");
+  }
+
+  async function performActualImport() {
+    if (!lastFmDryRun) return;
+    setLfmImporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const fromUnix = lfmFrom
+        ? Math.floor(new Date(lfmFrom + "T00:00:00Z").getTime() / 1000)
+        : null;
+      const toUnix = lfmTo
+        ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
+        : null;
+
+      const res = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          username: lfmUser,
+          from: fromUnix,
+          to: toUnix,
+          overrides: lfmOverrides,
+        }),
+      });
+      const js = await res.json();
+      if (!res.ok) {
+        console.error("Import failed", js);
+        alert(js.error || "Import failed");
+      } else {
+        const msg = formatImportResults(js.results);
+        alert(msg);
+        console.log("Last.fm import results:", js.results);
+        await loadSongs();
+        await loadPendingImportRows();
+        setShowLastFm(false);
+        setShowImport(false);
+        setLastFmDryRun(null);
+        setLfmOverrides({});
+      }
+    } catch (err) {
+      console.error("performActualImport error", err);
       alert("Import failed");
     } finally {
       setLfmImporting(false);
@@ -653,10 +852,14 @@ export default function MySongList() {
                   />
                   <button
                     className={styles.addBtn}
-                    onClick={() => fetchLastFm(1)}
-                    disabled={lfmLoading || !lfmUser}
+                    onClick={async () => {
+                      // Fetch preview then run a full dry-run across the date range
+                      await fetchLastFm(1);
+                      await performDryRun();
+                    }}
+                    disabled={lfmLoading || lfmImporting || !lfmUser}
                   >
-                    {lfmLoading ? "Fetching…" : "Fetch Last.fm"}
+                    {lfmLoading || lfmImporting ? "Running…" : "Fetch Last.fm"}
                   </button>
                   <button
                     className={styles.removeBtn}
@@ -758,7 +961,13 @@ export default function MySongList() {
                         </button>
                         <button
                           className={styles.addBtn}
-                          onClick={() => importLastFm()}
+                          onClick={async () => {
+                            if (lastFmDryRun) {
+                              await performActualImport();
+                            } else {
+                              await performDryRun();
+                            }
+                          }}
                           disabled={
                             lfmImporting ||
                             !lfmPreview ||
@@ -770,6 +979,198 @@ export default function MySongList() {
                         </button>
                       </div>
                     </div>
+
+                    {lastFmDryRun ? (
+                      <div
+                        ref={dryRunRef}
+                        style={{
+                          marginBottom: "0.5rem",
+                          padding: "0.5rem",
+                          border: "1px solid #2a2a2a",
+                          background: "#0f0f0f",
+                          borderRadius: 6,
+                        }}
+                      >
+                        <div
+                          style={{
+                            color: "#d6bcfa",
+                            fontSize: 13,
+                            marginBottom: 6,
+                          }}
+                        >
+                          {`Dry run: ${lastFmDryRun.plan.totalFetched} plays fetched (${lastFmDryRun.plan.datedCount} dated, ${lastFmDryRun.plan.uniqueCount} unique). Will create ${lastFmDryRun.plan.wouldCreate}, update ${lastFmDryRun.plan.wouldUpdate}, link ${lastFmDryRun.plan.wouldLink}.`}
+                        </div>
+                        <div
+                          style={{ display: "flex", gap: 8, marginBottom: 6 }}
+                        >
+                          <button
+                            className={styles.addBtn}
+                            onClick={() => setLastFmDryRun(null)}
+                            disabled={lfmImporting}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className={styles.addBtn}
+                            onClick={() => performActualImport()}
+                            disabled={lfmImporting}
+                          >
+                            {lfmImporting ? "Importing…" : "Import all"}
+                          </button>
+                        </div>
+                        <div
+                          style={{
+                            maxHeight: 200,
+                            overflow: "auto",
+                            fontSize: 13,
+                            borderTop: "1px solid #1a1a1a",
+                            paddingTop: 6,
+                          }}
+                        >
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                            }}
+                          >
+                            <thead>
+                              <tr>
+                                <th>Pos</th>
+                                <th>Action</th>
+                                <th>Date</th>
+                                <th>Title</th>
+                                <th>Artist</th>
+                                <th>Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(lastFmDryRun.decisions || [])
+                                .slice()
+                                .sort((a, b) => {
+                                  // Prefer explicit order if provided by the server
+                                  if (
+                                    typeof a.order === "number" &&
+                                    typeof b.order === "number"
+                                  )
+                                    return a.order - b.order;
+                                  if (typeof a.order === "number") return -1;
+                                  if (typeof b.order === "number") return 1;
+
+                                  // Otherwise fallback to date then action priority
+                                  if (a.iso && b.iso) {
+                                    if (a.iso < b.iso) return -1;
+                                    if (a.iso > b.iso) return 1;
+                                    return 0;
+                                  }
+                                  if (a.iso) return -1;
+                                  if (b.iso) return 1;
+                                  const pri = {
+                                    update: 1,
+                                    create: 2,
+                                    link: 3,
+                                    skip: 4,
+                                  };
+                                  return (
+                                    (pri[a.action] || 9) - (pri[b.action] || 9)
+                                  );
+                                })
+                                .map((d, idx) => (
+                                  <tr key={idx}>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.insertionPosition || ""}
+                                    </td>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.action}
+                                      {d.suggestion ? (
+                                        <div
+                                          style={{
+                                            fontSize: 12,
+                                            color: "#cfcfcf",
+                                          }}
+                                        >
+                                          Suggestion: {d.suggestion.title} —{" "}
+                                          {d.suggestion.artist}{" "}
+                                          {d.suggestion.matchType ===
+                                          "titleOnly" ? (
+                                            <em style={{ color: "#f0c" }}>
+                                              (title match)
+                                            </em>
+                                          ) : null}{" "}
+                                          (score {d.suggestion.score})
+                                        </div>
+                                      ) : null}
+                                      {/* per-row override controls */}
+                                      {d.suggestion ? (
+                                        <div style={{ marginTop: 6 }}>
+                                          <label style={{ marginRight: 8 }}>
+                                            <input
+                                              type="radio"
+                                              name={`ov-${d.key}`}
+                                              checked={
+                                                lfmOverrides[d.key]?.action ===
+                                                "link"
+                                              }
+                                              onChange={() =>
+                                                setLfmOverrides((s) => ({
+                                                  ...s,
+                                                  [d.key]: {
+                                                    action: "link",
+                                                    existingId: d.suggestion.id,
+                                                  },
+                                                }))
+                                              }
+                                            />{" "}
+                                            Use suggestion
+                                          </label>
+                                          <label>
+                                            <input
+                                              type="radio"
+                                              name={`ov-${d.key}`}
+                                              checked={
+                                                !lfmOverrides[d.key] ||
+                                                lfmOverrides[d.key]?.action ===
+                                                  "create"
+                                              }
+                                              onChange={() =>
+                                                setLfmOverrides((s) => {
+                                                  const n = { ...s };
+                                                  delete n[d.key];
+                                                  return n;
+                                                })
+                                              }
+                                            />{" "}
+                                            Create new
+                                          </label>
+                                        </div>
+                                      ) : null}
+                                    </td>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.iso || "(no date)"}
+                                    </td>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.title}
+                                    </td>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.artist}
+                                    </td>
+                                    <td style={{ padding: "0.25rem 0.5rem" }}>
+                                      {d.existingSequence
+                                        ? `seq:${d.existingSequence}`
+                                        : d.existingId
+                                        ? `id:${d.existingId}`
+                                        : ""}
+                                      {d.existingFirstListenDate
+                                        ? ` date:${d.existingFirstListenDate}`
+                                        : ""}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : null}
+
                     <table
                       style={{ width: "100%", borderCollapse: "collapse" }}
                     >
@@ -812,6 +1213,7 @@ export default function MySongList() {
                         ))}
                       </tbody>
                     </table>
+
                     <div
                       style={{
                         display: "flex",
