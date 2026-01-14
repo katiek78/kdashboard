@@ -6,6 +6,7 @@ import {
   parseTextToRows,
   normalizeString,
 } from "@/lib/musicImportUtils";
+import { parseDateToISO } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
@@ -138,6 +139,23 @@ export async function POST(req) {
           .limit(1)
           .maybeSingle();
 
+        // parse date using day-first rules (reject MM/DD formats)
+        const parsedIso = parseDateToISO(dateRaw);
+
+        if (dateRaw && !parsedIso) {
+          // invalid date provided - record an error row and skip creating the song
+          importRowInserts.push({
+            import_id: importId,
+            raw: { original: r.original, error: `Invalid date: ${dateRaw}` },
+            mapped_title: title,
+            mapped_artist: artist,
+            mapped_date: dateRaw,
+            notes,
+            status: "error",
+          });
+          continue; // move to next row
+        }
+
         if (exact) {
           importRowInserts.push({
             import_id: importId,
@@ -162,7 +180,7 @@ export async function POST(req) {
                 artist,
                 norm_title: normTitle,
                 norm_artist: normArtist,
-                first_listen_date: dateRaw || null,
+                first_listen_date: parsedIso || null,
                 sequence: currentMax,
                 curated: true,
                 notes: notes || null,

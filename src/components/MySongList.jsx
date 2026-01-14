@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import styles from "./MySongList.module.css";
 import supabase from "@/utils/supabaseClient";
+import { parseDateToISO, formatISOToDisplay } from "@/lib/dateUtils";
 
 export default function MySongList() {
   const [songs, setSongs] = useState([]);
@@ -108,6 +109,21 @@ export default function MySongList() {
         norm_artist: (artistVal || "").toLowerCase().trim(),
       };
 
+      // read & validate date (prefer uncontrolled ref when present)
+      const dateVal =
+        songDateRef.current && songDateRef.current.value !== undefined
+          ? songDateRef.current.value
+          : songDateDraft;
+      const parsedDateIso = dateVal ? parseDateToISO(dateVal) : null;
+      if (dateVal && !parsedDateIso) {
+        alert(
+          "Invalid date format. Use DD/MM/YYYY or YYYY-MM-DD or textual months (e.g., 30 Jun 2005)."
+        );
+        return;
+      }
+
+      payload.first_listen_date = parsedDateIso || null;
+
       const { data, error } = await supabase
         .from("songs")
         .update(payload)
@@ -125,11 +141,13 @@ export default function MySongList() {
       setSongNotesDraft("");
       setSongTitleDraft("");
       setSongArtistDraft("");
+      setSongDateDraft("");
 
       // clear refs' DOM values if they exist (safe no-op if unmounted)
       if (songTitleRef.current) songTitleRef.current.value = "";
       if (songArtistRef.current) songArtistRef.current.value = "";
       if (songNotesRef.current) songNotesRef.current.value = "";
+      if (songDateRef.current) songDateRef.current.value = "";
 
       await loadSongs();
     } catch (err) {
@@ -152,6 +170,8 @@ export default function MySongList() {
   const songTitleRef = React.useRef(null);
   const songArtistRef = React.useRef(null);
   const songNotesRef = React.useRef(null);
+  const songDateRef = React.useRef(null);
+  const [songDateDraft, setSongDateDraft] = useState("");
 
   async function loadPendingImportRows() {
     // fetch latest import for this user
@@ -196,6 +216,28 @@ export default function MySongList() {
   const [preview, setPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [creatingImport, setCreatingImport] = useState(false);
+
+  // Last.fm import state
+  const [showLastFm, setShowLastFm] = useState(false);
+  const [lfmUser, setLfmUser] = useState("");
+  const [lfmFrom, setLfmFrom] = useState("");
+  const [lfmTo, setLfmTo] = useState("");
+  const [lfmLoading, setLfmLoading] = useState(false);
+  const [lfmPreview, setLfmPreview] = useState(null);
+  const [lfmPage, setLfmPage] = useState(1);
+  const [lfmPerPage, setLfmPerPage] = useState(50);
+  const [lfmAscending, setLfmAscending] = useState(true); // true => oldest -> newest
+  const lfmUserRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (showLastFm && lfmUserRef.current) {
+      try {
+        lfmUserRef.current.focus();
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }, [showLastFm]);
 
   async function handlePreview() {
     setLoadingPreview(true);
@@ -312,6 +354,21 @@ export default function MySongList() {
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.warnings && data.warnings.length) {
+          const warnMsg = data.warnings
+            .map((w) => w.type + ": " + w.value)
+            .join("; ");
+          const savedDate =
+            data.song && data.song.first_listen_date
+              ? `Saved date: ${data.song.first_listen_date}`
+              : "";
+          // don't alert the user for date formatting issues; log silently and refresh
+          console.info(
+            `Import row warning: ${warnMsg}${
+              savedDate ? " — " + savedDate : ""
+            }`
+          );
+        }
         await loadSongs();
         await loadPendingImportRows();
       } else {
@@ -323,7 +380,53 @@ export default function MySongList() {
     }
   }
 
-  // Memoized song item to reduce re-renders when typing in notes
+  // Last.fm helper: fetch recent tracks and optionally exact match against user's songs
+  async function fetchLastFm(requestedPage = 1) {
+    setLfmLoading(true);
+    try {
+      // convert date inputs (YYYY-MM-DD) to unix seconds in UTC
+      const fromUnix = lfmFrom
+        ? Math.floor(new Date(lfmFrom + "T00:00:00Z").getTime() / 1000)
+        : null;
+      const toUnix = lfmTo
+        ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
+        : null;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/music/lastfm/fetch", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          username: lfmUser,
+          from: fromUnix,
+          to: toUnix,
+          page: requestedPage,
+          limit: lfmPerPage,
+          includeMatches: true,
+        }),
+      });
+      const js = await res.json();
+      if (!res.ok) {
+        console.error("Last.fm fetch failed", js);
+        alert(js.error || "Last.fm fetch failed");
+        setLfmLoading(false);
+        return;
+      }
+      setLfmPreview(js);
+      setLfmPage(requestedPage);
+    } catch (err) {
+      console.error("fetchLastFm error", err);
+      alert("Failed fetching Last.fm");
+    } finally {
+      setLfmLoading(false);
+    }
+  }
+
   return (
     <div className={styles.container + " pageContainer"}>
       <h1>My song list</h1>
@@ -346,23 +449,38 @@ export default function MySongList() {
             Add
           </button>
           <button
-            onClick={() => setShowImport((s) => !s)}
+            onClick={() => {
+              setShowLastFm(false);
+              setShowImport((s) => !s);
+            }}
             className={styles.addBtn}
             style={{ marginLeft: "1rem" }}
           >
             Import (Paste)
           </button>
+          <button
+            onClick={() => {
+              setShowImport(true);
+              setShowLastFm(true);
+            }}
+            className={styles.addBtn}
+            style={{ marginLeft: "0.5rem" }}
+          >
+            Import (Last.fm)
+          </button>
         </div>
 
         {showImport ? (
           <div style={{ marginTop: "1rem" }}>
-            <textarea
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              placeholder="Paste tab/CSV rows here"
-              rows={8}
-              style={{ width: "100%", padding: "0.75rem", borderRadius: 8 }}
-            />
+            {!showLastFm && (
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder="Paste tab/CSV rows here"
+                rows={8}
+                style={{ width: "100%", padding: "0.75rem", borderRadius: 8 }}
+              />
+            )}
             <div
               style={{
                 display: "flex",
@@ -371,40 +489,107 @@ export default function MySongList() {
                 marginTop: "0.5rem",
               }}
             >
-              <label
-                style={{
-                  display: "flex",
-                  gap: "0.25rem",
-                  alignItems: "center",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={hasHeader}
-                  onChange={(e) => setHasHeader(e.target.checked)}
-                />{" "}
-                Has header row
-              </label>
-              <input
-                placeholder="Delimiter (leave blank to auto-detect)"
-                value={delimiter}
-                onChange={(e) => setDelimiter(e.target.value)}
-                style={{ width: 200 }}
-              />
-              <button
-                onClick={handlePreview}
-                className={styles.addBtn}
-                disabled={loadingPreview}
-              >
-                {loadingPreview ? "Previewing…" : "Preview"}
-              </button>
-              <button
-                onClick={handleCreateImport}
-                className={styles.addBtn}
-                disabled={creatingImport || !preview}
-              >
-                {creatingImport ? "Creating…" : "Create Import"}
-              </button>
+              {!showLastFm && (
+                <>
+                  <label
+                    style={{
+                      display: "flex",
+                      gap: "0.25rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={hasHeader}
+                      onChange={(e) => setHasHeader(e.target.checked)}
+                    />{" "}
+                    Has header row
+                  </label>
+                  <input
+                    placeholder="Delimiter (leave blank to auto-detect)"
+                    value={delimiter}
+                    onChange={(e) => setDelimiter(e.target.value)}
+                    style={{ width: 200 }}
+                  />
+                  <button
+                    onClick={handlePreview}
+                    className={styles.addBtn}
+                    disabled={loadingPreview}
+                  >
+                    {loadingPreview ? "Previewing…" : "Preview"}
+                  </button>
+                  <button
+                    onClick={handleCreateImport}
+                    className={styles.addBtn}
+                    disabled={creatingImport || !preview}
+                  >
+                    {creatingImport ? "Creating…" : "Create Import"}
+                  </button>
+
+                  {/* Close button for Paste import */}
+                  <button
+                    className={styles.removeBtn}
+                    onClick={() => {
+                      setShowImport(false);
+                      setPasteText("");
+                      setPreview(null);
+                    }}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Close
+                  </button>
+                </>
+              )}
+
+              {showLastFm && (
+                <div
+                  style={{
+                    marginLeft: "1rem",
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    placeholder="Last.fm username"
+                    ref={lfmUserRef}
+                    value={lfmUser}
+                    onChange={(e) => setLfmUser(e.target.value)}
+                    className={styles.input}
+                    style={{ width: 200 }}
+                  />
+                  <input
+                    type="date"
+                    value={lfmFrom}
+                    onChange={(e) => setLfmFrom(e.target.value)}
+                    className={styles.input}
+                  />
+                  <input
+                    type="date"
+                    value={lfmTo}
+                    onChange={(e) => setLfmTo(e.target.value)}
+                    className={styles.input}
+                  />
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => fetchLastFm(1)}
+                    disabled={lfmLoading || !lfmUser}
+                  >
+                    {lfmLoading ? "Fetching…" : "Fetch Last.fm"}
+                  </button>
+                  <button
+                    className={styles.removeBtn}
+                    onClick={() => {
+                      setShowLastFm(false);
+                      setShowImport(false);
+                    }}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </div>
 
             {preview ? (
@@ -441,6 +626,131 @@ export default function MySongList() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            ) : null}
+
+            {/* Last.fm preview */}
+            {showLastFm ? (
+              <div
+                style={{ marginTop: "1rem", maxHeight: 300, overflow: "auto" }}
+              >
+                {lfmPreview ? (
+                  <div>
+                    <div
+                      style={{
+                        marginBottom: "0.5rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        Showing page {lfmPage} of{" "}
+                        {Math.max(
+                          1,
+                          Math.ceil((lfmPreview.total || 0) / lfmPerPage)
+                        )}{" "}
+                        — {lfmPreview.total || 0} total
+                        <span
+                          style={{ marginLeft: "0.75rem", color: "#d6bcfa" }}
+                        >
+                          ({lfmPreview.tracks.length} dated tracks shown —
+                          skipping undated)
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.5rem",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div style={{ color: "#d6bcfa" }}>
+                          {lfmAscending
+                            ? "Showing oldest → newest"
+                            : "Showing newest → oldest"}
+                        </div>
+                        <button
+                          className={styles.addBtn}
+                          onClick={() => setLfmAscending((s) => !s)}
+                        >
+                          Reverse
+                        </button>
+                      </div>
+                    </div>
+                    <table
+                      style={{ width: "100%", borderCollapse: "collapse" }}
+                    >
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Date</th>
+                          <th>Title</th>
+                          <th>Artist</th>
+                          <th>Match</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(lfmAscending
+                          ? lfmPreview.tracks
+                          : [...lfmPreview.tracks].slice().reverse()
+                        ).map((t, i) => (
+                          <tr key={i}>
+                            <td style={{ padding: "0.25rem 0.5rem" }}>
+                              {(lfmPage - 1) * lfmPerPage + i + 1}
+                            </td>
+                            <td style={{ padding: "0.25rem 0.5rem" }}>
+                              {t.isoDate ||
+                                (t.nowplaying ? "now" : "(no date)")}
+                            </td>
+                            <td style={{ padding: "0.25rem 0.5rem" }}>
+                              {t.title}
+                            </td>
+                            <td style={{ padding: "0.25rem 0.5rem" }}>
+                              {t.artist}
+                            </td>
+                            <td style={{ padding: "0.25rem 0.5rem" }}>
+                              {t.match
+                                ? t.match.type === "exact"
+                                  ? `Exact (seq ${t.match.song.sequence})`
+                                  : "—"
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        marginTop: "0.5rem",
+                      }}
+                    >
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => fetchLastFm(Math.max(1, lfmPage - 1))}
+                        disabled={lfmPage <= 1}
+                      >
+                        Prev
+                      </button>
+                      <button
+                        className={styles.addBtn}
+                        onClick={() => fetchLastFm(lfmPage + 1)}
+                        disabled={
+                          lfmPage * lfmPerPage >= (lfmPreview.total || 0)
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p>
+                    No Last.fm preview yet — enter username and date range then
+                    Fetch.
+                  </p>
+                )}
               </div>
             ) : null}
 
@@ -558,6 +868,11 @@ export default function MySongList() {
               <div style={{ flex: 1 }}>
                 <strong>{s.title}</strong>
                 <div className={styles.artist}>{s.artist}</div>
+                <div className={styles.date}>
+                  {s.first_listen_date
+                    ? formatISOToDisplay(s.first_listen_date)
+                    : "(no date)"}
+                </div>
 
                 {editingSongId === s.id ? (
                   <div style={{ marginTop: "0.5rem" }}>
@@ -572,6 +887,13 @@ export default function MySongList() {
                       defaultValue={songArtistDraft}
                       ref={songArtistRef}
                       placeholder="Artist"
+                      className={styles.input}
+                      style={{ marginBottom: "0.5rem" }}
+                    />
+                    <input
+                      defaultValue={songDateDraft || s.first_listen_date || ""}
+                      ref={songDateRef}
+                      placeholder="Date (DD/MM/YYYY or YYYY-MM-DD)"
                       className={styles.input}
                       style={{ marginBottom: "0.5rem" }}
                     />
@@ -639,6 +961,7 @@ export default function MySongList() {
                     setSongNotesDraft(s.notes || "");
                     setSongTitleDraft(s.title || "");
                     setSongArtistDraft(s.artist || "");
+                    setSongDateDraft(s.first_listen_date || "");
                   }}
                 >
                   Edit

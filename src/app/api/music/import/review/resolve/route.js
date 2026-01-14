@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { parseDateToISO } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
@@ -103,15 +104,29 @@ export async function POST(req) {
       if (sequenceRes.data && sequenceRes.data.length > 0)
         currentMax = sequenceRes.data[0].sequence || 0;
 
+      // validate and normalize date; be lenient for review-created songs
+      const parsedIso = rowData.mapped_date
+        ? parseDateToISO(rowData.mapped_date)
+        : null;
+      const warnings = [];
+      let notesForSong =
+        note && note.trim() ? note.trim() : rowData.notes || null;
+      if (rowData.mapped_date && !parsedIso) {
+        // don't block creation; save song with null date and record a warning
+        warnings.push({ type: "invalid_date", value: rowData.mapped_date });
+        const warnMsg = `Invalid date: ${rowData.mapped_date} — saved with null date`;
+        notesForSong = notesForSong ? `${notesForSong}\n${warnMsg}` : warnMsg;
+      }
+
       const newSong = {
         title: rowData.mapped_title || "",
         artist: rowData.mapped_artist || "",
         norm_title: (rowData.mapped_title || "").toLowerCase().trim(),
         norm_artist: (rowData.mapped_artist || "").toLowerCase().trim(),
-        first_listen_date: rowData.mapped_date || null,
+        first_listen_date: parsedIso || null,
         sequence: currentMax + 1,
         curated: true,
-        notes: note && note.trim() ? note.trim() : rowData.notes || null,
+        notes: notesForSong,
       };
 
       const { data: createdSong, error: createErr } = await db
@@ -121,6 +136,16 @@ export async function POST(req) {
         .maybeSingle();
       if (createErr)
         return NextResponse.json({ error: String(createErr) }, { status: 500 });
+
+      // debug logging: show what was parsed and what was stored
+      console.debug(
+        "resolve:create: mapped_date=",
+        rowData.mapped_date,
+        "parsedIso=",
+        parsedIso,
+        "stored=",
+        createdSong?.first_listen_date
+      );
 
       const importNotes = rowData.notes || "";
       const newImportNotes =
@@ -141,7 +166,10 @@ export async function POST(req) {
       if (updRowErr)
         return NextResponse.json({ error: String(updRowErr) }, { status: 500 });
 
-      return NextResponse.json({ success: true, song: createdSong });
+      // return warnings to client if any
+      const resp = { success: true, song: createdSong };
+      if (warnings && warnings.length) resp.warnings = warnings;
+      return NextResponse.json(resp);
     }
 
     if (action === "ignore") {

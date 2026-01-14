@@ -5,6 +5,7 @@ import {
   parseTextToRows,
   normalizeString,
 } from "@/lib/musicImportUtils";
+import { parseDateToISO } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
@@ -81,11 +82,14 @@ export async function POST(req) {
         exact = exactData || null;
       }
 
+      const parsedIso = parseDateToISO(dateRaw);
       preview.push({
         rowIndex: i,
         title,
         artist,
         date: dateRaw,
+        parsedDateIso: parsedIso, // normalized YYYY-MM-DD or null
+        dateValid: parsedIso !== null,
         notes,
         normTitle,
         normArtist,
