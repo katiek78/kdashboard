@@ -227,6 +227,7 @@ export default function MySongList() {
   const [lfmPage, setLfmPage] = useState(1);
   const [lfmPerPage, setLfmPerPage] = useState(50);
   const [lfmAscending, setLfmAscending] = useState(true); // true => oldest -> newest
+  const [lfmImporting, setLfmImporting] = useState(false);
   const lfmUserRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -427,6 +428,84 @@ export default function MySongList() {
     }
   }
 
+  async function importLastFm() {
+    if (!lfmPreview || !lfmPreview.tracks || lfmPreview.tracks.length === 0) {
+      alert("No tracks to import");
+      return;
+    }
+    // Do a dry-run first to show exact counts (and avoid surprises)
+    setLfmImporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // If we have a fuller preview with total, import across the whole date range by username
+      const fromUnix = lfmFrom
+        ? Math.floor(new Date(lfmFrom + "T00:00:00Z").getTime() / 1000)
+        : null;
+      const toUnix = lfmTo
+        ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
+        : null;
+
+      // Dry run first
+      const dryRes = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          username: lfmUser,
+          from: fromUnix,
+          to: toUnix,
+          dryRun: true,
+        }),
+      });
+      const dryJs = await dryRes.json();
+      if (!dryRes.ok) {
+        console.error("Dry run failed", dryJs);
+        alert(dryJs.error || "Dry run failed");
+        setLfmImporting(false);
+        return;
+      }
+
+      if (dryJs && dryJs.dryRun && dryJs.plan) {
+        const p = dryJs.plan;
+        const msg = `Dry run: ${p.totalFetched} plays fetched (${p.datedCount} dated, ${p.uniqueCount} unique songs). This will import ${p.wouldCreate} unique new tracks (plus ${p.wouldUpdate} updates and ${p.wouldLink} links). Proceed to import all ${p.wouldCreate} new tracks?`;
+        if (!confirm(msg)) {
+          setLfmImporting(false);
+          return;
+        }
+      }
+
+      // Proceed with the real import
+      const res = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ username: lfmUser, from: fromUnix, to: toUnix }),
+      });
+      const js = await res.json();
+      if (!res.ok) {
+        console.error("Import failed", js);
+        alert(js.error || "Import failed");
+      } else {
+        alert(
+          "Import completed: " +
+            (js.results ? JSON.stringify(js.results) : "done")
+        );
+        await loadSongs();
+        await loadPendingImportRows();
+        setShowLastFm(false);
+        setShowImport(false);
+      }
+    } catch (err) {
+      console.error("importLastFm error", err);
+      alert("Import failed");
+    } finally {
+      setLfmImporting(false);
+    }
+  }
+
   return (
     <div className={styles.container + " pageContainer"}>
       <h1>My song list</h1>
@@ -555,6 +634,7 @@ export default function MySongList() {
                     placeholder="Last.fm username"
                     ref={lfmUserRef}
                     value={lfmUser}
+                    default="discokate"
                     onChange={(e) => setLfmUser(e.target.value)}
                     className={styles.input}
                     style={{ width: 200 }}
@@ -675,6 +755,18 @@ export default function MySongList() {
                           onClick={() => setLfmAscending((s) => !s)}
                         >
                           Reverse
+                        </button>
+                        <button
+                          className={styles.addBtn}
+                          onClick={() => importLastFm()}
+                          disabled={
+                            lfmImporting ||
+                            !lfmPreview ||
+                            !lfmPreview.tracks ||
+                            lfmPreview.tracks.length === 0
+                          }
+                        >
+                          {lfmImporting ? "Importing…" : "Import all"}
                         </button>
                       </div>
                     </div>
