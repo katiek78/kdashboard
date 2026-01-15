@@ -47,6 +47,28 @@ function normalizeString(text) {
   if (!text) return "";
   let s = String(text).toLowerCase().trim();
   s = stripBracketed(s);
+
+  // Treat ampersand as 'and'
+  s = s.replace(/&/g, " and ");
+
+  // Normalize common contraction: hangin' -> hanging
+  s = s.replace(/in['’]\b/g, "ing");
+
+  // Replace single digits with their word equivalents
+  const digitWords = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+  ];
+  s = s.replace(/[0-9]/g, (m) => ` ${digitWords[Number(m)]} `);
+
   // remove leading articles
   s = s.replace(/^(a|an|the)\s+/i, "");
   s = s.replace(/[\p{P}]/gu, "");

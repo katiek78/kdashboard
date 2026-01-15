@@ -8,8 +8,31 @@ export function stripBracketed(text) {
 
 export function normalizeString(text) {
   if (!text) return "";
-  let s = text.toLowerCase().trim();
+  let s = String(text).toLowerCase().trim();
   s = stripBracketed(s);
+
+  // Treat ampersand as 'and'
+  s = s.replace(/&/g, " and ");
+
+  // Normalize common contraction: hangin' -> hanging
+  // Replace in' (apostrophe or unicode variant) with ing
+  s = s.replace(/in['’]\b/g, "ing");
+
+  // Replace single digits with their word equivalents to match '1' <-> 'one' (only 0-9)
+  const digitWords = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+  ];
+  s = s.replace(/[0-9]/g, (m) => ` ${digitWords[Number(m)]} `);
+
   // remove leading articles (a, an, the)
   s = s.replace(/^(a|an|the)\s+/i, "");
   // remove punctuation except letters numbers and spaces
@@ -92,6 +115,49 @@ export async function findExactMatch(normArtist, normTitle) {
     return null;
   }
   return data || null;
+}
+
+export function generateNormalizedVariants(norm) {
+  if (!norm) return [];
+  const set = new Set();
+  set.add(norm);
+  // try ing->in and in->ing variants to match older normalization
+  set.add(norm.replace(/\bing\b/g, "in"));
+  set.add(norm.replace(/\bin\b/g, "ing"));
+  return Array.from(set).filter(Boolean);
+}
+
+export async function findExactMatchVariants(
+  normArtist,
+  normTitle,
+  dbClient = null
+) {
+  // tries the canonical exact match first, then a small set of variants for the title
+  const db = dbClient || supabase;
+  if (!normArtist || !normTitle) return null;
+
+  const exact = await findExactMatch(normArtist, normTitle);
+  if (exact) return exact;
+
+  const variants = generateNormalizedVariants(normTitle);
+  for (const v of variants) {
+    if (v === normTitle) continue;
+    try {
+      const { data } = await db
+        .from("songs")
+        .select(
+          "id,title,artist,sequence,first_listen_date,norm_title,norm_artist"
+        )
+        .eq("norm_artist", normArtist)
+        .eq("norm_title", v)
+        .limit(1)
+        .maybeSingle();
+      if (data) return data;
+    } catch (e) {
+      console.error("findExactMatchVariants error", e);
+    }
+  }
+  return null;
 }
 
 export async function findFuzzyMatch(

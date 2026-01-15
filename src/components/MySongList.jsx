@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import styles from "./MySongList.module.css";
 import supabase from "@/utils/supabaseClient";
 import { parseDateToISO, formatISOToDisplay } from "@/lib/dateUtils";
+import { normalizeString } from "@/lib/musicImportUtils";
 
 export default function MySongList() {
   const [songs, setSongs] = useState([]);
@@ -17,15 +18,58 @@ export default function MySongList() {
   const [totalCount, setTotalCount] = useState(0);
   const [loadingSongs, setLoadingSongs] = useState(false);
 
+  // search state (DB-wide search; trigger with Search button to avoid slow typing)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   // keep the page input in sync when current page changes
   React.useEffect(() => {
     setPageInput(page);
   }, [page]);
 
-  async function loadSongs(p = page, ps = pageSize) {
+  async function loadSongs(p = page, ps = pageSize, useSearch = undefined) {
     setLoadingSongs(true);
+    if (useSearch === undefined) useSearch = isSearchMode;
     const from = (p - 1) * ps;
     const to = from + ps - 1;
+
+    // If search mode is active and we have a query, perform a DB-wide search (title/artist + normalized fields)
+    if (useSearch && searchQuery && searchQuery.trim() !== "") {
+      try {
+        const q = searchQuery.trim();
+        const normQ = normalizeString(q);
+        const orClause = `title.ilike.%${q}%,artist.ilike.%${q}%,norm_title.ilike.%${normQ}%,norm_artist.ilike.%${normQ}%`;
+        const { data, error, count } = await supabase
+          .from("songs")
+          .select("id,sequence,title,artist,first_listen_date,notes", {
+            count: "exact",
+          })
+          .or(orClause)
+          .order("sequence", { ascending: true })
+          .range(from, to);
+        setLoadingSongs(false);
+        if (error) {
+          console.error("loadSongs (search) error", error);
+          return;
+        }
+        setSongs(data || []);
+        setTotalCount(count || 0);
+
+        // If requested page is out of range, move to last available page
+        const totalPages = Math.max(1, Math.ceil((count || 0) / ps));
+        if (p > totalPages) {
+          setPage(totalPages);
+          await loadSongs(totalPages, ps, useSearch);
+        }
+      } catch (err) {
+        setLoadingSongs(false);
+        console.error("loadSongs (search) exception", err);
+      }
+      return;
+    }
+
+    // fallback to regular paginated fetch
     const { data, error, count } = await supabase
       .from("songs")
       .select("id,sequence,title,artist,first_listen_date,notes", {
@@ -49,6 +93,24 @@ export default function MySongList() {
     }
   }
 
+  async function performSearch() {
+    if (!searchQuery || !searchQuery.trim()) {
+      alert("Enter a search term to search titles or artists");
+      return;
+    }
+    setIsSearching(true);
+    try {
+      setIsSearchMode(true);
+      setPage(1);
+      await loadSongs(1, pageSize, true);
+    } catch (err) {
+      console.error("performSearch error", err);
+      alert("Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
   async function addSong() {
     if (!title.trim()) return;
     // compute next sequence
@@ -59,8 +121,8 @@ export default function MySongList() {
     const newSong = {
       title: title.trim(),
       artist: artist.trim(),
-      norm_title: (title || "").toLowerCase().trim(),
-      norm_artist: (artist || "").toLowerCase().trim(),
+      norm_title: normalizeString(title),
+      norm_artist: normalizeString(artist),
       sequence: maxSeq + 1,
       curated: true,
     };
@@ -156,8 +218,8 @@ export default function MySongList() {
         title: titleVal,
         artist: artistVal,
         notes: notesVal,
-        norm_title: (titleVal || "").toLowerCase().trim(),
-        norm_artist: (artistVal || "").toLowerCase().trim(),
+        norm_title: normalizeString(titleVal),
+        norm_artist: normalizeString(artistVal),
       };
 
       // read & validate date (prefer uncontrolled ref when present)
@@ -263,6 +325,11 @@ export default function MySongList() {
   const [showImport, setShowImport] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [resequencing, setResequencing] = useState(false);
+  const [lastReseedInfo, setLastReseedInfo] = useState(null);
+  const [diagnoseLoading, setDiagnoseLoading] = useState(false);
+  // diagnose window inputs
+  const [diagnoseFrom, setDiagnoseFrom] = useState("");
+  const [diagnoseTo, setDiagnoseTo] = useState("");
   const [hasHeader, setHasHeader] = useState(true);
   const [delimiter, setDelimiter] = useState("");
   const [preview, setPreview] = useState(null);
@@ -828,95 +895,304 @@ export default function MySongList() {
     }
   }
 
+  async function performResequenceDiagnose() {
+    if (!confirm("Run resequence diagnostic (no DB changes)?")) return;
+    setDiagnoseLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // build body including optional slice window
+      const body = { preserveUndated: true, diagnose: true };
+      const fromNum = diagnoseFrom ? Number(diagnoseFrom) : null;
+      const toNum = diagnoseTo ? Number(diagnoseTo) : null;
+      if (fromNum && toNum && fromNum > toNum) {
+        alert("Invalid window: 'From' must be <= 'To'");
+        setDiagnoseLoading(false);
+        return;
+      }
+      if (fromNum) body.sequenceFrom = fromNum;
+      if (toNum) body.sequenceTo = toNum;
+
+      const res = await fetch("/api/music/resequence", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+      const js = await res.json();
+      console.log("Resequence diagnose result:", js);
+      if (!res.ok) {
+        console.error("Diagnose failed", js);
+        alert(js.error || "Diagnose failed");
+      } else {
+        const invCount = js.inversions ? js.inversions.length : 0;
+        const updCount = js.updates ? js.updates.length : 0;
+
+        // Ask the user whether they want to apply the planned updates now
+        if (updCount > 0) {
+          const applyNow = confirm(
+            `Diagnose: ${updCount} planned updates, ${invCount} inversions. Apply these ${updCount} updates now?`
+          );
+          if (applyNow) {
+            try {
+              setDiagnoseLoading(false);
+              setResequencing(true);
+              const applyBody = { preserveUndated: true };
+              if (fromNum) applyBody.sequenceFrom = fromNum;
+              if (toNum) applyBody.sequenceTo = toNum;
+              const applyRes = await fetch("/api/music/resequence", {
+                method: "POST",
+                headers,
+                body: JSON.stringify(applyBody),
+              });
+              const applyJs = await applyRes.json();
+              console.log("Resequence apply response:", applyJs);
+              if (!applyRes.ok) {
+                console.error("Apply failed", applyJs);
+                alert(applyJs.error || "Apply failed");
+              } else {
+                const ver = applyJs.version || "(no version)";
+                const count =
+                  typeof applyJs.resequenced === "number"
+                    ? applyJs.resequenced
+                    : applyJs.resequenced || 0;
+                alert(`Applied ${count} changes (algorithm: ${ver})`);
+                setLastReseedInfo({
+                  version: ver,
+                  count,
+                  at: new Date().toISOString(),
+                });
+                await loadSongs();
+              }
+            } catch (err) {
+              console.error("Apply error", err);
+              alert("Apply failed");
+            } finally {
+              setResequencing(false);
+            }
+          } else {
+            alert(
+              `Diagnose: ${updCount} planned updates, ${invCount} inversions. See console for details.`
+            );
+          }
+        } else {
+          alert(
+            `Diagnose: ${updCount} planned updates, ${invCount} inversions. See console for details.`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Diagnose error", err);
+      alert("Diagnose failed");
+    } finally {
+      setDiagnoseLoading(false);
+    }
+  }
+
   return (
     <div className={styles.container + " pageContainer"}>
       <h1>My song list</h1>
 
       <div className={styles.card}>
         <div className={styles.formRow}>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Song title"
-            className={styles.input}
-          />
-          <input
-            value={artist}
-            onChange={(e) => setArtist(e.target.value)}
-            placeholder="Artist"
-            className={styles.input}
-          />
-          <button onClick={addSong} className={styles.addBtn}>
-            Add
-          </button>
-          <button
-            onClick={() => {
-              setShowLastFm(false);
-              setShowImport((s) => !s);
-            }}
-            className={styles.addBtn}
-            style={{ marginLeft: "1rem" }}
-          >
-            Import (Paste)
-          </button>
-          <button
-            onClick={() => {
-              setShowImport(true);
-              setShowLastFm(true);
-            }}
-            className={styles.addBtn}
-            style={{ marginLeft: "0.5rem" }}
-          >
-            Import (Last.fm)
-          </button>
+          {/* Row 1: Title, Artist, Add */}
+          <div className={styles.toolbarRow}>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Song title"
+              className={styles.input}
+              style={{ minWidth: 160 }}
+            />
+            <input
+              value={artist}
+              onChange={(e) => setArtist(e.target.value)}
+              placeholder="Artist"
+              className={styles.input}
+              style={{ minWidth: 140 }}
+            />
+            <button onClick={addSong} className={styles.addBtn}>
+              Add
+            </button>
+          </div>
 
-          {/* Tools: Resequence */}
-          <button
-            className={styles.removeBtn}
-            style={{ marginLeft: "0.5rem" }}
-            onClick={async () => {
-              if (
-                !confirm(
-                  "Resequence all songs now? This will compact numbering starting at 1."
+          {/* Row 2: Import buttons */}
+          <div className={styles.toolbarRow} style={{ marginTop: "0.5rem" }}>
+            <button
+              onClick={() => {
+                setShowLastFm(false);
+                setShowImport((s) => !s);
+              }}
+              className={styles.addBtn}
+            >
+              Import (Paste)
+            </button>
+            <button
+              onClick={() => {
+                setShowImport(true);
+                setShowLastFm(true);
+              }}
+              className={styles.addBtn}
+            >
+              Import (Last.fm)
+            </button>
+          </div>
+
+          {/* Row 3: Resequence tools and diagnose window */}
+          <div className={styles.toolbarRow} style={{ marginTop: "0.5rem" }}>
+            <button
+              className={styles.removeBtn}
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Resequence all songs now? This will compact numbering starting at 1."
+                  )
                 )
-              )
-                return;
-              try {
-                setResequencing(true);
-                const { data: sessionData } = await supabase.auth.getSession();
-                const token =
-                  sessionData?.session?.access_token ||
-                  sessionData?.access_token ||
-                  null;
-                const headers = { "Content-Type": "application/json" };
-                if (token) headers["Authorization"] = `Bearer ${token}`;
-                const res = await fetch("/api/music/resequence", {
-                  method: "POST",
-                  headers,
-                });
-                const js = await res.json();
-                if (!res.ok) {
-                  console.error("Resequence failed", js);
-                  alert(js.error || "Resequence failed");
-                } else {
-                  alert(
-                    js.resequenced
-                      ? `Resequenced ${js.resequenced} songs.`
-                      : "Resequenced songs."
-                  );
-                  await loadSongs();
+                  return;
+                try {
+                  setResequencing(true);
+                  const { data: sessionData } =
+                    await supabase.auth.getSession();
+                  const token =
+                    sessionData?.session?.access_token ||
+                    sessionData?.access_token ||
+                    null;
+                  const headers = { "Content-Type": "application/json" };
+                  if (token) headers["Authorization"] = `Bearer ${token}`;
+                  // build body and include optional window if set
+                  const body = { preserveUndated: true };
+                  const fromNumR = diagnoseFrom ? Number(diagnoseFrom) : null;
+                  const toNumR = diagnoseTo ? Number(diagnoseTo) : null;
+                  if (fromNumR && toNumR && fromNumR > toNumR) {
+                    alert("Invalid window: 'From' must be <= 'To'");
+                    setResequencing(false);
+                    return;
+                  }
+                  if (fromNumR) body.sequenceFrom = fromNumR;
+                  if (toNumR) body.sequenceTo = toNumR;
+
+                  const res = await fetch("/api/music/resequence", {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(body),
+                  });
+                  console.log("Resequence: sending request...");
+                  const js = await res.json();
+                  console.log("Resequence response:", js);
+                  if (!res.ok) {
+                    console.error("Resequence failed", js);
+                    alert(js.error || "Resequence failed");
+                  } else {
+                    const ver = js.version || "(no version)";
+                    const count =
+                      typeof js.resequenced === "number"
+                        ? js.resequenced
+                        : js.resequenced || 0;
+                    alert(`Resequenced ${count} songs (algorithm: ${ver})`);
+                    setLastReseedInfo({
+                      version: ver,
+                      count,
+                      at: new Date().toISOString(),
+                    });
+                    await loadSongs();
+                  }
+                } catch (err) {
+                  console.error("Resequence error", err);
+                  alert("Resequence failed");
+                } finally {
+                  setResequencing(false);
                 }
-              } catch (err) {
-                console.error("Resequence error", err);
-                alert("Resequence failed");
-              } finally {
-                setResequencing(false);
-              }
-            }}
-            disabled={resequencing}
-          >
-            {resequencing ? "Resequencing…" : "Resequence"}
-          </button>
+              }}
+              disabled={resequencing}
+            >
+              {resequencing ? "Resequencing…" : "Resequence"}
+            </button>
+
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <div
+                style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}
+              >
+                <label style={{ fontSize: 12, color: "#ccc" }}>From</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={diagnoseFrom}
+                  onChange={(e) => setDiagnoseFrom(e.target.value)}
+                  placeholder="seq#"
+                  style={{ width: 80, padding: "0.25rem" }}
+                />
+                <label style={{ fontSize: 12, color: "#ccc" }}>To</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={diagnoseTo}
+                  onChange={(e) => setDiagnoseTo(e.target.value)}
+                  placeholder="seq#"
+                  style={{ width: 80, padding: "0.25rem" }}
+                />
+              </div>
+
+              <button
+                className={styles.removeBtn}
+                onClick={performResequenceDiagnose}
+                disabled={diagnoseLoading}
+              >
+                {diagnoseLoading ? "Diagnosing…" : "Diagnose"}
+              </button>
+            </div>
+
+            {lastReseedInfo ? (
+              <div
+                style={{
+                  marginLeft: "0.75rem",
+                  color: "#d6bcfa",
+                  fontSize: 13,
+                }}
+              >
+                Last resequence: {lastReseedInfo.count} changed —{" "}
+                {lastReseedInfo.version} at{" "}
+                {new Date(lastReseedInfo.at).toLocaleString()}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Row 4: Search */}
+          <div className={styles.toolbarRow} style={{ marginTop: "0.75rem" }}>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search titles or artists (press Search)"
+              className={styles.input}
+              style={{ width: 240 }}
+            />
+            <button
+              className={styles.addBtn}
+              onClick={async () => {
+                await performSearch();
+              }}
+              disabled={isSearching}
+            >
+              {isSearching ? "Searching…" : "Search"}
+            </button>
+            {isSearchMode ? (
+              <button
+                className={styles.removeBtn}
+                onClick={async () => {
+                  setSearchQuery("");
+                  setIsSearchMode(false);
+                  setPage(1);
+                  await loadSongs(1, pageSize, false);
+                }}
+              >
+                Clear search
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {showImport ? (
@@ -1562,6 +1838,14 @@ export default function MySongList() {
           </div>
         ) : null}
       </div>
+
+      {isSearchMode ? (
+        <div style={{ marginTop: "0.75rem", color: "#d6bcfa" }}>
+          {'Showing search results for "'}
+          <strong>{searchQuery}</strong>
+          {'"'}
+        </div>
+      ) : null}
 
       <div className={styles.list}>
         {songs.length === 0 ? (

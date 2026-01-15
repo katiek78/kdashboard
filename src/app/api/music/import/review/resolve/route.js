@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { parseDateToISO } from "@/lib/dateUtils";
+import { normalizeString } from "@/lib/musicImportUtils";
 
 export async function POST(req) {
   try {
@@ -118,13 +119,54 @@ export async function POST(req) {
         notesForSong = notesForSong ? `${notesForSong}\n${warnMsg}` : warnMsg;
       }
 
+      let position = currentMax + 1;
+      if (parsedIso) {
+        // try to find the first song whose date is > parsedIso and insert before it
+        try {
+          const { data: firstLater } = await db
+            .from("songs")
+            .select("sequence")
+            .gt("first_listen_date", parsedIso)
+            .not("first_listen_date", "is", null)
+            .order("sequence", { ascending: true })
+            .limit(1);
+          if (firstLater && firstLater.length)
+            position = firstLater[0].sequence;
+          // otherwise keep as append (currentMax + 1)
+        } catch (e) {
+          console.error(
+            "failed finding insertion position for review create",
+            e
+          );
+        }
+      }
+
+      // shift sequences >= position by +1 (descending) if inserting not at end
+      if (position <= currentMax) {
+        const { data: rowsToShift } = await db
+          .from("songs")
+          .select("id,sequence")
+          .gte("sequence", position)
+          .order("sequence", { ascending: false });
+        if (rowsToShift && rowsToShift.length) {
+          for (const row of rowsToShift) {
+            const { error: shiftErr } = await db
+              .from("songs")
+              .update({ sequence: row.sequence + 1 })
+              .eq("id", row.id);
+            if (shiftErr)
+              console.error("Failed shifting sequence for", row.id, shiftErr);
+          }
+        }
+      }
+
       const newSong = {
         title: rowData.mapped_title || "",
         artist: rowData.mapped_artist || "",
-        norm_title: (rowData.mapped_title || "").toLowerCase().trim(),
-        norm_artist: (rowData.mapped_artist || "").toLowerCase().trim(),
+        norm_title: normalizeString(rowData.mapped_title || ""),
+        norm_artist: normalizeString(rowData.mapped_artist || ""),
         first_listen_date: parsedIso || null,
-        sequence: currentMax + 1,
+        sequence: position,
         curated: true,
         notes: notesForSong,
       };

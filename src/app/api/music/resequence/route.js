@@ -17,7 +17,67 @@ export async function POST(req) {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    // Try RPC first
+    const body = await req.json().catch(() => ({}));
+    const preserveUndated =
+      body && typeof body.preserveUndated !== "undefined"
+        ? !!body.preserveUndated
+        : true;
+
+    if (preserveUndated) {
+      // prefer server-side JS implementation that preserves undated songs in-place
+      try {
+        const diagnose = !!body.diagnose;
+        const { resequenceSongsPreserveUndatedV2 } = await import(
+          "@/lib/resequenceSongs"
+        );
+        const opts = { apply: !diagnose };
+        if (
+          typeof body.sequenceFrom === "number" ||
+          typeof body.sequenceTo === "number"
+        ) {
+          opts.slice = {};
+          if (typeof body.sequenceFrom === "number")
+            opts.slice.startSequence = Number(body.sequenceFrom);
+          if (typeof body.sequenceTo === "number")
+            opts.slice.endSequence = Number(body.sequenceTo);
+        }
+        const r = await resequenceSongsPreserveUndatedV2(db, opts);
+        // If there are parse errors, log a summary so we can see malformed date formats
+        if (r && r.parseErrors && r.parseErrors.length) {
+          console.warn(
+            `Resequence v2: detected ${r.parseErrors.length} unparseable dates (showing up to 10)`,
+            r.parseErrors.slice(0, 10)
+          );
+        }
+        if (diagnose) {
+          return NextResponse.json({
+            success: true,
+            version: "v2",
+            diagnose: true,
+            ...r,
+          });
+        }
+        if (r && r.inversions && r.inversions.length) {
+          console.warn(
+            "Resequence v2 detected inversions after ordering:",
+            r.inversions.slice(0, 10)
+          );
+        }
+        console.log(
+          `Resequence v2 completed: ${r && r.changed ? r.changed : 0} changes`
+        );
+        return NextResponse.json({
+          success: true,
+          resequenced: r && r.changed ? r.changed : 0,
+          version: "v2",
+        });
+      } catch (e) {
+        console.error("resequence preserve v2 failed", e);
+        return NextResponse.json({ error: String(e) }, { status: 500 });
+      }
+    }
+
+    // Otherwise, run the legacy full resequence (RPC if available, else fallback)
     try {
       const { data, error } = await db.rpc("resequence_songs");
       if (error) {

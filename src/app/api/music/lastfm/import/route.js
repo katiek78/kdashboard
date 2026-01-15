@@ -1,7 +1,42 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { normalizeString } from "@/lib/musicImportUtils";
+import { normalizeString, similarityScore } from "@/lib/musicImportUtils";
 import { parseDateToISO } from "@/lib/dateUtils";
+
+function compareISO(a, b) {
+  // a and b are ISO-like 'YYYY-MM-DD' strings (or null). Returns -1 if a < b, 0 if equal, 1 if a > b.
+  if (!a && !b) return 0;
+  if (!a) return -1;
+  if (!b) return 1;
+  // Try to normalize using parseDateToISO first (ensures DD/MM is treated day-first and MM/DD is never used)
+  const normA = parseDateToISO(a) || a;
+  const normB = parseDateToISO(b) || b;
+  const ma = normA.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const mb = normB.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ma && mb) {
+    // continue to numeric comparison below
+  } else {
+    // fallback: Date.parse compare (only for non-standard inputs); prefer normalized values when available
+    const ta = Date.parse(normA);
+    const tb = Date.parse(normB);
+    if (isNaN(ta) && isNaN(tb)) return 0;
+    if (isNaN(ta)) return -1;
+    if (isNaN(tb)) return 1;
+    if (ta < tb) return -1;
+    if (ta > tb) return 1;
+    return 0;
+  }
+  const ay = Number(ma[1]),
+    am = Number(ma[2]),
+    ad = Number(ma[3]);
+  const by = Number(mb[1]),
+    bm = Number(mb[2]),
+    bd = Number(mb[3]);
+  if (ay !== by) return ay < by ? -1 : 1;
+  if (am !== bm) return am < bm ? -1 : 1;
+  if (ad !== bd) return ad < bd ? -1 : 1;
+  return 0;
+}
 
 export async function POST(req) {
   try {
@@ -218,7 +253,7 @@ export async function POST(req) {
 
           if (priorDate) {
             // Existing song has a date: compare dates as before
-            if (parsed < priorDate) {
+            if (compareISO(parsed, priorDate) < 0) {
               plan.wouldUpdate++;
               decisions.push({
                 key: `${g.normTitle}|||${g.normArtist}`,
@@ -357,28 +392,31 @@ export async function POST(req) {
           // Prefer exact normalized title matches (title-only match) to surface a link option when titles align.
           let suggestion = null;
           try {
-            // Try exact norm_title matches first (title-only candidates)
-            const { data: titleMatches = [] } = await db
-              .from("songs")
-              .select(
-                "id,title,artist,sequence,first_listen_date,norm_title,norm_artist"
-              )
-              .eq("norm_title", g.normTitle)
-              .limit(20);
+            // Try exact norm_title matches first (title-only candidates), with variants helper
+            const { findExactMatchVariants } = await import(
+              "@/lib/musicImportUtils"
+            );
+            try {
+              // attempt variant-aware match where artist matches
+              const titleExact = await findExactMatchVariants(
+                g.normArtist,
+                g.normTitle,
+                db
+              );
+              if (titleExact) {
+                suggestion = {
+                  id: titleExact.id,
+                  title: titleExact.title,
+                  artist: titleExact.artist,
+                  score: 0.995,
+                  matchType: "titleOnly",
+                };
+              }
+            } catch (e) {
+              console.error("title-only variants lookup error", e);
+            }
 
-            if (titleMatches && titleMatches.length) {
-              // prefer a candidate whose norm_artist matches exactly when possible
-              let chosen =
-                titleMatches.find((c) => c.norm_artist === g.normArtist) ||
-                titleMatches[0];
-              suggestion = {
-                id: chosen.id,
-                title: chosen.title,
-                artist: chosen.artist,
-                score: 0.995,
-                matchType: "titleOnly",
-              };
-            } else {
+            if (!suggestion) {
               // fallback to fuzzy suggestions
               const token =
                 g.normTitle.split(" ")[0] || g.normArtist.split(" ")[0] || "";
@@ -448,7 +486,9 @@ export async function POST(req) {
     }
 
     const overrides = body.overrides || {};
+    const debug = !!body.debug;
     const results = { created: [], updated: [], linked: [], skipped: 0 };
+    const decisions = debug ? [] : null;
 
     for (const t of good) {
       const key = `${t.normTitle}|||${t.normArtist}`;
@@ -456,6 +496,14 @@ export async function POST(req) {
       if (!parsed) {
         // skip if somehow invalid
         results.skipped++;
+        if (debug)
+          decisions.push({
+            key,
+            action: "skip",
+            title: t.title,
+            artist: t.artist,
+            iso: t.iso,
+          });
         continue;
       }
 
@@ -489,26 +537,161 @@ export async function POST(req) {
       if (exact) {
         // If existing record has a first_listen_date, compare dates as before
         if (exact.first_listen_date) {
-          if (parsed < exact.first_listen_date) {
-            const { error: updErr } = await db
-              .from("songs")
-              .update({ first_listen_date: parsed })
-              .eq("id", exact.id);
-            if (updErr) console.error("Failed updating song date", updErr);
-            else
-              results.updated.push({
-                id: exact.id,
+          if (compareISO(parsed, exact.first_listen_date) < 0) {
+            try {
+              // determine insertion position: find the first song whose date is > parsed and insert before it
+              let position = null;
+              try {
+                const { data: firstLater } = await db
+                  .from("songs")
+                  .select("sequence")
+                  .gt("first_listen_date", parsed)
+                  .not("first_listen_date", "is", null)
+                  .order("sequence", { ascending: true })
+                  .limit(1);
+                if (firstLater && firstLater.length)
+                  position = firstLater[0].sequence;
+              } catch (e) {
+                console.error("Failed finding firstLater position", e);
+              }
+
+              // if no later-dated song found, append after current max
+              if (position == null) {
+                const { data: maxRows } = await db
+                  .from("songs")
+                  .select("sequence")
+                  .order("sequence", { ascending: false })
+                  .limit(1);
+                position =
+                  maxRows && maxRows.length ? maxRows[0].sequence + 1 : 1;
+              }
+
+              const existingSeq =
+                typeof exact.sequence === "number" ? exact.sequence : null;
+              if (existingSeq !== null && existingSeq > position) {
+                // move rows in [position, existingSeq-1] up by 1
+                const { data: rowsToShift } = await db
+                  .from("songs")
+                  .select("id,sequence")
+                  .gte("sequence", position)
+                  .lt("sequence", existingSeq)
+                  .order("sequence", { ascending: false });
+                if (rowsToShift && rowsToShift.length) {
+                  for (const row of rowsToShift) {
+                    const { error: shiftErr } = await db
+                      .from("songs")
+                      .update({ sequence: row.sequence + 1 })
+                      .eq("id", row.id);
+                    if (shiftErr)
+                      console.error(
+                        "Failed shifting sequence for",
+                        row.id,
+                        shiftErr
+                      );
+                  }
+                }
+
+                const { error: updErr } = await db
+                  .from("songs")
+                  .update({ first_listen_date: parsed, sequence: position })
+                  .eq("id", exact.id);
+                if (updErr)
+                  console.error(
+                    "Failed moving existing song date/update",
+                    updErr
+                  );
+                else {
+                  results.updated.push({
+                    id: exact.id,
+                    title: exact.title,
+                    artist: exact.artist,
+                    old: exact.first_listen_date,
+                    new: parsed,
+                  });
+                  if (debug)
+                    decisions.push({
+                      key,
+                      action: "update",
+                      title: exact.title,
+                      artist: exact.artist,
+                      iso: parsed,
+                      existingId: exact.id,
+                      existingSequence: exact.sequence,
+                      position,
+                    });
+                }
+              } else {
+                const { error: updErr } = await db
+                  .from("songs")
+                  .update({ first_listen_date: parsed })
+                  .eq("id", exact.id);
+                if (updErr) console.error("Failed updating song date", updErr);
+                else {
+                  results.updated.push({
+                    id: exact.id,
+                    title: exact.title,
+                    artist: exact.artist,
+                    old: exact.first_listen_date,
+                    new: parsed,
+                  });
+                  if (debug)
+                    decisions.push({
+                      key,
+                      action: "update",
+                      title: exact.title,
+                      artist: exact.artist,
+                      iso: parsed,
+                      existingId: exact.id,
+                      existingSequence: exact.sequence,
+                    });
+                }
+              }
+            } catch (e) {
+              console.error(
+                "Failed handling exact with existing date update",
+                e
+              );
+              const { error: updErr } = await db
+                .from("songs")
+                .update({ first_listen_date: parsed })
+                .eq("id", exact.id);
+              if (updErr) console.error("Failed updating song date", updErr);
+              if (debug)
+                decisions.push({
+                  key,
+                  action: "update",
+                  title: exact.title,
+                  artist: exact.artist,
+                  iso: parsed,
+                  existingId: exact.id,
+                });
+            }
+          } else {
+            // debugging: log cases where we link even though parsed might be earlier (shouldn't happen)
+            if (compareISO(parsed, exact.first_listen_date) < 0) {
+              console.warn("Linking despite parsed < existingDate", {
                 title: exact.title,
                 artist: exact.artist,
-                old: exact.first_listen_date,
-                new: parsed,
+                parsed,
+                existing: exact.first_listen_date,
+                seq: exact.sequence,
               });
-          } else {
+            }
             results.linked.push({
               id: exact.id,
               title: exact.title,
               artist: exact.artist,
             });
+            if (debug)
+              decisions.push({
+                key,
+                action: "link",
+                title: exact.title,
+                artist: exact.artist,
+                iso: parsed,
+                existingId: exact.id,
+                existingSequence: exact.sequence,
+              });
           }
           continue;
         }
@@ -538,27 +721,124 @@ export async function POST(req) {
           const existingSeq =
             typeof exact.sequence === "number" ? exact.sequence : null;
 
-          // if existingSeq is <= lastSeq, treat existing as earlier (link). Otherwise update.
+          // if existingSeq is <= lastSeq, treat existing as earlier (link).
+          // Otherwise, move the existing row to the correct insertion position and set the date.
+          const position = (lastSeq || 0) + 1;
           if (existingSeq !== null && existingSeq <= lastSeq) {
             results.linked.push({
               id: exact.id,
               title: exact.title,
               artist: exact.artist,
             });
-          } else {
-            const { error: updErr } = await db
-              .from("songs")
-              .update({ first_listen_date: parsed })
-              .eq("id", exact.id);
-            if (updErr) console.error("Failed updating song date", updErr);
-            else
-              results.updated.push({
-                id: exact.id,
+            if (debug)
+              decisions.push({
+                key,
+                action: "link",
                 title: exact.title,
                 artist: exact.artist,
-                old: exact.first_listen_date,
-                new: parsed,
+                iso: parsed,
+                existingId: exact.id,
+                existingSequence: exact.sequence,
               });
+          } else {
+            try {
+              // move rows in [position, existingSeq-1] up by 1 (descending to avoid conflicts)
+              if (existingSeq !== null && existingSeq > position) {
+                const { data: rowsToShift } = await db
+                  .from("songs")
+                  .select("id,sequence")
+                  .gte("sequence", position)
+                  .lt("sequence", existingSeq)
+                  .order("sequence", { ascending: false });
+
+                if (rowsToShift && rowsToShift.length) {
+                  for (const row of rowsToShift) {
+                    const { error: shiftErr } = await db
+                      .from("songs")
+                      .update({ sequence: row.sequence + 1 })
+                      .eq("id", row.id);
+                    if (shiftErr)
+                      console.error(
+                        "Failed shifting sequence for",
+                        row.id,
+                        shiftErr
+                      );
+                  }
+                }
+
+                // move exact song into position and set date
+                const { error: updErr } = await db
+                  .from("songs")
+                  .update({ first_listen_date: parsed, sequence: position })
+                  .eq("id", exact.id);
+                if (updErr)
+                  console.error("Failed moving existing song", updErr);
+                else {
+                  results.updated.push({
+                    id: exact.id,
+                    title: exact.title,
+                    artist: exact.artist,
+                    old: exact.first_listen_date,
+                    new: parsed,
+                  });
+                  if (debug)
+                    decisions.push({
+                      key,
+                      action: "update",
+                      title: exact.title,
+                      artist: exact.artist,
+                      iso: parsed,
+                      existingId: exact.id,
+                      existingSequence: exact.sequence,
+                      position,
+                    });
+                }
+              } else {
+                // existingSeq is null or already <= position, just set the date
+                const { error: updErr } = await db
+                  .from("songs")
+                  .update({ first_listen_date: parsed })
+                  .eq("id", exact.id);
+                if (updErr) console.error("Failed updating song date", updErr);
+                else {
+                  results.updated.push({
+                    id: exact.id,
+                    title: exact.title,
+                    artist: exact.artist,
+                    old: exact.first_listen_date,
+                    new: parsed,
+                  });
+                  if (debug)
+                    decisions.push({
+                      key,
+                      action: "update",
+                      title: exact.title,
+                      artist: exact.artist,
+                      iso: parsed,
+                      existingId: exact.id,
+                      existingSequence: exact.sequence,
+                    });
+                }
+              }
+            } catch (e) {
+              console.error("Failed moving/updating existing song", e);
+              // fallback: just update the date
+              const { error: updErr } = await db
+                .from("songs")
+                .update({ first_listen_date: parsed })
+                .eq("id", exact.id);
+              if (updErr)
+                console.error("Failed updating song date (fallback)", updErr);
+              if (debug)
+                decisions.push({
+                  key,
+                  action: "update",
+                  title: exact.title,
+                  artist: exact.artist,
+                  iso: parsed,
+                  existingId: exact.id,
+                });
+            }
           }
           continue;
         } catch (e) {
@@ -637,6 +917,15 @@ export async function POST(req) {
           title: created.title,
           artist: created.artist,
         });
+        if (debug)
+          decisions.push({
+            key,
+            action: "create",
+            title: created.title,
+            artist: created.artist,
+            iso: parsed,
+            insertionPosition: created.sequence,
+          });
       }
     }
 
@@ -669,7 +958,7 @@ export async function POST(req) {
       }
     }
 
-    return NextResponse.json({ success: true, results });
+    return NextResponse.json({ success: true, results, decisions });
   } catch (err) {
     console.error("lastfm import failed", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });

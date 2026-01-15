@@ -72,14 +72,15 @@ export async function POST(req) {
 
       let exact = null;
       if (db) {
-        const { data: exactData } = await db
-          .from("songs")
-          .select("id, title, artist, sequence, first_listen_date")
-          .eq("norm_artist", normArtist)
-          .eq("norm_title", normTitle)
-          .limit(1)
-          .maybeSingle();
-        exact = exactData || null;
+        const { findExactMatchVariants } = await import(
+          "@/lib/musicImportUtils"
+        );
+        try {
+          const data = await findExactMatchVariants(normArtist, normTitle, db);
+          exact = data || null;
+        } catch (e) {
+          console.error("preview exact match variants error", e);
+        }
       }
 
       const parsedIso = parseDateToISO(dateRaw);

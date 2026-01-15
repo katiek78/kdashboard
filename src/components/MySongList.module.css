@@ -13,8 +13,17 @@
 
 .formRow {
   display: flex;
+  flex-direction: column; /* stack toolbar rows vertically */
   gap: 0.75rem;
+  align-items: stretch;
+}
+
+/* Toolbar row helper: keeps items on a single row on desktop and stacks on small screens */
+.toolbarRow {
+  display: flex;
+  gap: 0.5rem;
   align-items: center;
+  flex-wrap: nowrap; /* avoid accidental wrapping */
 }
 
 .input {
@@ -26,6 +35,21 @@
   color: #e9d5ff;
 }
 
+/* Mobile: stack toolbar rows vertically and make controls full width */
+@media (max-width: 640px) {
+  .toolbarRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbarRow .input {
+    width: 100%;
+    flex: none;
+  }
+  .toolbarRow .addBtn,
+  .toolbarRow .removeBtn {
+    width: 100%;
+  }
+}
 .addBtn {
   background: linear-gradient(45deg, #8b5a9f, #ba55d3);
   border: 0;
