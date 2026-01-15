@@ -199,7 +199,9 @@ export async function POST(req) {
           let exact = null;
           const { data: exactData } = await db
             .from("songs")
-            .select("id,first_listen_date,title,artist,sequence")
+            .select(
+              "id,first_listen_date,first_listen_ts,title,artist,sequence"
+            )
             .eq("norm_title", g.normTitle)
             .eq("norm_artist", g.normArtist)
             .limit(1)
@@ -261,6 +263,10 @@ export async function POST(req) {
             title: g.title,
             artist: g.artist,
             iso: g.iso,
+            incomingUnix: g.unix || null,
+            incomingTsIso: g.unix
+              ? new Date(g.unix * 1000).toISOString()
+              : null,
             order: orderCounter++,
           });
           continue;
@@ -269,37 +275,82 @@ export async function POST(req) {
         const prior = seen[key];
         if (prior) {
           const priorDate = prior.first_listen_date || null;
+          const priorTs = prior.first_listen_ts || null;
 
           if (priorDate) {
-            // Existing song has a date: compare dates as before
-            if (compareISO(parsed, priorDate) < 0) {
-              plan.wouldUpdate++;
-              decisions.push({
-                key: `${g.normTitle}|||${g.normArtist}`,
-                action: "update",
-                title: g.title,
-                artist: g.artist,
-                iso: g.iso,
-                existingId: prior.id || null,
-                existingFirstListenDate: priorDate || null,
-                existingSequence: prior.sequence || null,
-                wouldUpdateTo: parsed,
-                order: orderCounter++,
-              });
-              seen[key] = { ...prior, first_listen_date: parsed };
+            // Prefer timestamp comparison when both sides have times
+            if (g.unix != null && priorTs) {
+              const priorUnix = Math.floor(Date.parse(priorTs) / 1000);
+              if (g.unix < priorUnix) {
+                plan.wouldUpdate++;
+                decisions.push({
+                  key: `${g.normTitle}|||${g.normArtist}`,
+                  action: "update",
+                  title: g.title,
+                  artist: g.artist,
+                  iso: g.iso,
+                  existingId: prior.id || null,
+                  existingFirstListenDate: priorDate || null,
+                  existingFirstListenTs: priorTs || null,
+                  existingSequence: prior.sequence || null,
+                  incomingUnix: g.unix,
+                  wouldUpdateTo: parsed,
+                  wouldUpdateToTs: new Date(g.unix * 1000).toISOString(),
+                  order: orderCounter++,
+                });
+                seen[key] = { ...prior, first_listen_date: parsed };
+              } else {
+                plan.wouldLink++;
+                decisions.push({
+                  key: `${g.normTitle}|||${g.normArtist}`,
+                  action: "link",
+                  title: g.title,
+                  artist: g.artist,
+                  iso: g.iso,
+                  existingId: prior.id || null,
+                  existingFirstListenDate: priorDate || null,
+                  existingFirstListenTs: priorTs || null,
+                  existingSequence: prior.sequence || null,
+                  incomingUnix: g.unix,
+                  order: orderCounter++,
+                });
+              }
             } else {
-              plan.wouldLink++;
-              decisions.push({
-                key: `${g.normTitle}|||${g.normArtist}`,
-                action: "link",
-                title: g.title,
-                artist: g.artist,
-                iso: g.iso,
-                existingId: prior.id || null,
-                existingFirstListenDate: priorDate || null,
-                existingSequence: prior.sequence || null,
-                order: orderCounter++,
-              });
+              // Existing song has a date: compare dates as before
+              if (compareISO(parsed, priorDate) < 0) {
+                plan.wouldUpdate++;
+                decisions.push({
+                  key: `${g.normTitle}|||${g.normArtist}`,
+                  action: "update",
+                  title: g.title,
+                  artist: g.artist,
+                  iso: g.iso,
+                  existingId: prior.id || null,
+                  existingFirstListenDate: priorDate || null,
+                  existingSequence: prior.sequence || null,
+                  incomingUnix: g.unix || null,
+                  wouldUpdateTo: parsed,
+                  wouldUpdateToTs: g.unix
+                    ? new Date(g.unix * 1000).toISOString()
+                    : null,
+                  order: orderCounter++,
+                });
+                seen[key] = { ...prior, first_listen_date: parsed };
+              } else {
+                plan.wouldLink++;
+                decisions.push({
+                  key: `${g.normTitle}|||${g.normArtist}`,
+                  action: "link",
+                  title: g.title,
+                  artist: g.artist,
+                  iso: g.iso,
+                  existingId: prior.id || null,
+                  existingFirstListenDate: priorDate || null,
+                  existingSequence: prior.sequence || null,
+                  incomingUnix: g.unix || null,
+                  order: orderCounter++,
+                });
+              }
             }
           } else {
             // Existing song has no date; infer using sequence position in DB
@@ -487,6 +538,10 @@ export async function POST(req) {
             artist: g.artist,
             iso: g.iso,
             insertionPosition,
+            incomingUnix: g.unix || null,
+            incomingTsIso: g.unix
+              ? new Date(g.unix * 1000).toISOString()
+              : null,
             order: orderCounter++,
           };
           if (suggestion) decision.suggestion = suggestion;
@@ -514,6 +569,9 @@ export async function POST(req) {
     for (const t of good) {
       const key = `${t.normTitle}|||${t.normArtist}`;
       const parsed = parseDateToISO(t.iso);
+      const incomingTsIso = t.unix
+        ? new Date(t.unix * 1000).toISOString()
+        : null;
       if (!parsed) {
         // skip if somehow invalid
         results.skipped++;
@@ -524,6 +582,8 @@ export async function POST(req) {
             title: t.title,
             artist: t.artist,
             iso: t.iso,
+            incomingUnix: t.unix || null,
+            incomingTsIso,
           });
         continue;
       }
@@ -538,7 +598,9 @@ export async function POST(req) {
           // use provided existing id as the exact match target
           const { data: byId } = await db
             .from("songs")
-            .select("id,title,artist,sequence,first_listen_date")
+            .select(
+              "id,title,artist,sequence,first_listen_date,first_listen_ts"
+            )
             .eq("id", override.existingId)
             .limit(1)
             .maybeSingle();
@@ -546,7 +608,9 @@ export async function POST(req) {
         } else {
           const { data } = await db
             .from("songs")
-            .select("id,title,artist,sequence,first_listen_date")
+            .select(
+              "id,title,artist,sequence,first_listen_date,first_listen_ts"
+            )
             .eq("norm_title", t.normTitle)
             .eq("norm_artist", t.normArtist)
             .limit(1)
@@ -612,9 +676,15 @@ export async function POST(req) {
                   }
                 }
 
+                const updatePayload = {
+                  first_listen_date: parsed,
+                  sequence: position,
+                };
+                if (incomingTsIso)
+                  updatePayload.first_listen_ts = incomingTsIso;
                 const { error: updErr } = await db
                   .from("songs")
-                  .update({ first_listen_date: parsed, sequence: position })
+                  .update(updatePayload)
                   .eq("id", exact.id);
                 if (updErr)
                   console.error(
@@ -672,9 +742,11 @@ export async function POST(req) {
                 "Failed handling exact with existing date update",
                 e
               );
+              const updatePayload = { first_listen_date: parsed };
+              if (incomingTsIso) updatePayload.first_listen_ts = incomingTsIso;
               const { error: updErr } = await db
                 .from("songs")
-                .update({ first_listen_date: parsed })
+                .update(updatePayload)
                 .eq("id", exact.id);
               if (updErr) console.error("Failed updating song date", updErr);
               if (debug)
@@ -924,6 +996,7 @@ export async function POST(req) {
         sequence: position,
         curated: true,
       };
+      if (incomingTsIso) newSong.first_listen_ts = incomingTsIso;
       const { data: created, error: createErr } = await db
         .from("songs")
         .insert([newSong])

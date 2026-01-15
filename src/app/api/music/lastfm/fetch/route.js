@@ -112,7 +112,9 @@ export async function POST(req) {
         try {
           const { data: exact } = await db
             .from("songs")
-            .select("id,title,artist,sequence,first_listen_date")
+            .select(
+              "id,title,artist,sequence,first_listen_date,first_listen_ts"
+            )
             .eq("norm_title", t.normTitle)
             .eq("norm_artist", t.normArtist)
             .limit(1)

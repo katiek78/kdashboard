@@ -8,6 +8,32 @@ import { parseDateToISO, formatISOToDisplay } from "@/lib/dateUtils";
 import { normalizeString } from "@/lib/musicImportUtils";
 
 export default function MySongList() {
+  function formatTsToDisplay(isoOrUnix) {
+    if (!isoOrUnix && isoOrUnix !== 0) return "";
+    try {
+      let d;
+      if (typeof isoOrUnix === "number") {
+        d = new Date(isoOrUnix * 1000);
+      } else {
+        const s = String(isoOrUnix).trim();
+        d = new Date(s);
+        if (isNaN(d.getTime())) {
+          // Try ISO-style with T instead of space (Postgres prints 'YYYY-MM-DD HH:MM:SS+00')
+          const s2 = s.replace(/^([0-9]{4}-[0-9]{2}-[0-9]{2})\s+/, "$1T");
+          d = new Date(s2);
+          if (isNaN(d.getTime())) {
+            // Fallback: append Z (treat as UTC)
+            d = new Date(s2 + "Z");
+          }
+        }
+      }
+      if (isNaN(d.getTime())) return String(isoOrUnix);
+      return d.toLocaleString();
+    } catch (e) {
+      return String(isoOrUnix);
+    }
+  }
+
   const [songs, setSongs] = useState([]);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
@@ -43,9 +69,12 @@ export default function MySongList() {
         const orClause = `title.ilike.%${q}%,artist.ilike.%${q}%,norm_title.ilike.%${normQ}%,norm_artist.ilike.%${normQ}%`;
         const { data, error, count } = await supabase
           .from("songs")
-          .select("id,sequence,title,artist,first_listen_date,notes", {
-            count: "exact",
-          })
+          .select(
+            "id,sequence,title,artist,first_listen_date,first_listen_ts,notes",
+            {
+              count: "exact",
+            }
+          )
           .or(orClause)
           .order("sequence", { ascending: true })
           .range(from, to);
@@ -73,9 +102,12 @@ export default function MySongList() {
     // fallback to regular paginated fetch
     const { data, error, count } = await supabase
       .from("songs")
-      .select("id,sequence,title,artist,first_listen_date,notes", {
-        count: "exact",
-      })
+      .select(
+        "id,sequence,title,artist,first_listen_date,first_listen_ts,notes",
+        {
+          count: "exact",
+        }
+      )
       .order("sequence", { ascending: true })
       .range(from, to);
     setLoadingSongs(false);
@@ -656,21 +688,41 @@ export default function MySongList() {
           const links = dryJs.decisions.filter((d) => d.action === "link");
           const creates = dryJs.decisions.filter((d) => d.action === "create");
 
-          const createLines = creates.map(
-            (c) => `CREATE: ${c.title} — ${c.artist} (${c.iso})`
-          );
-          const updateLines = updates.map(
-            (u) =>
-              `UPDATE: ${u.title} — ${u.artist} (${
-                u.existingFirstListenDate || "(no date)"
-              } → ${u.wouldUpdateTo})`
-          );
-          const linkLines = links.map(
-            (l) =>
-              `LINK: ${l.title} — ${l.artist} (existing ${
-                l.existingFirstListenDate || "(no date)"
-              })`
-          );
+          const createLines = creates.map((c) => {
+            const incoming =
+              c.incomingUnix || c.incomingUnix === 0
+                ? ` ${formatTsToDisplay(c.incomingUnix)}`
+                : "";
+            return `CREATE: ${c.title} — ${c.artist} (${c.iso}${incoming})`;
+          });
+
+          const updateLines = updates.map((u) => {
+            const existingTime = u.existingFirstListenTs
+              ? ` ${formatTsToDisplay(u.existingFirstListenTs)}`
+              : "";
+            const incomingTime = u.wouldUpdateToTs
+              ? ` ${formatTsToDisplay(u.wouldUpdateToTs)}`
+              : u.incomingUnix || u.incomingUnix === 0
+              ? ` ${formatTsToDisplay(u.incomingUnix)}`
+              : "";
+            const existingDate = u.existingFirstListenDate || "(no date)";
+            return `UPDATE: ${u.title} — ${u.artist} (${existingDate}${existingTime} → ${u.wouldUpdateTo}${incomingTime})`;
+          });
+
+          const linkLines = links.map((l) => {
+            const existingTime = l.existingFirstListenTs
+              ? ` ${formatTsToDisplay(l.existingFirstListenTs)}`
+              : "";
+            const incomingTime =
+              l.incomingUnix || l.incomingUnix === 0
+                ? ` ${formatTsToDisplay(l.incomingUnix)}`
+                : "";
+            return `LINK: ${l.title} — ${l.artist} (existing ${
+              l.existingFirstListenDate || "(no date)"
+            }${existingTime}${
+              incomingTime ? ` — incoming:${incomingTime}` : ""
+            })`;
+          });
 
           const details = [
             ...updateLines.slice(0, 20),
@@ -1650,6 +1702,22 @@ export default function MySongList() {
                                     </td>
                                     <td style={{ padding: "0.25rem 0.5rem" }}>
                                       {d.iso || "(no date)"}
+                                      {d.existingFirstListenTs
+                                        ? ` ${formatTsToDisplay(
+                                            d.existingFirstListenTs
+                                          )}`
+                                        : ""}
+                                      {d.wouldUpdateToTs
+                                        ? ` → ${formatTsToDisplay(
+                                            d.wouldUpdateToTs
+                                          )}`
+                                        : ""}
+                                      {!d.existingFirstListenTs &&
+                                      d.incomingUnix
+                                        ? ` ${formatTsToDisplay(
+                                            d.incomingUnix
+                                          )}`
+                                        : ""}
                                     </td>
                                     <td style={{ padding: "0.25rem 0.5rem" }}>
                                       {d.title}
@@ -1665,6 +1733,21 @@ export default function MySongList() {
                                         : ""}
                                       {d.existingFirstListenDate
                                         ? ` date:${d.existingFirstListenDate}`
+                                        : ""}
+                                      {d.existingFirstListenTs
+                                        ? ` time:${formatTsToDisplay(
+                                            d.existingFirstListenTs
+                                          )}`
+                                        : ""}
+                                      {d.incomingUnix
+                                        ? ` incoming:${formatTsToDisplay(
+                                            d.incomingUnix
+                                          )}`
+                                        : ""}
+                                      {d.wouldUpdateToTs
+                                        ? ` incoming:${formatTsToDisplay(
+                                            d.wouldUpdateToTs
+                                          )}`
                                         : ""}
                                     </td>
                                   </tr>
@@ -1875,9 +1958,11 @@ export default function MySongList() {
                 <strong>{s.title}</strong>
                 <div className={styles.artist}>{s.artist}</div>
                 <div className={styles.date}>
-                  {s.first_listen_date
-                    ? formatISOToDisplay(s.first_listen_date)
-                    : "(no date)"}
+                  {s.first_listen_ts
+                    ? formatTsToDisplay(s.first_listen_ts)
+                    : s.first_listen_date
+                    ? `${formatISOToDisplay(s.first_listen_date)}`
+                    : "-"}
                 </div>
 
                 {editingSongId === s.id ? (
