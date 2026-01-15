@@ -616,6 +616,25 @@ export async function POST(req) {
             .limit(1)
             .maybeSingle();
           exact = data || null;
+
+          // Fallback: if no normalized exact match, attempt variant/ilike lookups
+          if (!exact && t.title && t.artist) {
+            try {
+              const { findExactMatchVariants } = await import(
+                "@/lib/musicImportUtils"
+              );
+              const variant = await findExactMatchVariants(
+                t.normArtist,
+                t.normTitle,
+                db,
+                t.artist,
+                t.title
+              );
+              if (variant) exact = variant;
+            } catch (e) {
+              console.error("Exact match fallback error", e);
+            }
+          }
         }
       }
 

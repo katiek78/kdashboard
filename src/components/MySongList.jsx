@@ -1431,7 +1431,7 @@ export default function MySongList() {
               )}
             </div>
 
-            {preview ? (
+            {preview && !showLastFm ? (
               <div
                 style={{ marginTop: "1rem", maxHeight: 300, overflow: "auto" }}
               >
@@ -1470,9 +1470,7 @@ export default function MySongList() {
 
             {/* Last.fm preview */}
             {showLastFm ? (
-              <div
-                style={{ marginTop: "1rem", maxHeight: 300, overflow: "auto" }}
-              >
+              <div style={{ marginTop: "1rem" }}>
                 {lfmPreview ? (
                   <div>
                     <div
@@ -1490,12 +1488,6 @@ export default function MySongList() {
                           Math.ceil((lfmPreview.total || 0) / lfmPerPage)
                         )}{" "}
                         — {lfmPreview.total || 0} total
-                        <span
-                          style={{ marginLeft: "0.75rem", color: "#d6bcfa" }}
-                        >
-                          ({lfmPreview.tracks.length} dated tracks shown —
-                          skipping undated)
-                        </span>
                       </div>
                       <div
                         style={{
@@ -1504,17 +1496,6 @@ export default function MySongList() {
                           alignItems: "center",
                         }}
                       >
-                        <div style={{ color: "#d6bcfa" }}>
-                          {lfmAscending
-                            ? "Showing oldest → newest"
-                            : "Showing newest → oldest"}
-                        </div>
-                        <button
-                          className={styles.addBtn}
-                          onClick={() => setLfmAscending((s) => !s)}
-                        >
-                          Reverse
-                        </button>
                         <button
                           className={styles.addBtn}
                           onClick={async () => {
@@ -1537,16 +1518,7 @@ export default function MySongList() {
                     </div>
 
                     {lastFmDryRun ? (
-                      <div
-                        ref={dryRunRef}
-                        style={{
-                          marginBottom: "0.5rem",
-                          padding: "0.5rem",
-                          border: "1px solid #2a2a2a",
-                          background: "#0f0f0f",
-                          borderRadius: 6,
-                        }}
-                      >
+                      <div ref={dryRunRef} className={styles.card}>
                         <div
                           style={{
                             color: "#d6bcfa",
@@ -1576,10 +1548,8 @@ export default function MySongList() {
                         </div>
                         <div
                           style={{
-                            maxHeight: 200,
-                            overflow: "auto",
                             fontSize: 13,
-                            borderTop: "1px solid #1a1a1a",
+                            borderTop: "1px solid rgba(255,255,255,0.04)",
                             paddingTop: 6,
                           }}
                         >
@@ -1757,49 +1727,6 @@ export default function MySongList() {
                         </div>
                       </div>
                     ) : null}
-
-                    <table
-                      style={{ width: "100%", borderCollapse: "collapse" }}
-                    >
-                      <thead>
-                        <tr>
-                          <th>#</th>
-                          <th>Date</th>
-                          <th>Title</th>
-                          <th>Artist</th>
-                          <th>Match</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(lfmAscending
-                          ? lfmPreview.tracks
-                          : [...lfmPreview.tracks].slice().reverse()
-                        ).map((t, i) => (
-                          <tr key={i}>
-                            <td style={{ padding: "0.25rem 0.5rem" }}>
-                              {(lfmPage - 1) * lfmPerPage + i + 1}
-                            </td>
-                            <td style={{ padding: "0.25rem 0.5rem" }}>
-                              {t.isoDate ||
-                                (t.nowplaying ? "now" : "(no date)")}
-                            </td>
-                            <td style={{ padding: "0.25rem 0.5rem" }}>
-                              {t.title}
-                            </td>
-                            <td style={{ padding: "0.25rem 0.5rem" }}>
-                              {t.artist}
-                            </td>
-                            <td style={{ padding: "0.25rem 0.5rem" }}>
-                              {t.match
-                                ? t.match.type === "exact"
-                                  ? `Exact (seq ${t.match.song.sequence})`
-                                  : "—"
-                                : "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
 
                     <div
                       style={{
