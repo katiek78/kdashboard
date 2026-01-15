@@ -130,9 +130,13 @@ export function generateNormalizedVariants(norm) {
 export async function findExactMatchVariants(
   normArtist,
   normTitle,
-  dbClient = null
+  dbClient = null,
+  originalArtist = null,
+  originalTitle = null
 ) {
   // tries the canonical exact match first, then a small set of variants for the title
+  // If normalized fields are missing on existing rows, fall back to case-insensitive
+  // matching on the raw title/artist (using ILIKE) when original values are provided.
   const db = dbClient || supabase;
   if (!normArtist || !normTitle) return null;
 
@@ -157,6 +161,45 @@ export async function findExactMatchVariants(
       console.error("findExactMatchVariants error", e);
     }
   }
+
+  // Fallback: if original strings are available, try a case-insensitive exact match on title and artist
+  if (originalTitle && originalArtist) {
+    try {
+      const { data } = await db
+        .from("songs")
+        .select(
+          "id,title,artist,sequence,first_listen_date,norm_title,norm_artist"
+        )
+        .ilike("title", originalTitle)
+        .ilike("artist", originalArtist)
+        .limit(1)
+        .maybeSingle();
+      if (data) return data;
+    } catch (e) {
+      console.error("findExactMatchVariants fallback ilike error", e);
+    }
+
+    // Also try a simple '&' -> 'and' variant on the original values to catch common differences
+    try {
+      const altTitle = originalTitle.replace(/&/g, " and ");
+      const altArtist = originalArtist.replace(/&/g, " and ");
+      if (altTitle !== originalTitle || altArtist !== originalArtist) {
+        const { data: data2 } = await db
+          .from("songs")
+          .select(
+            "id,title,artist,sequence,first_listen_date,norm_title,norm_artist"
+          )
+          .ilike("title", altTitle)
+          .ilike("artist", altArtist)
+          .limit(1)
+          .maybeSingle();
+        if (data2) return data2;
+      }
+    } catch (e) {
+      console.error("findExactMatchVariants fallback alt-ilike error", e);
+    }
+  }
+
   return null;
 }
 

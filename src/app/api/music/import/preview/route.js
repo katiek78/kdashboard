@@ -76,7 +76,13 @@ export async function POST(req) {
           "@/lib/musicImportUtils"
         );
         try {
-          const data = await findExactMatchVariants(normArtist, normTitle, db);
+          const data = await findExactMatchVariants(
+            normArtist,
+            normTitle,
+            db,
+            artist,
+            title
+          );
           exact = data || null;
         } catch (e) {
           console.error("preview exact match variants error", e);

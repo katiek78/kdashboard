@@ -196,13 +196,32 @@ export async function POST(req) {
         const key = `${g.normTitle}|||${g.normArtist}`;
         if (existing[key]) continue;
         try {
-          const { data: exact } = await db
+          let exact = null;
+          const { data: exactData } = await db
             .from("songs")
             .select("id,first_listen_date,title,artist,sequence")
             .eq("norm_title", g.normTitle)
             .eq("norm_artist", g.normArtist)
             .limit(1)
             .maybeSingle();
+          if (exactData) exact = exactData;
+
+          // Fallback: try case-insensitive exact match on title/artist when norm fields not set or differ
+          if (!exact && g.title && g.artist) {
+            try {
+              const { data: ilikeData } = await db
+                .from("songs")
+                .select("id,first_listen_date,title,artist,sequence")
+                .ilike("title", g.title)
+                .ilike("artist", g.artist)
+                .limit(1)
+                .maybeSingle();
+              if (ilikeData) exact = ilikeData;
+            } catch (e) {
+              console.error("Dry-run ilike lookup error", e);
+            }
+          }
+
           if (exact) existing[key] = exact;
         } catch (e) {
           console.error("Dry-run lookup error", e);
@@ -401,7 +420,9 @@ export async function POST(req) {
               const titleExact = await findExactMatchVariants(
                 g.normArtist,
                 g.normTitle,
-                db
+                db,
+                g.artist,
+                g.title
               );
               if (titleExact) {
                 suggestion = {
