@@ -52,7 +52,8 @@ function normalizeString(text) {
   s = s.replace(/&/g, " and ");
 
   // Normalize common contraction: hangin' -> hanging
-  s = s.replace(/in['’]\b/g, "ing");
+  // Only replace when not followed by a word char to avoid transforming words like "ain't"
+  s = s.replace(/in['’](?!\w)/g, "ing");
 
   // Replace single digits with their word equivalents
   const digitWords = [

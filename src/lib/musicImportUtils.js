@@ -15,8 +15,9 @@ export function normalizeString(text) {
   s = s.replace(/&/g, " and ");
 
   // Normalize common contraction: hangin' -> hanging
-  // Replace in' (apostrophe or unicode variant) with ing
-  s = s.replace(/in['’]\b/g, "ing");
+  // Replace in' (apostrophe or unicode variant) with ing, but only when not followed by a word char
+  // (prevents matching "ain't" -> "aingt")
+  s = s.replace(/in['’](?!\w)/g, "ing");
 
   // Replace single digits with their word equivalents to match '1' <-> 'one' (only 0-9)
   const digitWords = [

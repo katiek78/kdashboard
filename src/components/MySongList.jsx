@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import styles from "./MySongList.module.css";
+import musicStyles from "./MusicContainer.module.css";
 import supabase from "@/utils/supabaseClient";
 import { parseDateToISO, formatISOToDisplay } from "@/lib/dateUtils";
 import { normalizeString } from "@/lib/musicImportUtils";
@@ -142,6 +143,13 @@ export default function MySongList() {
   }
 
   async function removeSong(id) {
+    // confirm with the user before deleting; include title/artist for clarity when available
+    const song = songs.find((s) => s.id === id);
+    const songLabel = song
+      ? `${song.title}${song.artist ? " — " + song.artist : ""}`
+      : "this song";
+    if (!confirm(`Remove ${songLabel}? This cannot be undone.`)) return;
+
     try {
       // fetch sequence of the song to remove (best-effort)
       const { data: row, error: fetchErr } = await supabase
@@ -993,7 +1001,7 @@ export default function MySongList() {
   }
 
   return (
-    <div className={styles.container + " pageContainer"}>
+    <div className={musicStyles.musicContainer + " pageContainer"}>
       <h1>My song list</h1>
 
       <div className={styles.card}>
