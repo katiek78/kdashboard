@@ -1601,7 +1601,17 @@ export default function MySongList() {
                                   );
                                 })
                                 .map((d, idx) => (
-                                  <tr key={idx}>
+                                  <tr
+                                    key={idx}
+                                    style={
+                                      lfmOverrides[d.key]?.action === "ignore"
+                                        ? {
+                                            opacity: 0.45,
+                                            textDecoration: "line-through",
+                                          }
+                                        : {}
+                                    }
+                                  >
                                     <td style={{ padding: "0.25rem 0.5rem" }}>
                                       {d.insertionPosition || ""}
                                     </td>
@@ -1669,6 +1679,40 @@ export default function MySongList() {
                                           </label>
                                         </div>
                                       ) : null}
+
+                                      <button
+                                        title={
+                                          lfmOverrides[d.key]?.action ===
+                                          "ignore"
+                                            ? "Undo remove"
+                                            : "Remove this row"
+                                        }
+                                        onClick={() =>
+                                          setLfmOverrides((s) => {
+                                            const n = { ...s };
+                                            if (
+                                              n[d.key] &&
+                                              n[d.key].action === "ignore"
+                                            ) {
+                                              delete n[d.key];
+                                            } else {
+                                              n[d.key] = { action: "ignore" };
+                                            }
+                                            return n;
+                                          })
+                                        }
+                                        className={styles.removeBtn}
+                                        style={{
+                                          marginLeft: 8,
+                                          padding: "0 6px",
+                                          minWidth: 28,
+                                        }}
+                                      >
+                                        {lfmOverrides[d.key]?.action ===
+                                        "ignore"
+                                          ? "Undo"
+                                          : "×"}
+                                      </button>
                                     </td>
                                     <td style={{ padding: "0.25rem 0.5rem" }}>
                                       {d.iso || "(no date)"}

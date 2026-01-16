@@ -591,6 +591,23 @@ export async function POST(req) {
       // check user overrides for this unique key
       const override = overrides[key] || null;
 
+      // honor explicit ignore override
+      if (override && override.action === "ignore") {
+        results.skipped++;
+        if (debug)
+          decisions.push({
+            key,
+            action: "skip",
+            title: t.title,
+            artist: t.artist,
+            iso: parsed,
+            override: "ignore",
+            incomingUnix: t.unix || null,
+            incomingTsIso,
+          });
+        continue;
+      }
+
       // try exact match (unless override forces create)
       let exact = null;
       if (!override || override.action !== "create") {
@@ -1006,11 +1023,19 @@ export async function POST(req) {
       }
 
       // insert new song at position
+      const titleToInsert =
+        override && override.action === "create" && override.title
+          ? override.title
+          : t.title;
+      const artistToInsert =
+        override && override.action === "create" && override.artist
+          ? override.artist
+          : t.artist;
       const newSong = {
-        title: t.title,
-        artist: t.artist,
-        norm_title: t.normTitle,
-        norm_artist: t.normArtist,
+        title: titleToInsert,
+        artist: artistToInsert,
+        norm_title: normalizeString(titleToInsert),
+        norm_artist: normalizeString(artistToInsert),
         first_listen_date: parsed,
         sequence: position,
         curated: true,
@@ -1038,6 +1063,10 @@ export async function POST(req) {
             artist: created.artist,
             iso: parsed,
             insertionPosition: created.sequence,
+            overrideUsed:
+              override && override.action === "create"
+                ? { title: override.title, artist: override.artist }
+                : undefined,
           });
       }
     }
