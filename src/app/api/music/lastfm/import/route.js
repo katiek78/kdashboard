@@ -114,6 +114,13 @@ export async function POST(req) {
         page += 1;
         // small delay to be nice to Last.fm (and avoid bursts) - optional
         await new Promise((res) => setTimeout(res, 150));
+        if (req.signal && req.signal.aborted) {
+          console.info("Last.fm fetch aborted by client");
+          return NextResponse.json(
+            { error: "Aborted by client", aborted: true },
+            { status: 499 }
+          );
+        }
       }
 
       // sort oldest -> newest
@@ -121,6 +128,14 @@ export async function POST(req) {
         a.isoDate < b.isoDate ? -1 : a.isoDate > b.isoDate ? 1 : 0
       );
       tracks = fetched;
+
+      if (req.signal && req.signal.aborted) {
+        console.info("Last.fm fetch aborted by client before processing");
+        return NextResponse.json(
+          { error: "Aborted by client", aborted: true },
+          { status: 499 }
+        );
+      }
     }
 
     // require auth token so RLS will scope operations to this user
@@ -193,6 +208,13 @@ export async function POST(req) {
       // Pre-populate existing songs map for lookups (keyed by normTitle|||normArtist)
       const existing = {};
       for (const g of good) {
+        if (req.signal && req.signal.aborted) {
+          console.info("Dry-run aborted by client during existing lookup");
+          return NextResponse.json(
+            { error: "Aborted by client", aborted: true },
+            { status: 499 }
+          );
+        }
         const key = `${g.normTitle}|||${g.normArtist}`;
         if (existing[key]) continue;
         try {
@@ -254,6 +276,13 @@ export async function POST(req) {
 
       let orderCounter = 1;
       for (const key of firstOrder) {
+        if (req.signal && req.signal.aborted) {
+          console.info("Dry-run aborted by client during decision build");
+          return NextResponse.json(
+            { error: "Aborted by client", aborted: true },
+            { status: 499 }
+          );
+        }
         const g = uniqueMap[key];
         const parsed = parseDateToISO(g.iso);
         if (!parsed) {
@@ -567,6 +596,13 @@ export async function POST(req) {
     const decisions = debug ? [] : null;
 
     for (const t of good) {
+      if (req.signal && req.signal.aborted) {
+        console.info("Import aborted by client during processing");
+        return NextResponse.json(
+          { error: "Aborted by client", aborted: true },
+          { status: 499 }
+        );
+      }
       const key = `${t.normTitle}|||${t.normArtist}`;
       const parsed = parseDateToISO(t.iso);
       const incomingTsIso = t.unix

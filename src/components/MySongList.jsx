@@ -194,10 +194,40 @@ export default function MySongList() {
       }
       const seq = row?.sequence ?? null;
 
-      const { error } = await supabase.from("songs").delete().eq("id", id);
-      if (error) {
-        console.error("removeSong error", error);
-      } else if (seq !== null) {
+      // Ask server to perform a safe delete (server will clear import_rows refs then delete)
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token =
+          sessionData?.session?.access_token ||
+          sessionData?.access_token ||
+          null;
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch("/api/music/songs/delete", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ id }),
+        });
+        const js = await res.json().catch(() => null);
+        if (!res.ok) {
+          console.error("Server delete failed", js || res.statusText);
+          if (js && js.guidance) {
+            const g = js.guidance;
+            const msg = `${js.error}\n\nReferences in import_rows: ${g.import_rows_ref_count}.\n\nRun this SQL in the Supabase SQL editor as an admin or with the service role key to clear references and delete the song:\n\n${g.sql}\n\nOr set SUPABASE_SERVICE_ROLE_KEY in your server environment to enable automatic safe deletion.`;
+            alert(msg);
+          } else {
+            alert(js?.error || "Failed to remove song (see console)");
+          }
+          return;
+        }
+      } catch (e) {
+        console.error("removeSong server delete error", e);
+        alert("Failed to remove song (see console)");
+        return;
+      }
+
+      if (seq !== null) {
         // compact sequences (best-effort). Use DB-side rpc for correctness and concurrency.
         try {
           const { error: rpcErr } = await supabase.rpc("resequence_songs");
@@ -391,6 +421,21 @@ export default function MySongList() {
   const [lfmOverrides, setLfmOverrides] = useState({});
   const dryRunRef = React.useRef(null);
   const lfmUserRef = React.useRef(null);
+
+  // Last.fm history search UI state
+  const [lfmSearchQuery, setLfmSearchQuery] = useState("");
+  const [lfmSearchResults, setLfmSearchResults] = useState([]);
+  const [lfmSearchLoading, setLfmSearchLoading] = useState(false);
+  const [lfmSearchType, setLfmSearchType] = useState("both");
+  const [lfmSearchMatchType, setLfmSearchMatchType] = useState("substring");
+  const [lfmSearchThreshold, setLfmSearchThreshold] = useState(0.68);
+  const [lfmSearchSelected, setLfmSearchSelected] = useState({});
+  const [lfmSearchAbortController, setLfmSearchAbortController] =
+    useState(null);
+  const [lfmImportAbortController, setLfmImportAbortController] =
+    useState(null);
+  // tracks selected for an import initiated from the Search UI (used by performActualImport)
+  const [lfmLastSelectedTracks, setLfmLastSelectedTracks] = useState(null);
 
   React.useEffect(() => {
     if (lastFmDryRun && dryRunRef.current) {
@@ -642,8 +687,22 @@ export default function MySongList() {
       alert("No tracks to import");
       return;
     }
-    // Do a dry-run first to show exact counts (and avoid surprises)
+
     setLfmImporting(true);
+
+    // abort previous import if running
+    if (lfmImportAbortController) {
+      try {
+        lfmImportAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmImportAbortController(null);
+    }
+
+    const controller = new AbortController();
+    setLfmImportAbortController(controller);
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token =
@@ -659,92 +718,122 @@ export default function MySongList() {
         ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
         : null;
 
-      // Dry run first
-      const dryRes = await fetch("/api/music/lastfm/import", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          username: lfmUser,
-          from: fromUnix,
-          to: toUnix,
-          dryRun: true,
-        }),
-      });
-      const dryJs = await dryRes.json();
-      if (!dryRes.ok) {
-        console.error("Dry run failed", dryJs);
-        alert(dryJs.error || "Dry run failed");
-        setLfmImporting(false);
+      // Perform a dry-run first (abortable)
+      let dryJs = null;
+      try {
+        const dryRes = await fetch("/api/music/lastfm/import", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            username: lfmUser,
+            from: fromUnix,
+            to: toUnix,
+            dryRun: true,
+          }),
+          signal: controller.signal,
+        });
+        dryJs = await dryRes.json();
+        if (!dryRes.ok) {
+          if (dryJs && dryJs.aborted) {
+            // server acknowledged abort
+            console.info("Dry-run aborted (server)");
+            return;
+          }
+          console.error("Dry run failed", dryJs);
+          alert(dryJs.error || "Dry run failed");
+          return;
+        }
+
+        if (dryJs && dryJs.dryRun && dryJs.plan) {
+          const p = dryJs.plan;
+          let msg = `Dry run: ${p.totalFetched} plays fetched (${p.datedCount} dated, ${p.uniqueCount} unique songs). This will import ${p.wouldCreate} unique new tracks (plus ${p.wouldUpdate} updates and ${p.wouldLink} no-update matches).`;
+
+          if (dryJs.decisions && Array.isArray(dryJs.decisions)) {
+            const updates = dryJs.decisions.filter(
+              (d) => d.action === "update"
+            );
+            const links = dryJs.decisions.filter((d) => d.action === "link");
+            const creates = dryJs.decisions.filter(
+              (d) => d.action === "create"
+            );
+
+            const createLines = creates.map((c) => {
+              const incoming =
+                c.incomingUnix || c.incomingUnix === 0
+                  ? ` ${formatTsToDisplay(c.incomingUnix)}`
+                  : "";
+              return `CREATE: ${c.title} — ${c.artist} (${c.iso}${incoming})`;
+            });
+
+            const updateLines = updates.map((u) => {
+              const existingTime = u.existingFirstListenTs
+                ? ` ${formatTsToDisplay(u.existingFirstListenTs)}`
+                : "";
+              const incomingTime = u.wouldUpdateToTs
+                ? ` ${formatTsToDisplay(u.wouldUpdateToTs)}`
+                : u.incomingUnix || u.incomingUnix === 0
+                ? ` ${formatTsToDisplay(u.incomingUnix)}`
+                : "";
+              const existingDate = u.existingFirstListenDate || "(no date)";
+              return `UPDATE: ${u.title} — ${u.artist} (${existingDate}${existingTime} → ${u.wouldUpdateTo}${incomingTime})`;
+            });
+
+            const linkLines = links.map((l) => {
+              const existingTime = l.existingFirstListenTs
+                ? ` ${formatTsToDisplay(l.existingFirstListenTs)}`
+                : "";
+              const incomingTime =
+                l.incomingUnix || l.incomingUnix === 0
+                  ? ` ${formatTsToDisplay(l.incomingUnix)}`
+                  : "";
+              return `LINK: ${l.title} — ${l.artist} (existing ${
+                l.existingFirstListenDate || "(no date)"
+              }${existingTime}${
+                incomingTime ? ` — incoming:${incomingTime}` : ""
+              })`;
+            });
+
+            const details = [
+              ...updateLines.slice(0, 20),
+              ...linkLines.slice(0, 20),
+              ...createLines.slice(0, 20),
+            ];
+            if (details.length > 0) {
+              msg +=
+                "\n\nTop decisions (showing up to 60 items):\n" +
+                details.join("\n");
+              msg += "\n\n(Full list is available in the browser console)";
+            }
+
+            console.log("Last.fm import dry-run decisions:", dryJs.decisions);
+          }
+
+          if (!confirm(msg)) {
+            return;
+          }
+        }
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          console.info("Last.fm dry-run aborted by user");
+          return;
+        }
+        console.error("Dry run failed", err);
+        alert("Dry run failed");
         return;
       }
 
-      if (dryJs && dryJs.dryRun && dryJs.plan) {
-        const p = dryJs.plan;
-        let msg = `Dry run: ${p.totalFetched} plays fetched (${p.datedCount} dated, ${p.uniqueCount} unique songs). This will import ${p.wouldCreate} unique new tracks (plus ${p.wouldUpdate} updates and ${p.wouldLink} no-update matches).`;
+      // If user cancelled the dry-run or no dryJs, bail out
+      if (!dryJs) return;
 
-        // If we have per-track decisions, summarize them and include top items in the confirmation
-        if (dryJs.decisions && Array.isArray(dryJs.decisions)) {
-          const updates = dryJs.decisions.filter((d) => d.action === "update");
-          const links = dryJs.decisions.filter((d) => d.action === "link");
-          const creates = dryJs.decisions.filter((d) => d.action === "create");
-
-          const createLines = creates.map((c) => {
-            const incoming =
-              c.incomingUnix || c.incomingUnix === 0
-                ? ` ${formatTsToDisplay(c.incomingUnix)}`
-                : "";
-            return `CREATE: ${c.title} — ${c.artist} (${c.iso}${incoming})`;
-          });
-
-          const updateLines = updates.map((u) => {
-            const existingTime = u.existingFirstListenTs
-              ? ` ${formatTsToDisplay(u.existingFirstListenTs)}`
-              : "";
-            const incomingTime = u.wouldUpdateToTs
-              ? ` ${formatTsToDisplay(u.wouldUpdateToTs)}`
-              : u.incomingUnix || u.incomingUnix === 0
-              ? ` ${formatTsToDisplay(u.incomingUnix)}`
-              : "";
-            const existingDate = u.existingFirstListenDate || "(no date)";
-            return `UPDATE: ${u.title} — ${u.artist} (${existingDate}${existingTime} → ${u.wouldUpdateTo}${incomingTime})`;
-          });
-
-          const linkLines = links.map((l) => {
-            const existingTime = l.existingFirstListenTs
-              ? ` ${formatTsToDisplay(l.existingFirstListenTs)}`
-              : "";
-            const incomingTime =
-              l.incomingUnix || l.incomingUnix === 0
-                ? ` ${formatTsToDisplay(l.incomingUnix)}`
-                : "";
-            return `LINK: ${l.title} — ${l.artist} (existing ${
-              l.existingFirstListenDate || "(no date)"
-            }${existingTime}${
-              incomingTime ? ` — incoming:${incomingTime}` : ""
-            })`;
-          });
-
-          const details = [
-            ...updateLines.slice(0, 20),
-            ...linkLines.slice(0, 20),
-            ...createLines.slice(0, 20),
-          ];
-
-          if (details.length > 0) {
-            msg +=
-              "\n\nTop decisions (showing up to 60 items):\n" +
-              details.join("\n");
-            msg += "\n\n(Full list is available in the browser console)";
-          }
-
-          // log full decisions for inspection
-          console.log("Last.fm import dry-run decisions:", dryJs.decisions);
-        }
-
-        if (!confirm(msg)) {
-          setLfmImporting(false);
-          return;
-        }
+      // initialize per-row overrides (default suggestions) for UI if needed
+      if (dryJs && dryJs.dryRun && dryJs.decisions) {
+        const ov = {};
+        (dryJs.decisions || []).forEach((d) => {
+          if (d.suggestion)
+            ov[d.key] = { action: "link", existingId: d.suggestion.id };
+        });
+        setLfmOverrides(ov);
+        setLastFmDryRun(dryJs);
       }
 
       // Proceed with the real import
@@ -757,24 +846,31 @@ export default function MySongList() {
           to: toUnix,
           overrides: lfmOverrides,
         }),
+        signal: controller.signal,
       });
       const js = await res.json();
       if (!res.ok) {
+        if (js && js.aborted) {
+          console.info("Import aborted (server)");
+          return;
+        }
         console.error("Import failed", js);
         alert(js.error || "Import failed");
-      } else {
-        const msg = formatImportResults(js.results);
-        alert(msg);
-        console.log("Last.fm import results:", js.results);
-        await loadSongs();
-        await loadPendingImportRows();
-        setShowLastFm(false);
-        setShowImport(false);
+        return;
       }
+
+      const msg = formatImportResults(js.results);
+      alert(msg);
+      console.log("Last.fm import results:", js.results);
+      await loadSongs();
+      await loadPendingImportRows();
+      setShowLastFm(false);
+      setShowImport(false);
     } catch (err) {
       console.error("importLastFm error", err);
       alert("Import failed");
     } finally {
+      setLfmImportAbortController(null);
       setLfmImporting(false);
     }
   }
@@ -784,7 +880,21 @@ export default function MySongList() {
       alert("Enter a Last.fm username to run a dry run");
       return;
     }
+
+    // abort previous import if running
+    if (lfmImportAbortController) {
+      try {
+        lfmImportAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmImportAbortController(null);
+    }
+
     setLfmImporting(true);
+    const controller = new AbortController();
+    setLfmImportAbortController(controller);
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token =
@@ -808,6 +918,7 @@ export default function MySongList() {
           to: toUnix,
           dryRun: true,
         }),
+        signal: controller.signal,
       });
       const dryJs = await dryRes.json();
       if (!dryRes.ok) {
@@ -829,8 +940,239 @@ export default function MySongList() {
         console.log("Last.fm import dry-run decisions:", dryJs.decisions);
       }
     } catch (err) {
+      if (err && err.name === "AbortError") {
+        console.info("Last.fm dry-run aborted by user");
+        return;
+      }
       console.error("performDryRun error", err);
       alert("Dry run failed");
+    } finally {
+      setLfmImportAbortController(null);
+      setLfmImporting(false);
+    }
+  }
+
+  // Search the user's Last.fm history (server-side) and load a page of results
+  async function searchLastFmHistory(page = 1) {
+    if (!lfmUser) {
+      alert("Enter a Last.fm username to search history");
+      return;
+    }
+
+    // abort previous search if running
+    if (lfmSearchAbortController) {
+      try {
+        lfmSearchAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmSearchAbortController(null);
+    }
+
+    setLfmSearchLoading(true);
+    const controller = new AbortController();
+    setLfmSearchAbortController(controller);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // pass the currently selected date window to limit work on server
+      const fromUnix = lfmFrom
+        ? Math.floor(new Date(lfmFrom + "T00:00:00Z").getTime() / 1000)
+        : null;
+      const toUnix = lfmTo
+        ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
+        : null;
+
+      const body = {
+        username: lfmUser,
+        query: lfmSearchQuery,
+        type: lfmSearchType,
+        matchType: lfmSearchMatchType,
+        threshold: Number(lfmSearchThreshold) || 0.68,
+        page,
+        limit: 200,
+        from: fromUnix,
+        to: toUnix,
+      };
+
+      const res = await fetch("/api/music/lastfm/search", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      const js = await res.json();
+      if (!res.ok) {
+        console.error("Last.fm search failed", js);
+        alert(js.error || "Search failed");
+        setLfmSearchResults([]);
+        return;
+      }
+      setLfmSearchResults(js.results || []);
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        console.info("Last.fm search aborted by user");
+        // leave partial results as-is and quietly return
+        return;
+      }
+      console.error("searchLastFmHistory error", err);
+      alert("Search failed");
+    } finally {
+      setLfmSearchLoading(false);
+      setLfmSearchAbortController(null);
+    }
+  }
+
+  function stopLastFmSearch() {
+    if (lfmSearchAbortController) {
+      try {
+        lfmSearchAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmSearchAbortController(null);
+    }
+    setLfmSearchLoading(false);
+  }
+
+  function stopLastFmImport() {
+    if (lfmImportAbortController) {
+      try {
+        lfmImportAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmImportAbortController(null);
+    }
+    setLfmImporting(false);
+  }
+
+  // Perform a dry-run import for the selected search results
+  async function dryRunSearchSelection() {
+    const selected = Object.keys(lfmSearchSelected)
+      .filter((k) => lfmSearchSelected[k])
+      .map((k) => lfmSearchResults[Number(k)])
+      .filter(Boolean)
+      .map((r) => ({
+        title: r.title,
+        artist: r.artist,
+        isoDate: r.iso,
+        unix: r.unix,
+      }));
+
+    if (!selected || selected.length === 0) {
+      alert("Select at least one search result to dry-run");
+      return;
+    }
+
+    // abort previous import if running
+    if (lfmImportAbortController) {
+      try {
+        lfmImportAbortController.abort();
+      } catch (e) {
+        /* ignore */
+      }
+      setLfmImportAbortController(null);
+    }
+
+    setLfmImporting(true);
+    const controller = new AbortController();
+    setLfmImportAbortController(controller);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const dryRes = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tracks: selected, dryRun: true }),
+        signal: controller.signal,
+      });
+      const dryJs = await dryRes.json();
+      if (!dryRes.ok) {
+        console.error("Search dry run failed", dryJs);
+        alert(dryJs.error || "Dry run failed");
+        return;
+      }
+      if (dryJs && dryJs.dryRun && dryJs.plan) {
+        setLastFmDryRun(dryJs);
+        const ov = {};
+        (dryJs.decisions || []).forEach((d) => {
+          if (d.suggestion)
+            ov[d.key] = { action: "link", existingId: d.suggestion.id };
+        });
+        setLfmOverrides(ov);
+        console.log("Search dry-run decisions:", dryJs.decisions);
+      }
+    } catch (err) {
+      console.error("dryRunSearchSelection error", err);
+      alert("Dry run failed");
+    } finally {
+      setLfmImporting(false);
+    }
+  }
+
+  // Import selected search results (applies overrides)
+  async function importSearchSelection() {
+    const selected = Object.keys(lfmSearchSelected)
+      .filter((k) => lfmSearchSelected[k])
+      .map((k) => lfmSearchResults[Number(k)])
+      .filter(Boolean)
+      .map((r) => ({
+        title: r.title,
+        artist: r.artist,
+        isoDate: r.iso,
+        unix: r.unix,
+      }));
+
+    if (!selected || selected.length === 0) {
+      alert("Select at least one search result to import");
+      return;
+    }
+
+    setLfmImporting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token =
+        sessionData?.session?.access_token || sessionData?.access_token || null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/music/lastfm/import", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tracks: selected, overrides: lfmOverrides }),
+      });
+      const js = await res.json();
+      if (!res.ok) {
+        console.error("Import failed", js);
+        alert(js.error || "Import failed");
+        return;
+      }
+      const msg = formatImportResults(js.results);
+      alert(msg);
+      console.log("Search import results:", js.results);
+      await loadSongs();
+      await loadPendingImportRows();
+      setShowLastFm(false);
+      setShowImport(false);
+      setLastFmDryRun(null);
+      setLfmOverrides({});
+      setLfmSearchResults([]);
+      setLfmSearchSelected({});
+    } catch (err) {
+      console.error("importSearchSelection error", err);
+      alert("Import failed");
     } finally {
       setLfmImporting(false);
     }
@@ -885,16 +1227,33 @@ export default function MySongList() {
         ? Math.floor(new Date(lfmTo + "T23:59:59Z").getTime() / 1000)
         : null;
 
-      const res = await fetch("/api/music/lastfm/import", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          username: lfmUser,
-          from: fromUnix,
-          to: toUnix,
-          overrides: lfmOverrides,
-        }),
-      });
+      // If we have a stored selection from the Search UI, import just those tracks
+      let res;
+      if (
+        lfmLastSelectedTracks &&
+        Array.isArray(lfmLastSelectedTracks) &&
+        lfmLastSelectedTracks.length > 0
+      ) {
+        res = await fetch("/api/music/lastfm/import", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            tracks: lfmLastSelectedTracks,
+            overrides: lfmOverrides,
+          }),
+        });
+      } else {
+        res = await fetch("/api/music/lastfm/import", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            username: lfmUser,
+            from: fromUnix,
+            to: toUnix,
+            overrides: lfmOverrides,
+          }),
+        });
+      }
       const js = await res.json();
       if (!res.ok) {
         console.error("Import failed", js);
@@ -1328,105 +1687,331 @@ export default function MySongList() {
 
               {showLastFm && (
                 <div
-                  style={{
-                    marginLeft: "1rem",
-                    display: "flex",
-                    gap: "0.5rem",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
                 >
-                  <input
-                    placeholder="Last.fm username"
-                    ref={lfmUserRef}
-                    value={lfmUser}
-                    default="discokate"
-                    onChange={(e) => setLfmUser(e.target.value)}
-                    className={styles.input}
-                    style={{ width: 200 }}
-                  />
-                  <input
-                    type="date"
-                    value={lfmFrom}
-                    onChange={(e) => setLfmFrom(e.target.value)}
-                    className={styles.input}
-                  />
-                  <input
-                    type="date"
-                    value={lfmTo}
-                    onChange={(e) => setLfmTo(e.target.value)}
-                    className={styles.input}
-                  />
-                  <button
-                    className={styles.addBtn}
-                    onClick={async () => {
-                      // Fetch preview then run a full dry-run across the date range
-                      await fetchLastFm(1);
-                      await performDryRun();
+                  <div
+                    style={{
+                      marginLeft: "1rem",
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                      flexWrap: "wrap",
                     }}
-                    disabled={lfmLoading || lfmImporting || !lfmUser}
                   >
-                    {lfmLoading || lfmImporting ? "Running…" : "Fetch Last.fm"}
-                  </button>
+                    <input
+                      placeholder="Last.fm username"
+                      ref={lfmUserRef}
+                      value={lfmUser}
+                      default="discokate"
+                      onChange={(e) => setLfmUser(e.target.value)}
+                      className={styles.input}
+                      style={{ width: 200 }}
+                    />
+                    <input
+                      type="date"
+                      value={lfmFrom}
+                      onChange={(e) => setLfmFrom(e.target.value)}
+                      className={styles.input}
+                    />
+                    <input
+                      type="date"
+                      value={lfmTo}
+                      onChange={(e) => setLfmTo(e.target.value)}
+                      className={styles.input}
+                    />
+                    {lfmImporting ? (
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => stopLastFmImport()}
+                      >
+                        Stop
+                      </button>
+                    ) : (
+                      <button
+                        className={styles.addBtn}
+                        onClick={async () => {
+                          // Fetch preview then run a full dry-run across the date range
+                          await fetchLastFm(1);
+                          await performDryRun();
+                        }}
+                        disabled={lfmLoading || lfmImporting || !lfmUser}
+                      >
+                        {lfmLoading ? "Running…" : "Fetch Last.fm"}
+                      </button>
+                    )}
 
-                  <button
-                    className={styles.addBtn}
-                    onClick={async () => {
-                      try {
-                        const { data: sessionData } =
-                          await supabase.auth.getSession();
-                        const token =
-                          sessionData?.session?.access_token ||
-                          sessionData?.access_token ||
-                          null;
-                        const headers = { "Content-Type": "application/json" };
-                        if (token) headers["Authorization"] = `Bearer ${token}`;
+                    <button
+                      className={styles.addBtn}
+                      onClick={async () => {
+                        try {
+                          const { data: sessionData } =
+                            await supabase.auth.getSession();
+                          const token =
+                            sessionData?.session?.access_token ||
+                            sessionData?.access_token ||
+                            null;
+                          const headers = {
+                            "Content-Type": "application/json",
+                          };
+                          if (token)
+                            headers["Authorization"] = `Bearer ${token}`;
 
-                        const res = await fetch("/api/music/export", {
-                          method: "POST",
-                          headers,
-                          body: JSON.stringify({
-                            from: lfmFrom || null,
-                            to: lfmTo || null,
-                          }),
-                        });
-                        if (!res.ok) {
-                          const js = await res.json().catch(() => null);
-                          alert(js?.error || "Export failed");
-                          return;
+                          const res = await fetch("/api/music/export", {
+                            method: "POST",
+                            headers,
+                            body: JSON.stringify({
+                              from: lfmFrom || null,
+                              to: lfmTo || null,
+                            }),
+                          });
+                          if (!res.ok) {
+                            const js = await res.json().catch(() => null);
+                            alert(js?.error || "Export failed");
+                            return;
+                          }
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          const fnFrom = lfmFrom || "all";
+                          const fnTo = lfmTo || "all";
+                          a.href = url;
+                          a.download = `songs_${fnFrom}_${fnTo}.csv`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                        } catch (err) {
+                          console.error("export csv failed", err);
+                          alert("Export failed");
                         }
-                        const blob = await res.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        const fnFrom = lfmFrom || "all";
-                        const fnTo = lfmTo || "all";
-                        a.href = url;
-                        a.download = `songs_${fnFrom}_${fnTo}.csv`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        window.URL.revokeObjectURL(url);
-                      } catch (err) {
-                        console.error("export csv failed", err);
-                        alert("Export failed");
-                      }
+                      }}
+                      disabled={!lfmFrom && !lfmTo}
+                      title="Export songs for the selected date or date range as CSV"
+                      style={{ marginLeft: 8 }}
+                    >
+                      Export CSV
+                    </button>
+                    <button
+                      className={styles.removeBtn}
+                      onClick={() => {
+                        setShowLastFm(false);
+                        setShowImport(false);
+                      }}
+                      style={{ marginLeft: 8 }}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "0.5rem",
+                      border: "1px dashed rgba(255,255,255,0.04)",
+                      borderRadius: 6,
                     }}
-                    disabled={!lfmFrom && !lfmTo}
-                    title="Export songs for the selected date or date range as CSV"
-                    style={{ marginLeft: 8 }}
                   >
-                    Export CSV
-                  </button>
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => {
-                      setShowLastFm(false);
-                      setShowImport(false);
-                    }}
-                    style={{ marginLeft: 8 }}
-                  >
-                    Close
-                  </button>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <input
+                        placeholder="Search Last.fm plays"
+                        value={lfmSearchQuery}
+                        onChange={(e) => setLfmSearchQuery(e.target.value)}
+                        className={styles.input}
+                        style={{ width: 220 }}
+                      />
+
+                      <select
+                        value={lfmSearchType}
+                        onChange={(e) => setLfmSearchType(e.target.value)}
+                        className={styles.input}
+                        style={{ width: 120 }}
+                      >
+                        <option value="both">Both</option>
+                        <option value="title">Title</option>
+                        <option value="artist">Artist</option>
+                      </select>
+
+                      <select
+                        value={lfmSearchMatchType}
+                        onChange={(e) => setLfmSearchMatchType(e.target.value)}
+                        className={styles.input}
+                        style={{ width: 120 }}
+                      >
+                        <option value="substring">Substring</option>
+                        <option value="fuzzy">Fuzzy</option>
+                        <option value="exact">Exact</option>
+                      </select>
+
+                      {lfmSearchMatchType === "fuzzy" ? (
+                        <input
+                          type="number"
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          value={lfmSearchThreshold}
+                          onChange={(e) =>
+                            setLfmSearchThreshold(Number(e.target.value))
+                          }
+                          className={styles.input}
+                          style={{ width: 80 }}
+                          title="Fuzzy threshold (0-1)"
+                        />
+                      ) : null}
+
+                      {lfmSearchLoading ? (
+                        <button
+                          className={styles.removeBtn}
+                          onClick={() => stopLastFmSearch()}
+                        >
+                          Stop
+                        </button>
+                      ) : (
+                        <button
+                          className={styles.addBtn}
+                          onClick={async () => await searchLastFmHistory(1)}
+                          disabled={lfmSearchLoading}
+                        >
+                          Search Last.fm
+                        </button>
+                      )}
+
+                      <button
+                        className={styles.removeBtn}
+                        onClick={() => {
+                          setLfmSearchResults([]);
+                          setLfmSearchSelected({});
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    {lfmSearchResults && lfmSearchResults.length > 0 ? (
+                      <div style={{ marginTop: 8 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <div style={{ color: "#d6bcfa" }}>
+                            {lfmSearchResults.length} results
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              alignItems: "center",
+                            }}
+                          >
+                            <button
+                              className={styles.addBtn}
+                              onClick={() => {
+                                const sel = {};
+                                lfmSearchResults.forEach(
+                                  (_, i) => (sel[i] = true)
+                                );
+                                setLfmSearchSelected(sel);
+                              }}
+                            >
+                              Select all
+                            </button>
+                            <button
+                              className={styles.removeBtn}
+                              onClick={() => setLfmSearchSelected({})}
+                            >
+                              Clear selection
+                            </button>
+                            <button
+                              className={styles.addBtn}
+                              onClick={dryRunSearchSelection}
+                              disabled={lfmImporting}
+                            >
+                              Dry-run selected
+                            </button>
+                            <button
+                              className={styles.addBtn}
+                              onClick={importSearchSelection}
+                              disabled={lfmImporting}
+                            >
+                              Import selected
+                            </button>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: 8,
+                            maxHeight: 260,
+                            overflow: "auto",
+                          }}
+                        >
+                          <table
+                            style={{
+                              width: "100%",
+                              borderCollapse: "collapse",
+                            }}
+                          >
+                            <thead>
+                              <tr>
+                                <th></th>
+                                <th>Title</th>
+                                <th>Artist</th>
+                                <th>Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lfmSearchResults.map((r, i) => (
+                                <tr
+                                  key={i}
+                                  style={
+                                    lfmSearchSelected[i]
+                                      ? { background: "rgba(214,188,250,0.04)" }
+                                      : {}
+                                  }
+                                >
+                                  <td style={{ padding: "0.25rem 0.5rem" }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!lfmSearchSelected[i]}
+                                      onChange={(e) =>
+                                        setLfmSearchSelected((s) => {
+                                          const n = { ...s };
+                                          if (e.target.checked) n[i] = true;
+                                          else delete n[i];
+                                          return n;
+                                        })
+                                      }
+                                    />
+                                  </td>
+                                  <td style={{ padding: "0.25rem 0.5rem" }}>
+                                    {r.title}
+                                  </td>
+                                  <td style={{ padding: "0.25rem 0.5rem" }}>
+                                    {r.artist}
+                                  </td>
+                                  <td style={{ padding: "0.25rem 0.5rem" }}>
+                                    {r.iso || "(no date)"}
+                                    {r.unix
+                                      ? ` ${formatTsToDisplay(r.unix)}`
+                                      : ""}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               )}
             </div>
@@ -1496,24 +2081,35 @@ export default function MySongList() {
                           alignItems: "center",
                         }}
                       >
-                        <button
-                          className={styles.addBtn}
-                          onClick={async () => {
-                            if (lastFmDryRun) {
-                              await performActualImport();
-                            } else {
-                              await performDryRun();
+                        {lfmImporting ? (
+                          <>
+                            <button
+                              className={styles.removeBtn}
+                              onClick={() => stopLastFmImport()}
+                            >
+                              Stop
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className={styles.addBtn}
+                            onClick={async () => {
+                              if (lastFmDryRun) {
+                                await performActualImport();
+                              } else {
+                                await performDryRun();
+                              }
+                            }}
+                            disabled={
+                              lfmImporting ||
+                              !lfmPreview ||
+                              !lfmPreview.tracks ||
+                              lfmPreview.tracks.length === 0
                             }
-                          }}
-                          disabled={
-                            lfmImporting ||
-                            !lfmPreview ||
-                            !lfmPreview.tracks ||
-                            lfmPreview.tracks.length === 0
-                          }
-                        >
-                          {lfmImporting ? "Importing…" : "Import all"}
-                        </button>
+                          >
+                            {lfmImporting ? "Importing…" : "Import all"}
+                          </button>
+                        )}
                       </div>
                     </div>
 
